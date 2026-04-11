@@ -108,6 +108,7 @@ export interface Employee {
   status: string;
   personality?: EmployeePersonality;
   customInstructions?: string | null;
+  voiceId?: string | null;
   hiredAt: string;
   role?: Role;
 }
@@ -126,6 +127,8 @@ export interface HireEmployee {
   team?: string;
   personality?: HireEmployeePersonality;
   customInstructions?: string;
+  avatarUrl?: string;
+  voiceId?: string;
 }
 
 export type UpdateEmployeePersonality = { [key: string]: unknown };
@@ -136,6 +139,8 @@ export interface UpdateEmployee {
   team?: string;
   status?: string;
   personality?: UpdateEmployeePersonality;
+  avatarUrl?: string;
+  voiceId?: string;
   customInstructions?: string;
 }
 
@@ -481,6 +486,65 @@ export interface AnalyticsOverview {
   topPerformers: AnalyticsOverviewTopPerformersItem[];
 }
 
+export type BillingPlanLimits = { [key: string]: number };
+
+export interface BillingPlan {
+  id: string;
+  name: string;
+  description: string;
+  monthly: number;
+  annual: number;
+  limits: BillingPlanLimits;
+}
+
+export interface BillingPlanList {
+  data: BillingPlan[];
+}
+
+export type CheckoutRequestPlan =
+  (typeof CheckoutRequestPlan)[keyof typeof CheckoutRequestPlan];
+
+export const CheckoutRequestPlan = {
+  starter: "starter",
+  growth: "growth",
+  business: "business",
+  enterprise: "enterprise",
+} as const;
+
+export type CheckoutRequestBillingCycle =
+  (typeof CheckoutRequestBillingCycle)[keyof typeof CheckoutRequestBillingCycle];
+
+export const CheckoutRequestBillingCycle = {
+  monthly: "monthly",
+  annual: "annual",
+} as const;
+
+export interface CheckoutRequest {
+  plan: CheckoutRequestPlan;
+  billingCycle?: CheckoutRequestBillingCycle;
+}
+
+export interface CheckoutResponse {
+  type: string;
+  url?: string | null;
+  message?: string | null;
+  subscription?: Subscription;
+}
+
+export interface VoiceItem {
+  voice_id: string;
+  name: string;
+  category?: string | null;
+  gender?: string | null;
+  accent?: string | null;
+  preview_url?: string | null;
+}
+
+export interface VoiceList {
+  data: VoiceItem[];
+  source: string;
+}
+
 export type PageParamParameter = number;
 
 export type LimitParamParameter = number;
@@ -537,6 +601,10 @@ export type ListWorkflowsParams = {
 export type ListConversationsParams = {
   page?: PageParamParameter;
   limit?: LimitParamParameter;
+};
+
+export type CreateBillingPortal200 = {
+  url: string;
 };
 
 export type ListNotificationsParams = {

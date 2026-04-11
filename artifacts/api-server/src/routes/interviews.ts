@@ -5,9 +5,11 @@ import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext } from "../lib/auth-helpers";
 import { chatCompletion } from "../lib/ai";
+import { textToSpeech } from "../lib/elevenlabs";
 import { z } from "zod/v4";
 import { validate, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -120,13 +122,25 @@ Keep responses concise (2-3 paragraphs max).`;
 
     const aiResponse = await chatCompletion(chatMessages);
 
+    let audioUrl: string | null = null;
+    if (process.env.ELEVENLABS_API_KEY) {
+      try {
+        const voiceId = candidate.voiceId || "21m00Tcm4TlvDq8ikWAM";
+        const audioBuffer = await textToSpeech(aiResponse.slice(0, 5000), { voiceId });
+        const base64Audio = audioBuffer.toString("base64");
+        audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
+      } catch (ttsErr) {
+        logger.warn({ err: ttsErr }, "Interview TTS generation failed, continuing without audio");
+      }
+    }
+
     const [aiMsg] = await db.insert(interviewMessages).values({
-      sessionId, candidateId, role: "assistant", content: aiResponse,
+      sessionId, candidateId, role: "assistant", content: aiResponse, audioUrl,
     }).returning();
 
     res.json({
       userMessage: { id: userMsg.id, content: userMsg.content, role: userMsg.role },
-      aiMessage: { id: aiMsg.id, content: aiResponse, role: "assistant", audioUrl: null },
+      aiMessage: { id: aiMsg.id, content: aiResponse, role: "assistant", audioUrl },
     });
   } catch (error) {
     next(error);

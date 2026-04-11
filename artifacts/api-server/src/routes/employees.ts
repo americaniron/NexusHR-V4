@@ -22,6 +22,8 @@ const createEmployeeBody = z.object({
   team: z.string().optional(),
   personality: z.record(z.string(), z.unknown()).optional(),
   customInstructions: z.string().optional(),
+  avatarUrl: z.string().url().optional(),
+  voiceId: z.string().optional(),
 });
 
 const updateEmployeeBody = z.object({
@@ -31,6 +33,8 @@ const updateEmployeeBody = z.object({
   status: z.enum(["active", "inactive", "suspended"]).optional(),
   personality: z.record(z.string(), z.unknown()).optional(),
   customInstructions: z.string().optional(),
+  avatarUrl: z.string().url().optional(),
+  voiceId: z.string().optional(),
 });
 
 router.get("/employees", requireAuth, validate({ query: listEmployeesQuery }), async (req, res, next) => {
@@ -71,7 +75,7 @@ router.post("/employees", requireAuth, validate({ body: createEmployeeBody }), a
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.badRequest("No organization");
 
-    const { roleId, name, department, team, personality, customInstructions } = req.body;
+    const { roleId, name, department, team, personality, customInstructions, avatarUrl, voiceId } = req.body;
 
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, roleId));
     if (!role) throw AppError.notFound("Role not found");
@@ -84,8 +88,8 @@ router.post("/employees", requireAuth, validate({ body: createEmployeeBody }), a
       team,
       personality: personality || role.personalityDefaults,
       customInstructions,
-      avatarUrl: role.avatarUrl,
-      voiceId: null,
+      avatarUrl: avatarUrl || role.avatarUrl,
+      voiceId: voiceId || null,
     }).returning();
 
     res.status(201).json({ ...employee, role });
@@ -119,7 +123,7 @@ router.patch("/employees/:id", requireAuth, validate({ params: idParam, body: up
     const [existing] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, id), eq(aiEmployees.orgId, orgId)));
     if (!existing) throw AppError.notFound("Employee not found");
 
-    const { name, department, team, status, personality, customInstructions } = req.body;
+    const { name, department, team, status, personality, customInstructions, avatarUrl, voiceId } = req.body;
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (name) updates.name = name;
     if (department !== undefined) updates.department = department;
@@ -127,6 +131,8 @@ router.patch("/employees/:id", requireAuth, validate({ params: idParam, body: up
     if (status) updates.status = status;
     if (personality !== undefined) updates.personality = personality;
     if (customInstructions !== undefined) updates.customInstructions = customInstructions;
+    if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
+    if (voiceId !== undefined) updates.voiceId = voiceId;
 
     const [updated] = await db.update(aiEmployees).set(updates).where(eq(aiEmployees.id, id)).returning();
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, updated.roleId));

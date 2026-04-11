@@ -1,10 +1,10 @@
 import { useListConversations, useGetConversation, useSendMessage } from "@workspace/api-client-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, Mic } from "lucide-react";
+import { Send, Bot, User, Volume2, VolumeX, MessageSquare } from "lucide-react";
 
 export default function ConversationsPage() {
   const { data: convList } = useListConversations({ limit: 50 });
@@ -18,7 +18,6 @@ export default function ConversationsPage() {
 
   return (
     <div className="flex h-[calc(100vh-140px)] border border-border rounded-xl overflow-hidden bg-card shadow-sm">
-      {/* Sidebar */}
       <div className="w-80 border-r border-border flex flex-col bg-muted/10">
         <div className="p-4 border-b border-border bg-card font-semibold text-foreground">
           Conversations
@@ -51,7 +50,6 @@ export default function ConversationsPage() {
         </ScrollArea>
       </div>
 
-      {/* Chat Area */}
       <div className="flex-1 flex flex-col bg-background">
         {activeId ? (
           <ChatWindow conversationId={activeId} />
@@ -63,6 +61,47 @@ export default function ConversationsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function AudioPlayer({ audioUrl }: { audioUrl: string }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const togglePlay = useCallback(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio(audioUrl);
+      audioRef.current.onended = () => setIsPlaying(false);
+      audioRef.current.onerror = () => setIsPlaying(false);
+    }
+
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().catch(() => setIsPlaying(false));
+      setIsPlaying(true);
+    }
+  }, [audioUrl, isPlaying]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <button
+      onClick={togglePlay}
+      className="inline-flex items-center gap-1 mt-1 px-2 py-1 rounded-md text-xs hover:bg-white/10 transition-colors"
+      title={isPlaying ? "Stop audio" : "Play audio"}
+    >
+      {isPlaying ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+      {isPlaying ? "Stop" : "Listen"}
+    </button>
   );
 }
 
@@ -90,7 +129,7 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
       refetch();
     } catch (err) {
       console.error(err);
-      setInput(text); // restore on failure
+      setInput(text);
     }
   };
 
@@ -107,9 +146,6 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
           </Avatar>
           <span className="font-medium text-foreground">{conv.aiEmployee?.name}</span>
         </div>
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-          <Mic className="h-5 w-5" />
-        </Button>
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 space-y-6" ref={scrollRef}>
@@ -126,6 +162,9 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
                 : 'bg-muted text-foreground rounded-tl-sm border border-border/50'
             }`}>
               <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+              {msg.role === 'assistant' && msg.audioUrl && (
+                <AudioPlayer audioUrl={msg.audioUrl} />
+              )}
             </div>
           </div>
         ))}
@@ -153,5 +192,3 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
     </>
   );
 }
-
-import { MessageSquare } from "lucide-react";

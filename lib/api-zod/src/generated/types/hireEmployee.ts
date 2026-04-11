@@ -14,4 +14,6 @@ export interface HireEmployee {
   team?: string;
   personality?: HireEmployeePersonality;
   customInstructions?: string;
+  avatarUrl?: string;
+  voiceId?: string;
 }

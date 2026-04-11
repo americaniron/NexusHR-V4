@@ -22,6 +22,7 @@ import IntegrationsPage from "@/pages/integrations";
 import BillingPage from "@/pages/billing";
 import SettingsPage from "@/pages/settings";
 import HelpPage from "@/pages/help";
+import OnboardingPage from "@/pages/onboarding";
 import NotFound from "@/pages/not-found";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -44,13 +45,21 @@ function HomeRedirect() {
   return (
     <>
       <Show when="signed-in">
-        <Redirect to="/dashboard" />
+        <OnboardingRedirect />
       </Show>
       <Show when="signed-out">
         <LandingPage />
       </Show>
     </>
   );
+}
+
+function OnboardingRedirect() {
+  const onboarded = localStorage.getItem("nexushr_onboarded");
+  if (!onboarded) {
+    return <Redirect to="/onboarding" />;
+  }
+  return <Redirect to="/dashboard" />;
 }
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -107,6 +116,13 @@ function ClerkProviderWithRoutes() {
             <Route path="/" component={HomeRedirect} />
             <Route path="/sign-in/*?" component={SignInPage} />
             <Route path="/sign-up/*?" component={SignUpPage} />
+            <Route path="/onboarding">
+              {() => (
+                <Show when="signed-in">
+                  <OnboardingPage />
+                </Show>
+              )}
+            </Route>
 
             <Route path="/dashboard">
               <ProtectedRoute component={DashboardPage} />

@@ -13,6 +13,7 @@ import billingRouter from "./billing";
 import notificationsRouter from "./notifications";
 import supportRouter from "./support";
 import dashboardRouter from "./dashboard";
+import voicesRouter from "./voices";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(billingRouter);
 router.use(notificationsRouter);
 router.use(supportRouter);
 router.use(dashboardRouter);
+router.use(voicesRouter);
 
 export default router;

@@ -45,7 +45,7 @@ NexsusHR is a production-grade AI workforce management platform. Businesses hire
 - `tasks` — task management with status, priority, assignee
 - `workflows` — multi-step workflow automation with steps
 - `conversations` — real-time chat between users and AI employees
-- `integrations` — tool registry (10 tools: Google Workspace, Slack, HubSpot, etc.) and org connections
+- `integrations` — tool registry (20 tools: Google Workspace, Slack, HubSpot, Jira, GitHub, Mailchimp, SendGrid, Freshdesk, Zoom, Trello, Dropbox, Pipedrive, BambooHR, etc.) and org connections
 - `billing` — subscription plans (trial/starter/growth/business/enterprise) and usage tracking
 - `support` — support tickets and knowledge base articles
 - `notifications` — user notifications
@@ -75,8 +75,13 @@ NexsusHR is a production-grade AI workforce management platform. Businesses hire
 - `/api/workflows` — CRUD workflows
 - `/api/conversations` — CRUD conversations with AI chat (Claude-powered, OpenAI fallback)
 - `/api/integrations` — list tools, connect/disconnect
+- `/api/billing/plans` — available plan pricing
 - `/api/billing/subscription` — subscription info
+- `/api/billing/checkout` — Stripe checkout session creation (falls back to direct activation without Stripe)
+- `/api/billing/portal` — Stripe customer portal
+- `/api/billing/webhook` — Stripe webhook handler
 - `/api/billing/usage` — usage dimensions
+- `/api/voices` — ElevenLabs voice list (with 12 preset fallbacks)
 - `/api/notifications` — list, mark read, mark all read
 - `/api/support/tickets` — list/create support tickets
 - `/api/support/articles` — knowledge base articles
@@ -85,16 +90,17 @@ NexsusHR is a production-grade AI workforce management platform. Businesses hire
 
 - `/` — Landing page (unauthenticated) / redirect to dashboard (authenticated)
 - `/sign-in`, `/sign-up` — Clerk auth pages
+- `/onboarding` — 4-step onboarding wizard (welcome → marketplace → integrations → conversations)
 - `/dashboard` — Command center with metrics and activity
 - `/marketplace` — AI role catalog with filtering
-- `/marketplace/:id` — Role detail with hire CTA
+- `/marketplace/:id` — Role detail with avatar picker, voice selection, and hire CTA
 - `/team` — Hired AI employees management
 - `/tasks` — Task management
 - `/workflows` — Workflow automation
-- `/conversations` — Chat with AI employees
+- `/conversations` — Chat with AI employees (ElevenLabs audio playback)
 - `/analytics` — Charts and metrics
 - `/integrations` — Platform integrations
-- `/billing` — Subscription and usage
+- `/billing` — Pricing plans ($299/$799/$1,999/Custom), Stripe checkout, subscription management
 - `/settings` — Profile and org settings
 - `/help` — Knowledge base and support tickets
 
@@ -119,5 +125,18 @@ Dark theme by default (charcoal). CSS variables in `artifacts/nexus-hr/src/index
 - `AI_INTEGRATIONS_ANTHROPIC_API_KEY` — Anthropic proxy API key (primary AI)
 - `AI_INTEGRATIONS_OPENAI_BASE_URL` — OpenAI proxy URL (fallback)
 - `AI_INTEGRATIONS_OPENAI_API_KEY` — OpenAI proxy API key (fallback)
+- `ELEVENLABS_API_KEY` — ElevenLabs TTS (optional; graceful fallback when not set)
+- `STRIPE_SECRET_KEY` — Stripe billing (optional; falls back to direct DB activation)
+- `STRIPE_WEBHOOK_SECRET` — Stripe webhook verification (optional)
+
+## Phase 1 Status (Complete)
+
+All 6 Phase 1 gaps closed:
+1. 20 integration tools seeded in tool_registry
+2. ElevenLabs TTS wired into conversations and interviews with audio playback UI
+3. Avatar customization (DiceBear API, 12 styles) + voice selection in hiring flow
+4. Self-serve onboarding wizard at /onboarding (4-step flow with localStorage tracking)
+5. Stripe billing checkout flows (checkout, portal, webhook, plans endpoints)
+6. Plan pricing display on billing page ($299/$799/$1,999/Custom with annual toggle)
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

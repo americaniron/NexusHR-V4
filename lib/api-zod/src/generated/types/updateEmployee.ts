@@ -13,5 +13,7 @@ export interface UpdateEmployee {
   team?: string;
   status?: string;
   personality?: UpdateEmployeePersonality;
+  avatarUrl?: string;
+  voiceId?: string;
   customInstructions?: string;
 }

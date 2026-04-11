@@ -19,6 +19,7 @@ export interface Employee {
   status: string;
   personality?: EmployeePersonality;
   customInstructions?: string | null;
+  voiceId?: string | null;
   hiredAt: string;
   role?: Role;
 }

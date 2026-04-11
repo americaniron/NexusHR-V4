@@ -5,9 +5,11 @@ import { eq, and, sql, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
 import { chatCompletion } from "../lib/ai";
+import { textToSpeech } from "../lib/elevenlabs";
 import { z } from "zod/v4";
 import { validate, paginationQuery, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -128,8 +130,20 @@ Be helpful, professional, and demonstrate expertise in your role. Keep responses
 
     const aiResponse = await chatCompletion(chatMessages);
 
+    let audioUrl: string | null = null;
+    if (process.env.ELEVENLABS_API_KEY) {
+      try {
+        const voiceId = emp?.voiceId || "21m00Tcm4TlvDq8ikWAM";
+        const audioBuffer = await textToSpeech(aiResponse.slice(0, 5000), { voiceId });
+        const base64Audio = audioBuffer.toString("base64");
+        audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
+      } catch (ttsErr) {
+        logger.warn({ err: ttsErr }, "TTS generation failed, continuing without audio");
+      }
+    }
+
     const [aiMsg] = await db.insert(messages).values({
-      conversationId: convId, role: "assistant", content: aiResponse,
+      conversationId: convId, role: "assistant", content: aiResponse, audioUrl,
     }).returning();
 
     await db.update(conversations).set({ lastMessageAt: new Date() }).where(eq(conversations.id, convId));

@@ -1,39 +1,65 @@
-import { useGetRole, useHireEmployee } from "@workspace/api-client-react";
-import { useParams, Link } from "wouter";
+import { useGetRole, useHireEmployee, useListVoices } from "@workspace/api-client-react";
+import { useParams, Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CheckCircle2, Zap, Briefcase, Star, Cpu, DollarSign } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Zap, Briefcase, Star, Cpu, DollarSign, User, Volume2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+const AVATAR_STYLES = [
+  "adventurer", "adventurer-neutral", "avataaars", "big-ears",
+  "bottts", "croodles", "fun-emoji", "lorelei",
+  "micah", "miniavs", "notionists", "personas",
+];
+
+function generateAvatarUrl(seed: string, style: string) {
+  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+}
 
 export default function MarketplaceDetailPage() {
   const params = useParams();
   const id = parseInt(params.id || "0", 10);
   const { data: role, isLoading } = useGetRole(id);
+  const { data: voicesData } = useListVoices();
   const hireMutation = useHireEmployee();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [isHiring, setIsHiring] = useState(false);
+  const [showCustomize, setShowCustomize] = useState(false);
+  const [employeeName, setEmployeeName] = useState("");
+  const [selectedStyle, setSelectedStyle] = useState("avataaars");
+  const [avatarSeed, setAvatarSeed] = useState("");
+  const [selectedVoiceId, setSelectedVoiceId] = useState("");
 
   const handleHire = async () => {
     if (!role) return;
     setIsHiring(true);
     try {
+      const name = employeeName.trim() || `${role.title} Alpha`;
+      const avatarUrl = avatarSeed
+        ? generateAvatarUrl(avatarSeed || name, selectedStyle)
+        : undefined;
+
       await hireMutation.mutateAsync({
         data: {
           roleId: role.id,
-          name: `${role.title} Alpha`,
+          name,
           department: role.department,
+          ...(avatarUrl ? { avatarUrl } : {}),
+          ...(selectedVoiceId ? { voiceId: selectedVoiceId } : {}),
         }
       });
       toast({
         title: "Agent Hired Successfully",
-        description: `${role.title} has been deployed to your workspace.`,
+        description: `${name} has been deployed to your workspace.`,
       });
-      // In a real app, might redirect to /team here
-    } catch (error) {
+      navigate("/team");
+    } catch {
       toast({
         title: "Failed to hire agent",
         description: "Please try again later.",
@@ -65,6 +91,10 @@ export default function MarketplaceDetailPage() {
     return <div>Role not found</div>;
   }
 
+  const previewAvatarUrl = avatarSeed
+    ? generateAvatarUrl(avatarSeed || employeeName || role.title, selectedStyle)
+    : role.avatarUrl;
+
   return (
     <div className="space-y-6 pb-12">
       <Link href="/marketplace" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -74,10 +104,9 @@ export default function MarketplaceDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          {/* Header Profile */}
           <div className="flex flex-col md:flex-row gap-6 items-start md:items-center bg-card p-6 rounded-xl border border-border shadow-sm">
             <Avatar className="h-24 w-24 border-2 border-primary/20 shadow-md">
-              <AvatarImage src={role.avatarUrl || undefined} />
+              <AvatarImage src={previewAvatarUrl || undefined} />
               <AvatarFallback className="bg-primary/10 text-primary text-xl">
                 <Zap className="h-10 w-10" />
               </AvatarFallback>
@@ -92,7 +121,6 @@ export default function MarketplaceDetailPage() {
             </div>
           </div>
 
-          {/* Capabilities */}
           <div className="grid md:grid-cols-2 gap-6">
             <Card className="bg-card border-border">
               <CardHeader>
@@ -140,7 +168,6 @@ export default function MarketplaceDetailPage() {
           </div>
         </div>
 
-        {/* Sidebar Actions */}
         <div className="space-y-6">
           <Card className="bg-card border-primary/20 shadow-md sticky top-6">
             <CardContent className="p-6 space-y-6">
@@ -171,18 +198,85 @@ export default function MarketplaceDetailPage() {
                 )}
               </div>
 
-              <div className="pt-4 space-y-3">
-                <Button 
-                  className="w-full text-base h-12 shadow-sm" 
-                  onClick={handleHire}
-                  disabled={isHiring}
-                >
-                  {isHiring ? "Deploying..." : "Hire & Deploy Agent"}
-                </Button>
-                <Button variant="outline" className="w-full h-12 bg-background">
-                  Conduct Interview First
-                </Button>
-              </div>
+              {!showCustomize ? (
+                <div className="pt-4 space-y-3">
+                  <Button
+                    className="w-full text-base h-12 shadow-sm"
+                    onClick={() => setShowCustomize(true)}
+                  >
+                    Customize & Hire
+                  </Button>
+                  <Button variant="outline" className="w-full h-12 bg-background" onClick={handleHire} disabled={isHiring}>
+                    {isHiring ? "Deploying..." : "Quick Hire (Default Settings)"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="pt-4 space-y-4 border-t border-border">
+                  <h4 className="font-semibold text-sm flex items-center gap-2">
+                    <User className="h-4 w-4 text-primary" /> Customize Your AI Employee
+                  </h4>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Employee Name</Label>
+                    <Input
+                      value={employeeName}
+                      onChange={(e) => {
+                        setEmployeeName(e.target.value);
+                        if (!avatarSeed) setAvatarSeed(e.target.value);
+                      }}
+                      placeholder={`${role.title} Alpha`}
+                      className="h-9"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Avatar Style</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {AVATAR_STYLES.map((style) => (
+                        <button
+                          key={style}
+                          onClick={() => { setSelectedStyle(style); if (!avatarSeed) setAvatarSeed(employeeName || role.title); }}
+                          className={`rounded-lg border p-1 transition-all ${selectedStyle === style ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground"}`}
+                        >
+                          <img
+                            src={generateAvatarUrl(employeeName || role.title, style)}
+                            alt={style}
+                            className="w-full h-auto rounded"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {voicesData?.data && voicesData.data.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Volume2 className="h-3 w-3" /> Voice
+                      </Label>
+                      <select
+                        value={selectedVoiceId}
+                        onChange={(e) => setSelectedVoiceId(e.target.value)}
+                        className="w-full h-9 px-3 rounded-md border border-border bg-background text-sm text-foreground"
+                      >
+                        <option value="">Default Voice</option>
+                        {voicesData.data.map((v: any) => (
+                          <option key={v.voice_id} value={v.voice_id}>
+                            {v.name}{v.gender ? ` (${v.gender})` : ""}{v.accent ? ` - ${v.accent}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <Button
+                    className="w-full text-base h-12 shadow-sm"
+                    onClick={handleHire}
+                    disabled={isHiring}
+                  >
+                    {isHiring ? "Deploying..." : "Hire & Deploy Agent"}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 

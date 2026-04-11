@@ -246,12 +246,13 @@ export const ListEmployeesResponse = zod.object({
       orgId: zod.number(),
       roleId: zod.number(),
       name: zod.string(),
-      avatarUrl: zod.string().nullish(),
+      avatarUrl: zod.string().url().nullish(),
       department: zod.string().nullish(),
       team: zod.string().nullish(),
       status: zod.string(),
       personality: zod.object({}).passthrough().nullish(),
       customInstructions: zod.string().nullish(),
+      voiceId: zod.string().nullish(),
       hiredAt: zod.string(),
       role: zod
         .object({
@@ -293,6 +294,8 @@ export const HireEmployeeBody = zod.object({
   team: zod.string().optional(),
   personality: zod.object({}).passthrough().optional(),
   customInstructions: zod.string().optional(),
+  avatarUrl: zod.string().url().optional(),
+  voiceId: zod.string().optional(),
 });
 
 /**
@@ -307,12 +310,13 @@ export const GetEmployeeResponse = zod.object({
   orgId: zod.number(),
   roleId: zod.number(),
   name: zod.string(),
-  avatarUrl: zod.string().nullish(),
+  avatarUrl: zod.string().url().nullish(),
   department: zod.string().nullish(),
   team: zod.string().nullish(),
   status: zod.string(),
   personality: zod.object({}).passthrough().nullish(),
   customInstructions: zod.string().nullish(),
+  voiceId: zod.string().nullish(),
   hiredAt: zod.string(),
   role: zod
     .object({
@@ -349,6 +353,8 @@ export const UpdateEmployeeBody = zod.object({
   team: zod.string().optional(),
   status: zod.string().optional(),
   personality: zod.object({}).passthrough().optional(),
+  avatarUrl: zod.string().url().optional(),
+  voiceId: zod.string().optional(),
   customInstructions: zod.string().optional(),
 });
 
@@ -357,12 +363,13 @@ export const UpdateEmployeeResponse = zod.object({
   orgId: zod.number(),
   roleId: zod.number(),
   name: zod.string(),
-  avatarUrl: zod.string().nullish(),
+  avatarUrl: zod.string().url().nullish(),
   department: zod.string().nullish(),
   team: zod.string().nullish(),
   status: zod.string(),
   personality: zod.object({}).passthrough().nullish(),
   customInstructions: zod.string().nullish(),
+  voiceId: zod.string().nullish(),
   hiredAt: zod.string(),
   role: zod
     .object({
@@ -398,12 +405,13 @@ export const DeactivateEmployeeResponse = zod.object({
   orgId: zod.number(),
   roleId: zod.number(),
   name: zod.string(),
-  avatarUrl: zod.string().nullish(),
+  avatarUrl: zod.string().url().nullish(),
   department: zod.string().nullish(),
   team: zod.string().nullish(),
   status: zod.string(),
   personality: zod.object({}).passthrough().nullish(),
   customInstructions: zod.string().nullish(),
+  voiceId: zod.string().nullish(),
   hiredAt: zod.string(),
   role: zod
     .object({
@@ -520,12 +528,13 @@ export const ListTasksResponse = zod.object({
           orgId: zod.number(),
           roleId: zod.number(),
           name: zod.string(),
-          avatarUrl: zod.string().nullish(),
+          avatarUrl: zod.string().url().nullish(),
           department: zod.string().nullish(),
           team: zod.string().nullish(),
           status: zod.string(),
           personality: zod.object({}).passthrough().nullish(),
           customInstructions: zod.string().nullish(),
+          voiceId: zod.string().nullish(),
           hiredAt: zod.string(),
           role: zod
             .object({
@@ -596,12 +605,13 @@ export const GetTaskResponse = zod.object({
       orgId: zod.number(),
       roleId: zod.number(),
       name: zod.string(),
-      avatarUrl: zod.string().nullish(),
+      avatarUrl: zod.string().url().nullish(),
       department: zod.string().nullish(),
       team: zod.string().nullish(),
       status: zod.string(),
       personality: zod.object({}).passthrough().nullish(),
       customInstructions: zod.string().nullish(),
+      voiceId: zod.string().nullish(),
       hiredAt: zod.string(),
       role: zod
         .object({
@@ -661,12 +671,13 @@ export const UpdateTaskResponse = zod.object({
       orgId: zod.number(),
       roleId: zod.number(),
       name: zod.string(),
-      avatarUrl: zod.string().nullish(),
+      avatarUrl: zod.string().url().nullish(),
       department: zod.string().nullish(),
       team: zod.string().nullish(),
       status: zod.string(),
       personality: zod.object({}).passthrough().nullish(),
       customInstructions: zod.string().nullish(),
+      voiceId: zod.string().nullish(),
       hiredAt: zod.string(),
       role: zod
         .object({
@@ -801,12 +812,13 @@ export const ListConversationsResponse = zod.object({
           orgId: zod.number(),
           roleId: zod.number(),
           name: zod.string(),
-          avatarUrl: zod.string().nullish(),
+          avatarUrl: zod.string().url().nullish(),
           department: zod.string().nullish(),
           team: zod.string().nullish(),
           status: zod.string(),
           personality: zod.object({}).passthrough().nullish(),
           customInstructions: zod.string().nullish(),
+          voiceId: zod.string().nullish(),
           hiredAt: zod.string(),
           role: zod
             .object({
@@ -875,12 +887,13 @@ export const GetConversationResponse = zod.object({
       orgId: zod.number(),
       roleId: zod.number(),
       name: zod.string(),
-      avatarUrl: zod.string().nullish(),
+      avatarUrl: zod.string().url().nullish(),
       department: zod.string().nullish(),
       team: zod.string().nullish(),
       status: zod.string(),
       personality: zod.object({}).passthrough().nullish(),
       customInstructions: zod.string().nullish(),
+      voiceId: zod.string().nullish(),
       hiredAt: zod.string(),
       role: zod
         .object({
@@ -981,6 +994,22 @@ export const DisconnectIntegrationResponse = zod.object({
 });
 
 /**
+ * @summary Get available billing plans with pricing
+ */
+export const GetBillingPlansResponse = zod.object({
+  data: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      description: zod.string(),
+      monthly: zod.number(),
+      annual: zod.number(),
+      limits: zod.record(zod.string(), zod.number()),
+    }),
+  ),
+});
+
+/**
  * @summary Get current subscription
  */
 export const GetSubscriptionResponse = zod.object({
@@ -1006,6 +1035,60 @@ export const GetUsageSummaryResponse = zod.object({
       percentage: zod.number(),
     }),
   ),
+});
+
+/**
+ * @summary Create a checkout session for plan upgrade
+ */
+export const createCheckoutBodyBillingCycleDefault = `monthly`;
+
+export const CreateCheckoutBody = zod.object({
+  plan: zod.enum(["starter", "growth", "business", "enterprise"]),
+  billingCycle: zod
+    .enum(["monthly", "annual"])
+    .default(createCheckoutBodyBillingCycleDefault),
+});
+
+export const CreateCheckoutResponse = zod.object({
+  type: zod.string(),
+  url: zod.string().nullish(),
+  message: zod.string().nullish(),
+  subscription: zod
+    .object({
+      id: zod.number(),
+      plan: zod.string(),
+      billingCycle: zod.string().nullish(),
+      status: zod.string(),
+      currentPeriodStart: zod.string().nullish(),
+      currentPeriodEnd: zod.string().nullish(),
+      trialEndsAt: zod.string().nullish(),
+      allocations: zod.object({}).passthrough().nullish(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Create Stripe billing portal session
+ */
+export const CreateBillingPortalResponse = zod.object({
+  url: zod.string(),
+});
+
+/**
+ * @summary List available AI voices
+ */
+export const ListVoicesResponse = zod.object({
+  data: zod.array(
+    zod.object({
+      voice_id: zod.string(),
+      name: zod.string(),
+      category: zod.string().nullish(),
+      gender: zod.string().nullish(),
+      accent: zod.string().nullish(),
+      preview_url: zod.string().nullish(),
+    }),
+  ),
+  source: zod.string(),
 });
 
 /**
