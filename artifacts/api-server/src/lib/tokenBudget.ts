@@ -107,6 +107,32 @@ export function allocateTokenBudget(
     criticalUsed += tokens;
   }
 
+  if (criticalUsed >= totalBudget) {
+    for (const layer of [...highLayers, ...mediumLayers, ...lowLayers]) {
+      allocations.push({
+        layer,
+        allocated: 0,
+        used: 0,
+        truncated: true,
+        originalTokens: tokenCounts[layer],
+      });
+      truncations.push({
+        layer,
+        from: tokenCounts[layer],
+        to: 0,
+        strategy: "dropped_budget_exhausted",
+      });
+    }
+
+    return {
+      allocations,
+      totalUsed: criticalUsed,
+      totalBudget,
+      overBudget: criticalUsed > totalBudget,
+      truncations,
+    };
+  }
+
   let remaining = totalBudget - criticalUsed;
 
   const truncatableGroups = [highLayers, mediumLayers, lowLayers];
@@ -119,15 +145,12 @@ export function allocateTokenBudget(
       if (remaining <= 0) {
         allocations.push({
           layer,
-          allocated: p.minTokens,
-          used: Math.min(rawTokens, p.minTokens),
-          truncated: rawTokens > p.minTokens,
+          allocated: 0,
+          used: 0,
+          truncated: true,
           originalTokens: rawTokens,
         });
-        if (rawTokens > p.minTokens) {
-          truncations.push({ layer, from: rawTokens, to: p.minTokens, strategy: p.truncationStrategy });
-        }
-        remaining -= p.minTokens;
+        truncations.push({ layer, from: rawTokens, to: 0, strategy: "dropped_budget_exhausted" });
         continue;
       }
 

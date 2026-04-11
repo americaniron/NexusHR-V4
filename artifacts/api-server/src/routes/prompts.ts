@@ -78,16 +78,22 @@ router.post("/prompts/templates", requireAuth, validate({ body: createTemplateBo
     if (!orgId) throw AppError.forbidden("Organization required");
 
     const variant = req.body.variant || "default";
+    const roleId = req.body.roleId || null;
+
+    const conditions = [
+      eq(promptTemplates.orgId, orgId),
+      eq(promptTemplates.name, req.body.name),
+      eq(promptTemplates.layer, req.body.layer),
+      eq(promptTemplates.variant, variant),
+    ];
+    if (roleId) {
+      conditions.push(eq(promptTemplates.roleId, roleId));
+    }
 
     const existing = await db
       .select()
       .from(promptTemplates)
-      .where(and(
-        eq(promptTemplates.orgId, orgId),
-        eq(promptTemplates.name, req.body.name),
-        eq(promptTemplates.layer, req.body.layer),
-        eq(promptTemplates.variant, variant),
-      ))
+      .where(and(...conditions))
       .orderBy(desc(promptTemplates.version))
       .limit(1);
 
@@ -110,7 +116,7 @@ router.post("/prompts/templates", requireAuth, validate({ body: createTemplateBo
         content: req.body.content,
         variables: req.body.variables || null,
         metadata: req.body.metadata || null,
-        roleId: req.body.roleId || null,
+        roleId,
         variant,
         trafficWeight: req.body.trafficWeight ?? 100,
       })
@@ -147,21 +153,38 @@ router.put("/prompts/templates/:id", requireAuth, validate({ body: updateTemplat
 
     if (!existing) throw AppError.notFound("Template not found");
 
-    const updateData: Record<string, unknown> = { updatedAt: new Date() };
-    if (req.body.content !== undefined) updateData.content = req.body.content;
-    if (req.body.variables !== undefined) updateData.variables = req.body.variables;
-    if (req.body.metadata !== undefined) updateData.metadata = req.body.metadata;
-    if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive;
-    if (req.body.variant !== undefined) updateData.variant = req.body.variant;
-    if (req.body.trafficWeight !== undefined) updateData.trafficWeight = req.body.trafficWeight;
+    if (req.body.isActive !== undefined && !req.body.content) {
+      const [updated] = await db
+        .update(promptTemplates)
+        .set({ isActive: req.body.isActive, updatedAt: new Date() })
+        .where(eq(promptTemplates.id, id))
+        .returning();
+      return res.json(updated);
+    }
 
-    const [updated] = await db
+    await db
       .update(promptTemplates)
-      .set(updateData)
-      .where(eq(promptTemplates.id, id))
+      .set({ isActive: 0, updatedAt: new Date() })
+      .where(eq(promptTemplates.id, id));
+
+    const [newVersion] = await db
+      .insert(promptTemplates)
+      .values({
+        orgId: existing.orgId,
+        name: existing.name,
+        layer: existing.layer,
+        version: existing.version + 1,
+        content: req.body.content || existing.content,
+        variables: req.body.variables !== undefined ? req.body.variables : existing.variables,
+        metadata: req.body.metadata !== undefined ? req.body.metadata : existing.metadata,
+        roleId: existing.roleId,
+        variant: req.body.variant || existing.variant,
+        trafficWeight: req.body.trafficWeight ?? existing.trafficWeight,
+        isActive: 1,
+      })
       .returning();
 
-    res.json(updated);
+    res.json(newVersion);
   } catch (error) {
     next(error);
   }
