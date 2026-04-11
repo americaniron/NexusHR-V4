@@ -37,6 +37,10 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
 ].filter(Boolean) as string[];
 
+if (process.env.NODE_ENV === "production" && !process.env.REPLIT_DEV_DOMAIN && !process.env.REPLIT_DEPLOYMENT_URL) {
+  console.warn("[CORS] No REPLIT_DEV_DOMAIN or REPLIT_DEPLOYMENT_URL set — CORS will reject all cross-origin requests in production");
+}
+
 const allowedHosts = new Set(
   allowedOrigins.map(u => { try { return new URL(u).host; } catch { return null; } }).filter(Boolean)
 );
