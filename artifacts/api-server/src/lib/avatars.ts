@@ -166,7 +166,9 @@ export async function generateAvatar(params: AvatarParams): Promise<AvatarGenera
 
       const baseUrl = process.env.REPLIT_DEV_DOMAIN
         ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : "";
+        : process.env.REPLIT_DOMAINS
+          ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+          : `http://localhost:${process.env.PORT || 8080}`;
       const avatarUrl = `${baseUrl}/api/storage/public-objects/avatars/${objectPath.split("/").pop()}`;
 
       const avatarConfig: AvatarConfig = {

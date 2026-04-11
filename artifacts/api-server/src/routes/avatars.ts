@@ -221,12 +221,18 @@ router.post("/avatars/regenerate/:employeeId", requireAuth, avatarRegenerateLimi
       throw AppError.notFound("Employee not found");
     }
 
+    const [employeeRole] = await db
+      .select({ title: aiEmployeeRoles.title, industry: aiEmployeeRoles.industry, seniorityLevel: aiEmployeeRoles.seniorityLevel })
+      .from(aiEmployeeRoles)
+      .where(eq(aiEmployeeRoles.id, employee.roleId))
+      .limit(1);
+
     const { roleTitle, industry, seniority, gender, ageRange, ethnicity, attireStyle } = req.body || {};
 
     const result = await generateAvatar({
-      roleTitle: roleTitle || employee.name,
-      industry,
-      seniority,
+      roleTitle: roleTitle || employeeRole?.title || employee.name,
+      industry: industry || employeeRole?.industry,
+      seniority: seniority || employeeRole?.seniorityLevel,
       gender,
       ageRange,
       ethnicity,
