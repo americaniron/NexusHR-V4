@@ -1,33 +1,26 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { aiEmployees, aiEmployeeRoles, organizations } from "@workspace/db";
+import { aiEmployees, aiEmployeeRoles } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
-import { getAuth } from "@clerk/express";
+import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
 
 const router = Router();
 
-async function getOrgId(req: any): Promise<number | null> {
-  const auth = getAuth(req);
-  const clerkOrgId = auth?.orgId;
-  if (!clerkOrgId) return null;
-  const [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, clerkOrgId));
-  return org?.id || null;
-}
-
 router.get("/employees", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
-    if (!orgId) return res.json({ data: [], pagination: { page: 1, limit: 12, total: 0, totalPages: 0 } });
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.json(emptyPagination());
 
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 12));
     const offset = (page - 1) * limit;
-    const { status, department } = req.query;
+    const status = req.query.status as string | undefined;
+    const department = req.query.department as string | undefined;
 
-    let conditions: any[] = [eq(aiEmployees.orgId, orgId)];
-    if (status) conditions.push(eq(aiEmployees.status, status as string));
-    if (department) conditions.push(eq(aiEmployees.department, department as string));
+    const conditions = [eq(aiEmployees.orgId, orgId)];
+    if (status) conditions.push(eq(aiEmployees.status, status));
+    if (department) conditions.push(eq(aiEmployees.department, department));
 
     const where = and(...conditions);
     const data = await db.select().from(aiEmployees).where(where).limit(limit).offset(offset);
@@ -49,7 +42,7 @@ router.get("/employees", requireAuth, async (req, res) => {
 
 router.post("/employees", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
+    const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(400).json({ error: "No organization" });
 
     const { roleId, name, department, team, personality, customInstructions } = req.body;
@@ -78,8 +71,11 @@ router.post("/employees", requireAuth, async (req, res) => {
 
 router.get("/employees/:id", requireAuth, async (req, res) => {
   try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+
     const id = parseInt(req.params.id);
-    const [employee] = await db.select().from(aiEmployees).where(eq(aiEmployees.id, id));
+    const [employee] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, id), eq(aiEmployees.orgId, orgId)));
     if (!employee) return res.status(404).json({ error: "Employee not found" });
 
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, employee.roleId));
@@ -91,9 +87,15 @@ router.get("/employees/:id", requireAuth, async (req, res) => {
 
 router.patch("/employees/:id", requireAuth, async (req, res) => {
   try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+
     const id = parseInt(req.params.id);
+    const [existing] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, id), eq(aiEmployees.orgId, orgId)));
+    if (!existing) return res.status(404).json({ error: "Employee not found" });
+
     const { name, department, team, status, personality, customInstructions } = req.body;
-    const updates: any = { updatedAt: new Date() };
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (name) updates.name = name;
     if (department !== undefined) updates.department = department;
     if (team !== undefined) updates.team = team;
@@ -102,8 +104,6 @@ router.patch("/employees/:id", requireAuth, async (req, res) => {
     if (customInstructions !== undefined) updates.customInstructions = customInstructions;
 
     const [updated] = await db.update(aiEmployees).set(updates).where(eq(aiEmployees.id, id)).returning();
-    if (!updated) return res.status(404).json({ error: "Employee not found" });
-
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, updated.roleId));
     res.json({ ...updated, role });
   } catch (error) {
@@ -113,12 +113,17 @@ router.patch("/employees/:id", requireAuth, async (req, res) => {
 
 router.delete("/employees/:id", requireAuth, async (req, res) => {
   try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+
     const id = parseInt(req.params.id);
+    const [existing] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, id), eq(aiEmployees.orgId, orgId)));
+    if (!existing) return res.status(404).json({ error: "Employee not found" });
+
     const [updated] = await db.update(aiEmployees)
       .set({ status: "inactive", updatedAt: new Date() })
       .where(eq(aiEmployees.id, id))
       .returning();
-    if (!updated) return res.status(404).json({ error: "Employee not found" });
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: "Failed to deactivate employee" });

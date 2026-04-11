@@ -40,7 +40,7 @@ router.patch("/organizations/current", requireAuth, async (req, res) => {
     }
 
     const { name, logoUrl, industry, timezone } = req.body;
-    const updates: any = { updatedAt: new Date() };
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (name) updates.name = name;
     if (logoUrl !== undefined) updates.logoUrl = logoUrl;
     if (industry !== undefined) updates.industry = industry;

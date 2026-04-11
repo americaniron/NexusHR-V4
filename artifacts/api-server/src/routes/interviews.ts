@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { interviewSessions, interviewCandidates, interviewMessages, aiEmployeeRoles, organizations, users } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { interviewSessions, interviewCandidates, interviewMessages, aiEmployeeRoles } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
-import { getAuth } from "@clerk/express";
+import { getAuthContext } from "../lib/auth-helpers";
 import { chatCompletion } from "../lib/openai";
 
 const router = Router();
@@ -16,14 +16,8 @@ const CANDIDATE_PERSONALITIES = [
 
 router.post("/interviews", requireAuth, async (req, res) => {
   try {
-    const auth = getAuth(req);
-    const clerkOrgId = auth?.orgId;
-    const clerkUserId = auth?.userId;
-    if (!clerkOrgId || !clerkUserId) return res.status(400).json({ error: "Missing org or user" });
-
-    const [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, clerkOrgId));
-    const [user] = await db.select().from(users).where(eq(users.clerkUserId, clerkUserId));
-    if (!org || !user) return res.status(404).json({ error: "Org or user not found" });
+    const { orgId, userId } = await getAuthContext(req);
+    if (!orgId || !userId) return res.status(400).json({ error: "Missing org or user" });
 
     const { roleId, mode } = req.body;
     if (!roleId) return res.status(400).json({ error: "roleId required" });
@@ -32,10 +26,7 @@ router.post("/interviews", requireAuth, async (req, res) => {
     if (!role) return res.status(404).json({ error: "Role not found" });
 
     const [session] = await db.insert(interviewSessions).values({
-      orgId: org.id,
-      userId: user.id,
-      roleId,
-      mode: mode || "text",
+      orgId, userId, roleId, mode: mode || "text",
     }).returning();
 
     const candidates = [];
@@ -59,8 +50,13 @@ router.post("/interviews", requireAuth, async (req, res) => {
 
 router.get("/interviews/:id", requireAuth, async (req, res) => {
   try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+
     const id = parseInt(req.params.id);
-    const [session] = await db.select().from(interviewSessions).where(eq(interviewSessions.id, id));
+    const [session] = await db.select().from(interviewSessions).where(
+      and(eq(interviewSessions.id, id), eq(interviewSessions.orgId, orgId))
+    );
     if (!session) return res.status(404).json({ error: "Session not found" });
 
     const candidates = await db.select().from(interviewCandidates).where(eq(interviewCandidates.sessionId, id));
@@ -72,11 +68,16 @@ router.get("/interviews/:id", requireAuth, async (req, res) => {
 
 router.post("/interviews/:id/messages", requireAuth, async (req, res) => {
   try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+
     const sessionId = parseInt(req.params.id);
     const { candidateId, content } = req.body;
     if (!candidateId || !content) return res.status(400).json({ error: "candidateId and content required" });
 
-    const [session] = await db.select().from(interviewSessions).where(eq(interviewSessions.id, sessionId));
+    const [session] = await db.select().from(interviewSessions).where(
+      and(eq(interviewSessions.id, sessionId), eq(interviewSessions.orgId, orgId))
+    );
     if (!session) return res.status(404).json({ error: "Session not found" });
 
     const [candidate] = await db.select().from(interviewCandidates).where(eq(interviewCandidates.id, candidateId));
@@ -91,20 +92,20 @@ router.post("/interviews/:id/messages", requireAuth, async (req, res) => {
     const history = await db.select().from(interviewMessages)
       .where(eq(interviewMessages.candidateId, candidateId));
 
-    const personality = candidate.personalityProfile as any;
+    const personality = candidate.personalityProfile as Record<string, unknown>;
     const systemPrompt = `You are ${candidate.candidateName}, an AI candidate interviewing for the role of ${role?.title || "AI Employee"}. 
-Your personality style is ${personality?.style || "balanced"}.
+Your personality style is ${(personality?.style as string) || "balanced"}.
 Role description: ${role?.description || "A professional AI employee"}.
 Be conversational, professional, and demonstrate competence for this role. 
 Answer questions about your capabilities, experience, and approach to work.
 Keep responses concise (2-3 paragraphs max).`;
 
-    const messages = [
+    const chatMessages = [
       { role: "system" as const, content: systemPrompt },
       ...history.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
     ];
 
-    const aiResponse = await chatCompletion(messages);
+    const aiResponse = await chatCompletion(chatMessages);
 
     const [aiMsg] = await db.insert(interviewMessages).values({
       sessionId, candidateId, role: "assistant", content: aiResponse,
@@ -114,8 +115,9 @@ Keep responses concise (2-3 paragraphs max).`;
       userMessage: { id: userMsg.id, content: userMsg.content, role: userMsg.role },
       aiMessage: { id: aiMsg.id, content: aiResponse, role: "assistant", audioUrl: null },
     });
-  } catch (error: any) {
-    res.status(500).json({ error: "Failed to send message: " + (error?.message || "unknown") });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "unknown";
+    res.status(500).json({ error: "Failed to send message: " + message });
   }
 });
 

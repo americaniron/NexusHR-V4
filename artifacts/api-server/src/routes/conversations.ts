@@ -1,27 +1,17 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { conversations, messages, aiEmployees, aiEmployeeRoles, organizations, users } from "@workspace/db";
+import { conversations, messages, aiEmployees, aiEmployeeRoles } from "@workspace/db";
 import { eq, and, sql, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
-import { getAuth } from "@clerk/express";
+import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
 import { chatCompletion } from "../lib/openai";
 
 const router = Router();
 
-async function getOrgAndUser(req: any) {
-  const auth = getAuth(req);
-  const clerkOrgId = auth?.orgId;
-  const clerkUserId = auth?.userId;
-  if (!clerkOrgId || !clerkUserId) return { orgId: null, userId: null };
-  const [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, clerkOrgId));
-  const [user] = await db.select().from(users).where(eq(users.clerkUserId, clerkUserId));
-  return { orgId: org?.id || null, userId: user?.id || null };
-}
-
 router.get("/conversations", requireAuth, async (req, res) => {
   try {
-    const { orgId, userId } = await getOrgAndUser(req);
-    if (!orgId || !userId) return res.json({ data: [], pagination: { page: 1, limit: 12, total: 0, totalPages: 0 } });
+    const { orgId, userId } = await getAuthContext(req);
+    if (!orgId || !userId) return res.json(emptyPagination());
 
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 12));
@@ -51,17 +41,19 @@ router.get("/conversations", requireAuth, async (req, res) => {
 
 router.post("/conversations", requireAuth, async (req, res) => {
   try {
-    const { orgId, userId } = await getOrgAndUser(req);
+    const { orgId, userId } = await getAuthContext(req);
     if (!orgId || !userId) return res.status(400).json({ error: "No org or user" });
 
     const { aiEmployeeId, title } = req.body;
     if (!aiEmployeeId) return res.status(400).json({ error: "aiEmployeeId required" });
 
+    const [emp] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, aiEmployeeId), eq(aiEmployees.orgId, orgId)));
+    if (!emp) return res.status(404).json({ error: "Employee not found in your organization" });
+
     const [conv] = await db.insert(conversations).values({
       orgId, userId, aiEmployeeId, title,
     }).returning();
 
-    const [emp] = await db.select().from(aiEmployees).where(eq(aiEmployees.id, aiEmployeeId));
     res.status(201).json({ ...conv, aiEmployee: emp });
   } catch (error) {
     res.status(500).json({ error: "Failed to create conversation" });
@@ -70,8 +62,13 @@ router.post("/conversations", requireAuth, async (req, res) => {
 
 router.get("/conversations/:id", requireAuth, async (req, res) => {
   try {
+    const { orgId, userId } = await getAuthContext(req);
+    if (!orgId || !userId) return res.status(403).json({ error: "Forbidden" });
+
     const id = parseInt(req.params.id);
-    const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
+    const [conv] = await db.select().from(conversations).where(
+      and(eq(conversations.id, id), eq(conversations.orgId, orgId), eq(conversations.userId, userId))
+    );
     if (!conv) return res.status(404).json({ error: "Conversation not found" });
 
     const msgs = await db.select().from(messages).where(eq(messages.conversationId, id));
@@ -89,15 +86,20 @@ router.get("/conversations/:id", requireAuth, async (req, res) => {
 
 router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
   try {
+    const { orgId, userId } = await getAuthContext(req);
+    if (!orgId || !userId) return res.status(403).json({ error: "Forbidden" });
+
     const convId = parseInt(req.params.id);
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: "content required" });
 
-    const [conv] = await db.select().from(conversations).where(eq(conversations.id, convId));
+    const [conv] = await db.select().from(conversations).where(
+      and(eq(conversations.id, convId), eq(conversations.orgId, orgId), eq(conversations.userId, userId))
+    );
     if (!conv) return res.status(404).json({ error: "Conversation not found" });
 
     const [emp] = await db.select().from(aiEmployees).where(eq(aiEmployees.id, conv.aiEmployeeId));
-    const [role] = emp ? await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, emp.roleId)) : [null];
+    const role = emp ? (await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, emp.roleId)))[0] : null;
 
     const [userMsg] = await db.insert(messages).values({
       conversationId: convId, role: "user", content,
@@ -122,12 +124,10 @@ Be helpful, professional, and demonstrate expertise in your role. Keep responses
 
     await db.update(conversations).set({ lastMessageAt: new Date() }).where(eq(conversations.id, convId));
 
-    res.json({
-      userMessage: userMsg,
-      aiMessage: aiMsg,
-    });
-  } catch (error: any) {
-    res.status(500).json({ error: "Failed to send message: " + (error?.message || "unknown") });
+    res.json({ userMessage: userMsg, aiMessage: aiMsg });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "unknown";
+    res.status(500).json({ error: "Failed to send message: " + message });
   }
 });
 

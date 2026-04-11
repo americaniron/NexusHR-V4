@@ -1,34 +1,28 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { tasks, aiEmployees, aiEmployeeRoles, organizations } from "@workspace/db";
+import { tasks, aiEmployees, aiEmployeeRoles } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
-import { getAuth } from "@clerk/express";
+import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
 
 const router = Router();
 
-async function getOrgId(req: any): Promise<number | null> {
-  const auth = getAuth(req);
-  const clerkOrgId = auth?.orgId;
-  if (!clerkOrgId) return null;
-  const [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, clerkOrgId));
-  return org?.id || null;
-}
-
 router.get("/tasks", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
-    if (!orgId) return res.json({ data: [], pagination: { page: 1, limit: 12, total: 0, totalPages: 0 } });
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.json(emptyPagination());
 
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 12));
     const offset = (page - 1) * limit;
-    const { status, assigneeId, priority } = req.query;
+    const status = req.query.status as string | undefined;
+    const assigneeId = req.query.assigneeId as string | undefined;
+    const priority = req.query.priority as string | undefined;
 
-    let conditions: any[] = [eq(tasks.orgId, orgId)];
-    if (status) conditions.push(eq(tasks.status, status as string));
-    if (assigneeId) conditions.push(eq(tasks.assigneeId, parseInt(assigneeId as string)));
-    if (priority) conditions.push(eq(tasks.priority, priority as string));
+    const conditions = [eq(tasks.orgId, orgId)];
+    if (status) conditions.push(eq(tasks.status, status));
+    if (assigneeId) conditions.push(eq(tasks.assigneeId, parseInt(assigneeId)));
+    if (priority) conditions.push(eq(tasks.priority, priority));
 
     const where = and(...conditions);
     const data = await db.select().from(tasks).where(where).limit(limit).offset(offset);
@@ -56,7 +50,7 @@ router.get("/tasks", requireAuth, async (req, res) => {
 
 router.post("/tasks", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
+    const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(400).json({ error: "No organization" });
 
     const { title, description, assigneeId, priority, category, dueDate } = req.body;
@@ -80,8 +74,11 @@ router.post("/tasks", requireAuth, async (req, res) => {
 
 router.get("/tasks/:id", requireAuth, async (req, res) => {
   try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+
     const id = parseInt(req.params.id);
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    const [task] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
     if (!task) return res.status(404).json({ error: "Task not found" });
     res.json(task);
   } catch (error) {
@@ -91,25 +88,46 @@ router.get("/tasks/:id", requireAuth, async (req, res) => {
 
 router.patch("/tasks/:id", requireAuth, async (req, res) => {
   try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+
     const id = parseInt(req.params.id);
+    const [existing] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
+    if (!existing) return res.status(404).json({ error: "Task not found" });
+
     const { title, description, assigneeId, status, priority, deliverable } = req.body;
-    const updates: any = { updatedAt: new Date() };
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (title) updates.title = title;
     if (description !== undefined) updates.description = description;
     if (assigneeId !== undefined) updates.assigneeId = assigneeId;
     if (status) {
       updates.status = status;
-      if (status === "in_progress" && !updates.startedAt) updates.startedAt = new Date();
+      if (status === "in_progress" && !existing.startedAt) updates.startedAt = new Date();
       if (status === "completed") updates.completedAt = new Date();
     }
     if (priority) updates.priority = priority;
     if (deliverable !== undefined) updates.deliverable = deliverable;
 
     const [updated] = await db.update(tasks).set(updates).where(eq(tasks.id, id)).returning();
-    if (!updated) return res.status(404).json({ error: "Task not found" });
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: "Failed to update task" });
+  }
+});
+
+router.delete("/tasks/:id", requireAuth, async (req, res) => {
+  try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+
+    const id = parseInt(req.params.id);
+    const [existing] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
+    if (!existing) return res.status(404).json({ error: "Task not found" });
+
+    await db.delete(tasks).where(eq(tasks.id, id));
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete task" });
   }
 });
 

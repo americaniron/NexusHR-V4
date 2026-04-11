@@ -33,9 +33,9 @@ router.get("/users/me", requireAuth, async (req, res) => {
       [user] = await db.insert(users).values({
         clerkUserId,
         orgId: dbOrgId,
-        email: (auth as any)?.sessionClaims?.email || "user@example.com",
-        firstName: (auth as any)?.sessionClaims?.firstName || null,
-        lastName: (auth as any)?.sessionClaims?.lastName || null,
+        email: "user@example.com",
+        firstName: null,
+        lastName: null,
       }).returning();
     }
 
@@ -53,13 +53,16 @@ router.get("/users", requireAuth, async (req, res) => {
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 12));
     const offset = (page - 1) * limit;
 
-    let conditions: any[] = [];
-    if (orgId) {
-      const [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, orgId));
-      if (org) conditions.push(eq(users.orgId, org.id));
+    if (!orgId) {
+      return res.json({ data: [], pagination: { page, limit, total: 0, totalPages: 0 } });
     }
 
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, orgId));
+    if (!org) {
+      return res.json({ data: [], pagination: { page, limit, total: 0, totalPages: 0 } });
+    }
+
+    const where = eq(users.orgId, org.id);
     const data = await db.select().from(users).where(where).limit(limit).offset(offset);
     const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(users).where(where);
 

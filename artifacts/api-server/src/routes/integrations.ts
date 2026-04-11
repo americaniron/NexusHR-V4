@@ -1,23 +1,15 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { toolRegistry, integrations, organizations } from "@workspace/db";
+import { toolRegistry, integrations } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
-import { getAuth } from "@clerk/express";
+import { getAuthContext } from "../lib/auth-helpers";
 
 const router = Router();
 
-async function getOrgId(req: any): Promise<number | null> {
-  const auth = getAuth(req);
-  const clerkOrgId = auth?.orgId;
-  if (!clerkOrgId) return null;
-  const [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, clerkOrgId));
-  return org?.id || null;
-}
-
 router.get("/integrations", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
+    const { orgId } = await getAuthContext(req);
     const tools = await db.select().from(toolRegistry).where(eq(toolRegistry.isActive, 1));
 
     const data = await Promise.all(tools.map(async (tool) => {
@@ -51,7 +43,7 @@ router.get("/integrations", requireAuth, async (req, res) => {
 
 router.post("/integrations/:toolId/connect", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
+    const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(400).json({ error: "No organization" });
 
     const toolId = parseInt(req.params.toolId);
@@ -78,7 +70,7 @@ router.post("/integrations/:toolId/connect", requireAuth, async (req, res) => {
 
 router.post("/integrations/:toolId/disconnect", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
+    const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(400).json({ error: "No organization" });
 
     const toolId = parseInt(req.params.toolId);

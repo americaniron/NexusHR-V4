@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { billingSubscriptions, usageEvents, organizations } from "@workspace/db";
+import { billingSubscriptions, usageEvents } from "@workspace/db";
 import { eq, and, sql, gte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
-import { getAuth } from "@clerk/express";
+import { getAuthContext } from "../lib/auth-helpers";
 
 const router = Router();
 
@@ -15,17 +15,9 @@ const PLAN_LIMITS: Record<string, Record<string, number>> = {
   enterprise: { ai_employees: 999999, voice_hours: 999999, messages: 999999, workflows: 999999, tasks: 999999, integrations: 999, storage_gb: 999999, users: 999999 },
 };
 
-async function getOrgId(req: any): Promise<number | null> {
-  const auth = getAuth(req);
-  const clerkOrgId = auth?.orgId;
-  if (!clerkOrgId) return null;
-  const [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, clerkOrgId));
-  return org?.id || null;
-}
-
 router.get("/billing/subscription", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
+    const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(404).json({ error: "No organization" });
 
     let [sub] = await db.select().from(billingSubscriptions).where(eq(billingSubscriptions.orgId, orgId));
@@ -50,7 +42,7 @@ router.get("/billing/subscription", requireAuth, async (req, res) => {
 
 router.get("/billing/usage", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
+    const { orgId } = await getAuthContext(req);
     if (!orgId) return res.json({ dimensions: [] });
 
     const [sub] = await db.select().from(billingSubscriptions).where(eq(billingSubscriptions.orgId, orgId));

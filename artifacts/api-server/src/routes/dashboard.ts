@@ -1,23 +1,15 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { aiEmployees, tasks, organizations, notifications } from "@workspace/db";
+import { aiEmployees, tasks } from "@workspace/db";
 import { eq, and, sql, gte, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
-import { getAuth } from "@clerk/express";
+import { getAuthContext } from "../lib/auth-helpers";
 
 const router = Router();
 
-async function getOrgId(req: any): Promise<number | null> {
-  const auth = getAuth(req);
-  const clerkOrgId = auth?.orgId;
-  if (!clerkOrgId) return null;
-  const [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, clerkOrgId));
-  return org?.id || null;
-}
-
 router.get("/dashboard/summary", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
+    const { orgId } = await getAuthContext(req);
     if (!orgId) {
       return res.json({
         totalEmployees: 0, activeTasks: 0, completedThisMonth: 0, utilizationPercent: 0,
@@ -66,7 +58,7 @@ router.get("/dashboard/summary", requireAuth, async (req, res) => {
 
 router.get("/dashboard/activity", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
+    const { orgId } = await getAuthContext(req);
     const limit = Math.min(20, parseInt(req.query.limit as string) || 10);
 
     if (!orgId) return res.json({ data: [] });
@@ -92,12 +84,12 @@ router.get("/dashboard/activity", requireAuth, async (req, res) => {
 
 router.get("/analytics/overview", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
+    const { orgId } = await getAuthContext(req);
     if (!orgId) {
       return res.json({ tasksOverTime: [], utilizationByDepartment: [], taskDistribution: [], topPerformers: [] });
     }
 
-    const tasksOverTime: any[] = [];
+    const tasksOverTime: Array<{ date: string; completed: number; created: number }> = [];
     for (let i = 29; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);

@@ -1,31 +1,24 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { workflows, workflowSteps, organizations } from "@workspace/db";
+import { workflows, workflowSteps } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
-import { getAuth } from "@clerk/express";
+import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
 
 const router = Router();
 
-async function getOrgId(req: any): Promise<number | null> {
-  const auth = getAuth(req);
-  const clerkOrgId = auth?.orgId;
-  if (!clerkOrgId) return null;
-  const [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, clerkOrgId));
-  return org?.id || null;
-}
-
 router.get("/workflows", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
-    if (!orgId) return res.json({ data: [], pagination: { page: 1, limit: 12, total: 0, totalPages: 0 } });
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.json(emptyPagination());
 
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 12));
     const offset = (page - 1) * limit;
 
-    const data = await db.select().from(workflows).where(eq(workflows.orgId, orgId)).limit(limit).offset(offset);
-    const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(workflows).where(eq(workflows.orgId, orgId));
+    const where = eq(workflows.orgId, orgId);
+    const data = await db.select().from(workflows).where(where).limit(limit).offset(offset);
+    const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(workflows).where(where);
 
     const enriched = await Promise.all(data.map(async (wf) => {
       const steps = await db.select().from(workflowSteps).where(eq(workflowSteps.workflowId, wf.id));
@@ -43,7 +36,7 @@ router.get("/workflows", requireAuth, async (req, res) => {
 
 router.post("/workflows", requireAuth, async (req, res) => {
   try {
-    const orgId = await getOrgId(req);
+    const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(400).json({ error: "No organization" });
 
     const { name, description, triggerType } = req.body;
@@ -61,8 +54,11 @@ router.post("/workflows", requireAuth, async (req, res) => {
 
 router.get("/workflows/:id", requireAuth, async (req, res) => {
   try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+
     const id = parseInt(req.params.id);
-    const [workflow] = await db.select().from(workflows).where(eq(workflows.id, id));
+    const [workflow] = await db.select().from(workflows).where(and(eq(workflows.id, id), eq(workflows.orgId, orgId)));
     if (!workflow) return res.status(404).json({ error: "Workflow not found" });
 
     const steps = await db.select().from(workflowSteps).where(eq(workflowSteps.workflowId, id));
@@ -74,18 +70,40 @@ router.get("/workflows/:id", requireAuth, async (req, res) => {
 
 router.patch("/workflows/:id", requireAuth, async (req, res) => {
   try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+
     const id = parseInt(req.params.id);
+    const [existing] = await db.select().from(workflows).where(and(eq(workflows.id, id), eq(workflows.orgId, orgId)));
+    if (!existing) return res.status(404).json({ error: "Workflow not found" });
+
     const { name, description, status } = req.body;
-    const updates: any = { updatedAt: new Date() };
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (name) updates.name = name;
     if (description !== undefined) updates.description = description;
     if (status) updates.status = status;
 
     const [updated] = await db.update(workflows).set(updates).where(eq(workflows.id, id)).returning();
-    if (!updated) return res.status(404).json({ error: "Workflow not found" });
     res.json({ ...updated, steps: [] });
   } catch (error) {
     res.status(500).json({ error: "Failed to update workflow" });
+  }
+});
+
+router.delete("/workflows/:id", requireAuth, async (req, res) => {
+  try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+
+    const id = parseInt(req.params.id);
+    const [existing] = await db.select().from(workflows).where(and(eq(workflows.id, id), eq(workflows.orgId, orgId)));
+    if (!existing) return res.status(404).json({ error: "Workflow not found" });
+
+    await db.delete(workflowSteps).where(eq(workflowSteps.workflowId, id));
+    await db.delete(workflows).where(eq(workflows.id, id));
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete workflow" });
   }
 });
 
