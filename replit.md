@@ -49,6 +49,7 @@ NexsusHR is a production-grade AI workforce management platform. Businesses hire
 - `billing` — subscription plans (trial/starter/growth/business/enterprise) and usage tracking
 - `support` — support tickets and knowledge base articles
 - `notifications` — user notifications
+- `relational-memory` — AI employee relational memories (preferences, context, interaction patterns)
 
 ## Production Hardening
 
@@ -95,6 +96,7 @@ NexsusHR is a production-grade AI workforce management platform. Businesses hire
 - `/marketplace` — AI role catalog with filtering
 - `/marketplace/:id` — Role detail with avatar picker, voice selection, and hire CTA
 - `/team` — Hired AI employees management
+- `/team/:id` — Employee detail with personality config, activity, settings tabs
 - `/tasks` — Task management
 - `/workflows` — Workflow automation
 - `/conversations` — Chat with AI employees (ElevenLabs audio playback)
@@ -181,5 +183,28 @@ All Phase 1 requirements verified complete:
 - **Conversations Page**: Voice Mode toggle in chat header, push-to-talk mic button, avatar state indicators during voice interaction
 - **CSS Animations**: `animate-avatar-speaking`, `animate-avatar-thinking`, `animate-avatar-listening`, `animate-waveform-bar`, `animate-thinking-dot`
 - **Rate Limits**: synthesize 20/min, transcribe 15/min
+
+## Phase 4: AI Personality Engine (Complete)
+
+- **7-Axis Personality System**: warmth, formality, assertiveness, energy, empathy, detailOrientation, humor — each 0..1 continuous scale
+- **Personality Engine** (`personalityEngine.ts`): Axis definitions, presets (8 types: analytical-expert, warm-counselor, direct-leader, creative-collaborator, executive-strategist, supportive-mentor, compliance-officer, friendly-assistant), communication style mapper, prompt generator, preview text generator
+- **Dynamic Tone Controller** (`toneController.ts`): Real-time sentiment analysis of user messages (positive/neutral/negative/frustrated), urgency-based tone adjustment, interaction-count familiarity scaling, voice parameter offsets
+- **Culture Alignment** (`cultureAlignment.ts`): Organization-level culture profile (formality baseline, industry terminology, values emphasis, communication norms, tone preference), culture-aware prompt generation, validation
+- **Priority Intelligence** (`priorityIntelligence.ts`): Task queue scoring (priority + deadline + org matrix), urgency assessment (low/medium/high/critical), SLA awareness, role-specific priority weighting
+- **Relational Memory Engine** (`relationalMemory.ts`): `relational_memories` DB table, memory types (preference, personal_context, interaction_pattern), combined recency+relevance scoring, deduplication, prompt formatting
+- **Personality API Routes** (`routes/personality.ts`):
+  - `GET /api/personality/presets` — list presets + axis labels
+  - `GET /api/personality/employee/:id` — get personality config
+  - `PUT /api/personality/employee/:id` — update personality axes
+  - `POST /api/personality/generate-style` — preview style with context
+  - `POST /api/personality/analyze-sentiment` — analyze message sentiment
+  - `GET /api/personality/culture` — get org culture profile
+  - `PUT /api/personality/culture` — update org culture
+  - `POST /api/personality/memories` — store relational memory
+  - `GET /api/personality/memories/:aiEmployeeId` — retrieve memories
+  - `DELETE /api/personality/memories/:memoryId` — delete memory
+  - `POST /api/personality/assess-priority` — assess task priority
+- **Personality Configuration UI** (`personality-config.tsx`): 7 sliders with tooltips, 8 preset buttons, live preview text, axis overview visualization
+- **Employee Detail Page** (`employee-detail.tsx`): Route `/team/:id`, tabs (Personality/Activity/Settings), integrated personality config with save/reset
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

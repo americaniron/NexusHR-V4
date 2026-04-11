@@ -17,6 +17,7 @@ import voicesRouter from "./voices";
 import storageRouter from "./storage";
 import avatarsRouter from "./avatars";
 import voiceRouter from "./voice";
+import personalityRouter from "./personality";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(voicesRouter);
 router.use(storageRouter);
 router.use(avatarsRouter);
 router.use(voiceRouter);
+router.use(personalityRouter);
 
 export default router;

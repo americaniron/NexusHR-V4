@@ -10,3 +10,4 @@ export * from "./integrations";
 export * from "./billing";
 export * from "./support";
 export * from "./notifications";
+export * from "./relational-memory";

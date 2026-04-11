@@ -72,9 +72,11 @@ export default function TeamPage() {
                     <MessageSquare className="mr-2 h-3.5 w-3.5" /> Chat
                   </Button>
                 </Link>
-                <Button variant="outline" size="sm" className="h-8 px-2">
-                  <Settings className="h-3.5 w-3.5" />
-                </Button>
+                <Link href={`/team/${employee.id}`}>
+                  <Button variant="outline" size="sm" className="h-8 px-2">
+                    <Settings className="h-3.5 w-3.5" />
+                  </Button>
+                </Link>
               </CardFooter>
             </Card>
           ))}

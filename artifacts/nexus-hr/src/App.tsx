@@ -23,6 +23,7 @@ import BillingPage from "@/pages/billing";
 import SettingsPage from "@/pages/settings";
 import HelpPage from "@/pages/help";
 import OnboardingPage from "@/pages/onboarding";
+import EmployeeDetailPage from "@/pages/employee-detail";
 import NotFound from "@/pages/not-found";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -135,6 +136,9 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route path="/team">
               <ProtectedRoute component={TeamPage} />
+            </Route>
+            <Route path="/team/:id">
+              <ProtectedRoute component={EmployeeDetailPage} />
             </Route>
             <Route path="/tasks">
               <ProtectedRoute component={TasksPage} />
