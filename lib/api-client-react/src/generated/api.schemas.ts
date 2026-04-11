@@ -673,6 +673,63 @@ export interface AvatarGallery {
   total?: number;
 }
 
+export type VoiceSynthesizeRequestPersonality = {
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  energy?: number;
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  formality?: number;
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  warmth?: number;
+};
+
+export interface VoiceSynthesizeRequest {
+  /**
+   * @minLength 1
+   * @maxLength 5000
+   */
+  text: string;
+  voiceId?: string;
+  roleTitle?: string;
+  department?: string;
+  personality?: VoiceSynthesizeRequestPersonality;
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  stability?: number;
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  similarityBoost?: number;
+  /**
+   * @minimum 0.5
+   * @maximum 2
+   */
+  speed?: number;
+}
+
+export interface TranscriptionResult {
+  text: string;
+  language?: string;
+}
+
+export interface VoiceProfile {
+  category: string;
+  label: string;
+  description: string;
+  voiceId: string;
+}
+
 export type PageParamParameter = number;
 
 export type LimitParamParameter = number;
@@ -733,6 +790,15 @@ export type ListConversationsParams = {
 
 export type CreateBillingPortal200 = {
   url: string;
+};
+
+export type TranscribeAudioBody = {
+  /** Base64-encoded audio data */
+  audio: string;
+};
+
+export type GetVoiceProfiles200 = {
+  data?: VoiceProfile[];
 };
 
 export type ListNotificationsParams = {

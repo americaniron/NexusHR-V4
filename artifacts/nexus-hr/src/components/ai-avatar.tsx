@@ -1,6 +1,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Zap } from "lucide-react";
+import { Zap, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+export type AvatarVisualState = "idle" | "speaking" | "thinking" | "listening";
 
 interface AIAvatarProps {
   src?: string | null;
@@ -9,6 +11,8 @@ interface AIAvatarProps {
   size?: "sm" | "md" | "lg" | "xl";
   showLabel?: boolean;
   className?: string;
+  visualState?: AvatarVisualState;
+  audioLevel?: number;
 }
 
 const sizeClasses = {
@@ -46,18 +50,102 @@ const roleLabelSizes = {
   xl: "text-base",
 };
 
-export function AIAvatar({ src, name, roleTitle, size = "md", showLabel = false, className }: AIAvatarProps) {
+const stateRingClasses: Record<AvatarVisualState, string> = {
+  idle: "border-primary/20",
+  speaking: "border-primary animate-avatar-speaking shadow-[0_0_12px_rgba(var(--primary-rgb,200,120,50),0.4)]",
+  thinking: "border-yellow-500/50 animate-avatar-thinking",
+  listening: "border-green-500/60 animate-avatar-listening shadow-[0_0_8px_rgba(34,197,94,0.3)]",
+};
+
+const dotSizes = {
+  sm: "h-1 w-1",
+  md: "h-1.5 w-1.5",
+  lg: "h-2 w-2",
+  xl: "h-2.5 w-2.5",
+};
+
+const micIndicatorSizes = {
+  sm: "h-3 w-3",
+  md: "h-4 w-4",
+  lg: "h-5 w-5",
+  xl: "h-6 w-6",
+};
+
+const indicatorPositions = {
+  sm: "-bottom-0.5 -right-0.5",
+  md: "-bottom-0.5 -right-0.5",
+  lg: "-bottom-1 -right-1",
+  xl: "-bottom-1 -right-1",
+};
+
+export function AIAvatar({
+  src,
+  name,
+  roleTitle,
+  size = "md",
+  showLabel = false,
+  className,
+  visualState = "idle",
+  audioLevel = 0,
+}: AIAvatarProps) {
   const initials = name
     ? name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
     : "";
 
   const avatar = (
-    <Avatar className={cn(sizeClasses[size], "border-2 border-primary/20 shadow-md", !showLabel && className)}>
-      {src && <AvatarImage src={src} alt={name || "AI Avatar"} />}
-      <AvatarFallback className={cn("bg-primary/10 text-primary", textSizes[size])}>
-        {initials || <Zap className={iconSizes[size]} />}
-      </AvatarFallback>
-    </Avatar>
+    <div className="relative inline-flex">
+      <Avatar className={cn(
+        sizeClasses[size],
+        "border-2 shadow-md transition-all duration-300",
+        stateRingClasses[visualState],
+        !showLabel && className,
+      )}>
+        {src && <AvatarImage src={src} alt={name || "AI Avatar"} />}
+        <AvatarFallback className={cn("bg-primary/10 text-primary", textSizes[size])}>
+          {initials || <Zap className={iconSizes[size]} />}
+        </AvatarFallback>
+      </Avatar>
+
+      {visualState === "speaking" && (
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-end gap-[2px]">
+          {[0, 1, 2, 3, 4].map(i => (
+            <div
+              key={i}
+              className="bg-primary rounded-full animate-waveform-bar"
+              style={{
+                width: size === "sm" ? 2 : 3,
+                animationDelay: `${i * 0.1}s`,
+                height: size === "sm" ? 6 : size === "md" ? 8 : 12,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {visualState === "thinking" && (
+        <div className={cn("absolute flex gap-0.5", indicatorPositions[size])}>
+          {[0, 1, 2].map(i => (
+            <div
+              key={i}
+              className={cn("rounded-full bg-yellow-500 animate-thinking-dot", dotSizes[size])}
+              style={{ animationDelay: `${i * 0.3}s` }}
+            />
+          ))}
+        </div>
+      )}
+
+      {visualState === "listening" && (
+        <div className={cn("absolute flex items-center justify-center rounded-full bg-green-500 text-white", indicatorPositions[size], micIndicatorSizes[size])}>
+          <Mic className={cn(size === "sm" ? "h-2 w-2" : "h-3 w-3")} />
+          {audioLevel > 0.1 && (
+            <div
+              className="absolute inset-0 rounded-full border-2 border-green-400 animate-ping"
+              style={{ opacity: Math.min(audioLevel, 0.8) }}
+            />
+          )}
+        </div>
+      )}
+    </div>
   );
 
   if (!showLabel || (!name && !roleTitle)) {
@@ -76,6 +164,11 @@ export function AIAvatar({ src, name, roleTitle, size = "md", showLabel = false,
         {roleTitle && (
           <span className={cn("text-muted-foreground truncate", roleLabelSizes[size])}>
             {roleTitle}
+          </span>
+        )}
+        {visualState !== "idle" && (
+          <span className={cn("text-muted-foreground truncate capitalize", roleLabelSizes[size])}>
+            {visualState === "speaking" ? "Speaking..." : visualState === "thinking" ? "Thinking..." : "Listening..."}
           </span>
         )}
       </div>

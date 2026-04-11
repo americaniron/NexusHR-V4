@@ -156,8 +156,30 @@ All Phase 1 requirements verified complete:
 - **Avatar Generate**: `POST /api/avatars/generate` — real AI-generated headshot
 - **Avatar Regenerate**: `POST /api/avatars/regenerate/:employeeId` — regenerate for existing employee
 - **Storage Routes**: Upload URL generation, public asset serving, private object serving
-- **Reusable AIAvatar Component**: `artifacts/nexus-hr/src/components/ai-avatar.tsx` — responsive sizes (sm/md/lg/xl)
+- **Reusable AIAvatar Component**: `artifacts/nexus-hr/src/components/ai-avatar.tsx` — responsive sizes (sm/md/lg/xl), visual states (idle/speaking/thinking/listening)
 - **Frontend Integration**: Marketplace detail page has "Style Picker" + "AI Generate" avatar modes; team, conversations, and marketplace pages use AIAvatar component
 - **Environment Variables**: `DEFAULT_OBJECT_STORAGE_BUCKET_ID`, `PUBLIC_OBJECT_SEARCH_PATHS`, `PRIVATE_OBJECT_DIR`
+
+## Phase 3: Voice & Visual States (Complete)
+
+- **Voice Synthesis**: `POST /api/voice/synthesize` — ElevenLabs TTS with personality-mapped voice settings
+  - Personality axes: Energy→speed, Formality→stability, Warmth→similarity_boost
+  - Role-based voice profiles: warm (counseling/HR), authoritative (executive/legal), technical (engineering/data), creative (design/marketing), neutral (default)
+  - Voice config resolver: `lib/voiceConfig.ts` — `personalityToVoiceSettings()`, `resolveVoiceProfile()`
+- **Speech Recognition**: `POST /api/voice/transcribe` — OpenAI Whisper STT, accepts base64 audio
+- **Voice Profiles**: `GET /api/voice/profiles` — lists role-category voice profiles
+- **Avatar Visual States**: AIAvatar component enhanced with `visualState` prop
+  - `idle` — static professional headshot (default)
+  - `speaking` — animated waveform border glow + waveform bars below avatar
+  - `thinking` — pulsing yellow dots + slow glow border
+  - `listening` — green mic indicator with ping animation, audio level meter
+- **Audio Waveform Player**: `AudioWaveformPlayer` component with canvas-based waveform visualization, seek, mute, progress tracking, compact mode
+- **Voice Mode**: `useVoiceMode` hook manages full voice pipeline
+  - Mic permissions, MediaRecorder, audio capture (WebM/Opus)
+  - STT → AI response → TTS → playback coordination
+  - Audio level monitoring for listening state
+- **Conversations Page**: Voice Mode toggle in chat header, push-to-talk mic button, avatar state indicators during voice interaction
+- **CSS Animations**: `animate-avatar-speaking`, `animate-avatar-thinking`, `animate-avatar-listening`, `animate-waveform-bar`, `animate-thinking-dot`
+- **Rate Limits**: synthesize 20/min, transcribe 15/min
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

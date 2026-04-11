@@ -43,6 +43,7 @@ import type {
   GetAvatarBrandingPresets200,
   GetAvatarGalleryParams,
   GetRecentActivityParams,
+  GetVoiceProfiles200,
   HealthStatus,
   HireEmployee,
   IntegrationItem,
@@ -72,6 +73,8 @@ import type {
   TaskList,
   TicketItem,
   TicketList,
+  TranscribeAudioBody,
+  TranscriptionResult,
   UpdateEmployee,
   UpdateOrganization,
   UpdateTask,
@@ -82,6 +85,7 @@ import type {
   User,
   UserList,
   VoiceList,
+  VoiceSynthesizeRequest,
   WorkflowItem,
   WorkflowList,
 } from "./api.schemas";
@@ -3370,6 +3374,253 @@ export function useListVoices<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListVoicesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Synthesize text to speech
+ */
+export const getSynthesizeVoiceUrl = () => {
+  return `/api/voice/synthesize`;
+};
+
+export const synthesizeVoice = async (
+  voiceSynthesizeRequest: VoiceSynthesizeRequest,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getSynthesizeVoiceUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(voiceSynthesizeRequest),
+  });
+};
+
+export const getSynthesizeVoiceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof synthesizeVoice>>,
+    TError,
+    { data: BodyType<VoiceSynthesizeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof synthesizeVoice>>,
+  TError,
+  { data: BodyType<VoiceSynthesizeRequest> },
+  TContext
+> => {
+  const mutationKey = ["synthesizeVoice"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof synthesizeVoice>>,
+    { data: BodyType<VoiceSynthesizeRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return synthesizeVoice(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SynthesizeVoiceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof synthesizeVoice>>
+>;
+export type SynthesizeVoiceMutationBody = BodyType<VoiceSynthesizeRequest>;
+export type SynthesizeVoiceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Synthesize text to speech
+ */
+export const useSynthesizeVoice = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof synthesizeVoice>>,
+    TError,
+    { data: BodyType<VoiceSynthesizeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof synthesizeVoice>>,
+  TError,
+  { data: BodyType<VoiceSynthesizeRequest> },
+  TContext
+> => {
+  return useMutation(getSynthesizeVoiceMutationOptions(options));
+};
+
+/**
+ * @summary Transcribe audio to text via Whisper
+ */
+export const getTranscribeAudioUrl = () => {
+  return `/api/voice/transcribe`;
+};
+
+export const transcribeAudio = async (
+  transcribeAudioBody: TranscribeAudioBody,
+  options?: RequestInit,
+): Promise<TranscriptionResult> => {
+  return customFetch<TranscriptionResult>(getTranscribeAudioUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(transcribeAudioBody),
+  });
+};
+
+export const getTranscribeAudioMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transcribeAudio>>,
+    TError,
+    { data: BodyType<TranscribeAudioBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transcribeAudio>>,
+  TError,
+  { data: BodyType<TranscribeAudioBody> },
+  TContext
+> => {
+  const mutationKey = ["transcribeAudio"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transcribeAudio>>,
+    { data: BodyType<TranscribeAudioBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return transcribeAudio(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TranscribeAudioMutationResult = NonNullable<
+  Awaited<ReturnType<typeof transcribeAudio>>
+>;
+export type TranscribeAudioMutationBody = BodyType<TranscribeAudioBody>;
+export type TranscribeAudioMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Transcribe audio to text via Whisper
+ */
+export const useTranscribeAudio = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transcribeAudio>>,
+    TError,
+    { data: BodyType<TranscribeAudioBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof transcribeAudio>>,
+  TError,
+  { data: BodyType<TranscribeAudioBody> },
+  TContext
+> => {
+  return useMutation(getTranscribeAudioMutationOptions(options));
+};
+
+/**
+ * @summary Get role-based voice profiles
+ */
+export const getGetVoiceProfilesUrl = () => {
+  return `/api/voice/profiles`;
+};
+
+export const getVoiceProfiles = async (
+  options?: RequestInit,
+): Promise<GetVoiceProfiles200> => {
+  return customFetch<GetVoiceProfiles200>(getGetVoiceProfilesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetVoiceProfilesQueryKey = () => {
+  return [`/api/voice/profiles`] as const;
+};
+
+export const getGetVoiceProfilesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVoiceProfiles>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getVoiceProfiles>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetVoiceProfilesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getVoiceProfiles>>
+  > = ({ signal }) => getVoiceProfiles({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getVoiceProfiles>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetVoiceProfilesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getVoiceProfiles>>
+>;
+export type GetVoiceProfilesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get role-based voice profiles
+ */
+
+export function useGetVoiceProfiles<
+  TData = Awaited<ReturnType<typeof getVoiceProfiles>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getVoiceProfiles>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetVoiceProfilesQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

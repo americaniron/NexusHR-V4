@@ -1092,6 +1092,98 @@ export const ListVoicesResponse = zod.object({
 });
 
 /**
+ * @summary Synthesize text to speech
+ */
+export const synthesizeVoiceBodyTextMax = 5000;
+
+export const synthesizeVoiceBodyPersonalityEnergyMin = 0;
+export const synthesizeVoiceBodyPersonalityEnergyMax = 1;
+
+export const synthesizeVoiceBodyPersonalityFormalityMin = 0;
+export const synthesizeVoiceBodyPersonalityFormalityMax = 1;
+
+export const synthesizeVoiceBodyPersonalityWarmthMin = 0;
+export const synthesizeVoiceBodyPersonalityWarmthMax = 1;
+
+export const synthesizeVoiceBodyStabilityMin = 0;
+export const synthesizeVoiceBodyStabilityMax = 1;
+
+export const synthesizeVoiceBodySimilarityBoostMin = 0;
+export const synthesizeVoiceBodySimilarityBoostMax = 1;
+
+export const synthesizeVoiceBodySpeedMin = 0.5;
+export const synthesizeVoiceBodySpeedMax = 2;
+
+export const SynthesizeVoiceBody = zod.object({
+  text: zod.string().min(1).max(synthesizeVoiceBodyTextMax),
+  voiceId: zod.string().optional(),
+  roleTitle: zod.string().optional(),
+  department: zod.string().optional(),
+  personality: zod
+    .object({
+      energy: zod
+        .number()
+        .min(synthesizeVoiceBodyPersonalityEnergyMin)
+        .max(synthesizeVoiceBodyPersonalityEnergyMax)
+        .optional(),
+      formality: zod
+        .number()
+        .min(synthesizeVoiceBodyPersonalityFormalityMin)
+        .max(synthesizeVoiceBodyPersonalityFormalityMax)
+        .optional(),
+      warmth: zod
+        .number()
+        .min(synthesizeVoiceBodyPersonalityWarmthMin)
+        .max(synthesizeVoiceBodyPersonalityWarmthMax)
+        .optional(),
+    })
+    .optional(),
+  stability: zod
+    .number()
+    .min(synthesizeVoiceBodyStabilityMin)
+    .max(synthesizeVoiceBodyStabilityMax)
+    .optional(),
+  similarityBoost: zod
+    .number()
+    .min(synthesizeVoiceBodySimilarityBoostMin)
+    .max(synthesizeVoiceBodySimilarityBoostMax)
+    .optional(),
+  speed: zod
+    .number()
+    .min(synthesizeVoiceBodySpeedMin)
+    .max(synthesizeVoiceBodySpeedMax)
+    .optional(),
+});
+
+/**
+ * @summary Transcribe audio to text via Whisper
+ */
+export const TranscribeAudioBody = zod.object({
+  audio: zod.string().describe("Base64-encoded audio data"),
+});
+
+export const TranscribeAudioResponse = zod.object({
+  text: zod.string(),
+  language: zod.string().optional(),
+});
+
+/**
+ * @summary Get role-based voice profiles
+ */
+export const GetVoiceProfilesResponse = zod.object({
+  data: zod
+    .array(
+      zod.object({
+        category: zod.string(),
+        label: zod.string(),
+        description: zod.string(),
+        voiceId: zod.string(),
+      }),
+    )
+    .optional(),
+});
+
+/**
  * @summary List notifications
  */
 export const listNotificationsQueryPageDefault = 1;

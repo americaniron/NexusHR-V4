@@ -755,6 +755,75 @@ paths:
               schema:
                 $ref: "#/components/schemas/VoiceList"
 
+  /voice/synthesize:
+    post:
+      operationId: synthesizeVoice
+      tags: [voice]
+      summary: Synthesize text to speech
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoiceSynthesizeRequest"
+      responses:
+        "200":
+          description: Audio stream
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+
+  /voice/transcribe:
+    post:
+      operationId: transcribeAudio
+      tags: [voice]
+      summary: Transcribe audio to text via Whisper
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                audio:
+                  type: string
+                  description: Base64-encoded audio data
+              required:
+                - audio
+      responses:
+        "200":
+          description: Transcription result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionResult"
+
+  /voice/profiles:
+    get:
+      operationId: getVoiceProfiles
+      tags: [voice]
+      summary: Get role-based voice profiles
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Voice profiles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/VoiceProfile"
+
   /notifications:
     get:
       operationId: listNotifications
@@ -2118,3 +2187,67 @@ components:
             $ref: "#/components/schemas/AvatarGalleryItem"
         total:
           type: integer
+
+    VoiceSynthesizeRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        voiceId:
+          type: string
+        roleTitle:
+          type: string
+        department:
+          type: string
+        personality:
+          type: object
+          properties:
+            energy:
+              type: number
+              minimum: 0
+              maximum: 1
+            formality:
+              type: number
+              minimum: 0
+              maximum: 1
+            warmth:
+              type: number
+              minimum: 0
+              maximum: 1
+        stability:
+          type: number
+          minimum: 0
+          maximum: 1
+        similarityBoost:
+          type: number
+          minimum: 0
+          maximum: 1
+        speed:
+          type: number
+          minimum: 0.5
+          maximum: 2.0
+
+    TranscriptionResult:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+        language:
+          type: string
+
+    VoiceProfile:
+      type: object
+      required: [category, label, description, voiceId]
+      properties:
+        category:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        voiceId:
+          type: string

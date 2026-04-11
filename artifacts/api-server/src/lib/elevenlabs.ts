@@ -8,6 +8,8 @@ export async function textToSpeech(
     modelId?: string;
     stability?: number;
     similarityBoost?: number;
+    speed?: number;
+    style?: number;
   }
 ) {
   const voiceId = options?.voiceId || "21m00Tcm4TlvDq8ikWAM";
@@ -25,7 +27,10 @@ export async function textToSpeech(
         voice_settings: {
           stability: options?.stability ?? 0.5,
           similarity_boost: options?.similarityBoost ?? 0.75,
+          style: options?.style ?? 0.3,
+          use_speaker_boost: true,
         },
+        ...(options?.speed && options.speed !== 1.0 ? { generation_config: { speed: options.speed } } : {}),
       }),
     }
   );

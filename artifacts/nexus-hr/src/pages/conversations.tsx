@@ -1,11 +1,15 @@
 import { useListConversations, useGetConversation, useSendMessage } from "@workspace/api-client-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { AIAvatar } from "@/components/ai-avatar";
+import type { AvatarVisualState } from "@/components/ai-avatar";
+import { AudioWaveformPlayer } from "@/components/audio-waveform-player";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, Volume2, VolumeX, MessageSquare } from "lucide-react";
+import { Send, Bot, User, MessageSquare, Mic, MicOff, PhoneOff } from "lucide-react";
+import { useVoiceMode } from "@/hooks/use-voice-mode";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ConversationsPage() {
   const { data: convList } = useListConversations({ limit: 50 });
@@ -62,52 +66,25 @@ export default function ConversationsPage() {
   );
 }
 
-function AudioPlayer({ audioUrl }: { audioUrl: string }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  const togglePlay = useCallback(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio(audioUrl);
-      audioRef.current.onended = () => setIsPlaying(false);
-      audioRef.current.onerror = () => setIsPlaying(false);
-    }
-
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      audioRef.current.play().catch(() => setIsPlaying(false));
-      setIsPlaying(true);
-    }
-  }, [audioUrl, isPlaying]);
-
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
-
-  return (
-    <button
-      onClick={togglePlay}
-      className="inline-flex items-center gap-1 mt-1 px-2 py-1 rounded-md text-xs hover:bg-white/10 transition-colors"
-      title={isPlaying ? "Stop audio" : "Play audio"}
-    >
-      {isPlaying ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-      {isPlaying ? "Stop" : "Listen"}
-    </button>
-  );
-}
-
 function ChatWindow({ conversationId }: { conversationId: number }) {
   const { data: conv, isLoading, refetch } = useGetConversation(conversationId);
   const sendMutation = useSendMessage();
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const [aiAvatarState, setAiAvatarState] = useState<AvatarVisualState>("idle");
+
+  const voiceMode = useVoiceMode({
+    onTranscription: (text) => {
+      if (text.trim()) {
+        setInput(text);
+        handleSendText(text);
+      }
+    },
+    onError: (error) => {
+      toast({ title: "Voice Error", description: error, variant: "destructive" });
+    },
+  });
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -115,21 +92,65 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
     }
   }, [conv?.messages]);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || sendMutation.isPending) return;
-    
-    const text = input;
+  const handleSendText = useCallback(async (text: string) => {
+    if (!text.trim() || sendMutation.isPending) return;
+
     setInput("");
-    
+    setAiAvatarState("thinking");
+
     try {
       await sendMutation.mutateAsync({ id: conversationId, data: { content: text } });
-      refetch();
-    } catch (err) {
-      console.error(err);
+      const refreshed = await refetch();
+
+      setAiAvatarState("idle");
+
+      if (voiceMode.isVoiceMode && refreshed.data) {
+        const messages = refreshed.data.messages;
+        if (messages && messages.length > 0) {
+          const lastMsg = messages[messages.length - 1];
+          if (lastMsg?.role === "assistant" && lastMsg?.content) {
+            setAiAvatarState("speaking");
+            await voiceMode.synthesizeAndPlay(
+              lastMsg.content,
+              refreshed.data.aiEmployee?.voiceId || undefined,
+            );
+            setAiAvatarState("idle");
+          }
+        }
+      }
+    } catch {
+      setAiAvatarState("idle");
       setInput(text);
     }
+  }, [conversationId, sendMutation, refetch, voiceMode]);
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    await handleSendText(input);
   };
+
+  const handleVoiceToggle = async () => {
+    if (voiceMode.isRecording) {
+      setAiAvatarState("thinking");
+      await voiceMode.stopRecording();
+    } else if (voiceMode.isVoiceMode) {
+      await voiceMode.startRecording();
+      setAiAvatarState("listening");
+    }
+  };
+
+  useEffect(() => {
+    if (voiceMode.isRecording) {
+      setAiAvatarState("listening");
+    } else if (voiceMode.isTranscribing || voiceMode.isSynthesizing) {
+      setAiAvatarState("thinking");
+    } else if (voiceMode.isPlayingAudio) {
+      setAiAvatarState("speaking");
+    } else if (!sendMutation.isPending) {
+      setAiAvatarState("idle");
+    }
+  }, [voiceMode.isRecording, voiceMode.isTranscribing, voiceMode.isSynthesizing, voiceMode.isPlayingAudio, sendMutation.isPending]);
 
   if (isLoading) return <div className="flex-1 flex items-center justify-center">Loading...</div>;
   if (!conv) return null;
@@ -138,51 +159,154 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
     <>
       <div className="p-4 border-b border-border bg-card flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <AIAvatar src={conv.aiEmployee?.avatarUrl} name={conv.aiEmployee?.name} size="sm" />
-          <span className="font-medium text-foreground">{conv.aiEmployee?.name}</span>
+          <AIAvatar
+            src={conv.aiEmployee?.avatarUrl}
+            name={conv.aiEmployee?.name}
+            size="sm"
+            visualState={aiAvatarState}
+            audioLevel={voiceMode.audioLevel}
+          />
+          <div className="flex flex-col">
+            <span className="font-medium text-foreground">{conv.aiEmployee?.name}</span>
+            {aiAvatarState !== "idle" && (
+              <span className="text-xs text-muted-foreground capitalize">
+                {aiAvatarState === "speaking" ? "Speaking..." : aiAvatarState === "thinking" ? "Thinking..." : aiAvatarState === "listening" ? "Listening..." : ""}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={voiceMode.isVoiceMode ? "default" : "outline"}
+            size="sm"
+            onClick={voiceMode.toggleVoiceMode}
+            className={voiceMode.isVoiceMode ? "bg-green-600 hover:bg-green-700" : ""}
+          >
+            {voiceMode.isVoiceMode ? (
+              <><PhoneOff className="h-4 w-4 mr-1" /> End Voice</>
+            ) : (
+              <><Mic className="h-4 w-4 mr-1" /> Voice Mode</>
+            )}
+          </Button>
         </div>
       </div>
-      
+
       <div className="flex-1 overflow-y-auto p-4 space-y-6" ref={scrollRef}>
         {conv.messages?.map((msg) => (
           <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-            <Avatar className="h-8 w-8 shrink-0 border border-border/50">
-              <AvatarFallback className={msg.role === 'user' ? "bg-secondary text-secondary-foreground" : "bg-primary text-primary-foreground"}>
-                {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-              </AvatarFallback>
-            </Avatar>
+            {msg.role === 'user' ? (
+              <Avatar className="h-8 w-8 shrink-0 border border-border/50">
+                <AvatarFallback className="bg-secondary text-secondary-foreground">
+                  <User className="h-4 w-4" />
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <AIAvatar
+                src={conv.aiEmployee?.avatarUrl}
+                name={conv.aiEmployee?.name}
+                size="sm"
+              />
+            )}
             <div className={`rounded-2xl px-4 py-2.5 max-w-[80%] ${
-              msg.role === 'user' 
-                ? 'bg-primary text-primary-foreground rounded-tr-sm' 
+              msg.role === 'user'
+                ? 'bg-primary text-primary-foreground rounded-tr-sm'
                 : 'bg-muted text-foreground rounded-tl-sm border border-border/50'
             }`}>
               <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
               {msg.role === 'assistant' && msg.audioUrl && (
-                <AudioPlayer audioUrl={msg.audioUrl} />
+                <AudioWaveformPlayer
+                  src={msg.audioUrl}
+                  compact
+                  className="mt-1"
+                  onPlayStateChange={(playing) => {
+                    if (playing) setAiAvatarState("speaking");
+                    else setAiAvatarState("idle");
+                  }}
+                />
               )}
             </div>
           </div>
         ))}
+
+        {sendMutation.isPending && (
+          <div className="flex gap-4">
+            <AIAvatar
+              src={conv.aiEmployee?.avatarUrl}
+              name={conv.aiEmployee?.name}
+              size="sm"
+              visualState="thinking"
+            />
+            <div className="rounded-2xl px-4 py-2.5 bg-muted text-foreground rounded-tl-sm border border-border/50">
+              <div className="flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-thinking-dot" style={{ animationDelay: "0s" }} />
+                <div className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-thinking-dot" style={{ animationDelay: "0.3s" }} />
+                <div className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-thinking-dot" style={{ animationDelay: "0.6s" }} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="p-4 border-t border-border bg-card">
-        <form onSubmit={handleSend} className="relative flex items-center">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={`Message ${conv.aiEmployee?.name}...`}
-            className="pr-12 h-12 bg-background border-border"
-            disabled={sendMutation.isPending}
-          />
-          <Button 
-            type="submit" 
-            size="icon" 
-            className="absolute right-1.5 h-9 w-9" 
-            disabled={!input.trim() || sendMutation.isPending}
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </form>
+        {voiceMode.isVoiceMode ? (
+          <div className="flex items-center justify-center gap-4">
+            <Button
+              size="lg"
+              variant={voiceMode.isRecording ? "destructive" : "default"}
+              className={`h-14 w-14 rounded-full ${voiceMode.isRecording ? "animate-pulse" : ""}`}
+              onClick={handleVoiceToggle}
+              disabled={voiceMode.isTranscribing || voiceMode.isSynthesizing}
+            >
+              {voiceMode.isRecording ? (
+                <MicOff className="h-6 w-6" />
+              ) : (
+                <Mic className="h-6 w-6" />
+              )}
+            </Button>
+            <div className="text-sm text-muted-foreground">
+              {voiceMode.isRecording
+                ? "Listening... Click to stop"
+                : voiceMode.isTranscribing
+                ? "Transcribing..."
+                : voiceMode.isSynthesizing
+                ? "Generating voice..."
+                : voiceMode.isPlayingAudio
+                ? "Speaking..."
+                : "Click to speak"}
+            </div>
+            {voiceMode.isRecording && (
+              <div className="flex items-end gap-[2px] h-8">
+                {[0, 1, 2, 3, 4, 5, 6].map(i => (
+                  <div
+                    key={i}
+                    className="w-1 bg-green-500 rounded-full transition-all duration-100"
+                    style={{
+                      height: `${Math.max(4, voiceMode.audioLevel * 32 * (0.5 + Math.random() * 0.5))}px`,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <form onSubmit={handleSend} className="relative flex items-center">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={`Message ${conv.aiEmployee?.name}...`}
+              className="pr-12 h-12 bg-background border-border"
+              disabled={sendMutation.isPending}
+            />
+            <Button
+              type="submit"
+              size="icon"
+              className="absolute right-1.5 h-9 w-9"
+              disabled={!input.trim() || sendMutation.isPending}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
+        )}
       </div>
     </>
   );
