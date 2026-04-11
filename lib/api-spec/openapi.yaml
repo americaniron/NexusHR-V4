@@ -3,20 +3,46 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: NexusHR VX API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: organizations
+    description: Organization management
+  - name: users
+    description: User management
+  - name: roles
+    description: AI employee role catalog
+  - name: employees
+    description: AI employee management
+  - name: interviews
+    description: Interview sessions
+  - name: tasks
+    description: Task management
+  - name: workflows
+    description: Workflow management
+  - name: conversations
+    description: Conversations with AI employees
+  - name: integrations
+    description: Integration management
+  - name: billing
+    description: Billing and subscriptions
+  - name: notifications
+    description: Notifications
+  - name: support
+    description: Support tickets and knowledge base
+  - name: dashboard
+    description: Dashboard summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +50,787 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Dashboard summary metrics
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Recent activity feed
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Activity list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityList"
+
+  /organizations/current:
+    get:
+      operationId: getCurrentOrganization
+      tags: [organizations]
+      summary: Get current organization
+      responses:
+        "200":
+          description: Organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+    patch:
+      operationId: updateOrganization
+      tags: [organizations]
+      summary: Update organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrganization"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+
+  /users/me:
+    get:
+      operationId: getCurrentUser
+      tags: [users]
+      summary: Get current user
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List org users
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Users list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserList"
+
+  /roles:
+    get:
+      operationId: listRoles
+      tags: [roles]
+      summary: List AI employee roles
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: industry
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [relevance, rating, price_asc, price_desc, newest]
+      responses:
+        "200":
+          description: Roles list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleList"
+
+  /roles/{id}:
+    get:
+      operationId: getRole
+      tags: [roles]
+      summary: Get role details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+
+  /roles/categories:
+    get:
+      operationId: getRoleCategories
+      tags: [roles]
+      summary: Get role categories with counts
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryList"
+
+  /employees:
+    get:
+      operationId: listEmployees
+      tags: [employees]
+      summary: List hired AI employees
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: department
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Employees list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeList"
+    post:
+      operationId: hireEmployee
+      tags: [employees]
+      summary: Hire an AI employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HireEmployee"
+      responses:
+        "201":
+          description: Hired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+
+  /employees/{id}:
+    get:
+      operationId: getEmployee
+      tags: [employees]
+      summary: Get AI employee details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+    patch:
+      operationId: updateEmployee
+      tags: [employees]
+      summary: Update AI employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEmployee"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+    delete:
+      operationId: deactivateEmployee
+      tags: [employees]
+      summary: Deactivate AI employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+
+  /interviews:
+    post:
+      operationId: createInterviewSession
+      tags: [interviews]
+      summary: Start interview session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInterview"
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewSession"
+
+  /interviews/{id}:
+    get:
+      operationId: getInterviewSession
+      tags: [interviews]
+      summary: Get interview session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewSession"
+
+  /interviews/{id}/messages:
+    post:
+      operationId: sendInterviewMessage
+      tags: [interviews]
+      summary: Send message to interview candidate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendInterviewMessage"
+      responses:
+        "200":
+          description: Response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewMessageResponse"
+
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List tasks
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: assigneeId
+          in: query
+          schema:
+            type: integer
+        - name: priority
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskList"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTask"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskItem"
+
+  /tasks/{id}:
+    get:
+      operationId: getTask
+      tags: [tasks]
+      summary: Get task details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskItem"
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTask"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskItem"
+
+  /workflows:
+    get:
+      operationId: listWorkflows
+      tags: [workflows]
+      summary: List workflows
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Workflows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowList"
+    post:
+      operationId: createWorkflow
+      tags: [workflows]
+      summary: Create workflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkflow"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowItem"
+
+  /workflows/{id}:
+    get:
+      operationId: getWorkflow
+      tags: [workflows]
+      summary: Get workflow
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Workflow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowItem"
+    patch:
+      operationId: updateWorkflow
+      tags: [workflows]
+      summary: Update workflow
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWorkflow"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowItem"
+
+  /conversations:
+    get:
+      operationId: listConversations
+      tags: [conversations]
+      summary: List conversations
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationList"
+    post:
+      operationId: createConversation
+      tags: [conversations]
+      summary: Start a conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConversation"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationItem"
+
+  /conversations/{id}:
+    get:
+      operationId: getConversation
+      tags: [conversations]
+      summary: Get conversation with messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationDetail"
+
+  /conversations/{id}/messages:
+    post:
+      operationId: sendMessage
+      tags: [conversations]
+      summary: Send message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessage"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /integrations:
+    get:
+      operationId: listIntegrations
+      tags: [integrations]
+      summary: List available integrations
+      responses:
+        "200":
+          description: Integrations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationList"
+
+  /integrations/{toolId}/connect:
+    post:
+      operationId: connectIntegration
+      tags: [integrations]
+      summary: Connect an integration
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Connected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationItem"
+
+  /integrations/{toolId}/disconnect:
+    post:
+      operationId: disconnectIntegration
+      tags: [integrations]
+      summary: Disconnect an integration
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Disconnected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationItem"
+
+  /billing/subscription:
+    get:
+      operationId: getSubscription
+      tags: [billing]
+      summary: Get current subscription
+      responses:
+        "200":
+          description: Subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+
+  /billing/usage:
+    get:
+      operationId: getUsageSummary
+      tags: [billing]
+      summary: Get usage summary
+      responses:
+        "200":
+          description: Usage
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageSummary"
+
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationList"
+
+  /notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationItem"
+
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all as read
+      responses:
+        "200":
+          description: Done
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+
+  /support/tickets:
+    get:
+      operationId: listTickets
+      tags: [support]
+      summary: List support tickets
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Tickets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketList"
+    post:
+      operationId: createTicket
+      tags: [support]
+      summary: Create support ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTicket"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketItem"
+
+  /support/articles:
+    get:
+      operationId: listArticles
+      tags: [support]
+      summary: List knowledge base articles
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Articles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArticleList"
+
+  /analytics/overview:
+    get:
+      operationId: getAnalyticsOverview
+      tags: [dashboard]
+      summary: Analytics overview with charts data
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d]
+            default: 30d
+      responses:
+        "200":
+          description: Analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsOverview"
+
 components:
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 12
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +840,858 @@ components:
       required:
         - status
 
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+      required: [page, limit, total, totalPages]
+
+    Organization:
+      type: object
+      properties:
+        id:
+          type: integer
+        clerkOrgId:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        logoUrl:
+          type: string
+          nullable: true
+        industry:
+          type: string
+          nullable: true
+        timezone:
+          type: string
+        createdAt:
+          type: string
+      required: [id, clerkOrgId, name, slug, timezone, createdAt]
+
+    UpdateOrganization:
+      type: object
+      properties:
+        name:
+          type: string
+        logoUrl:
+          type: string
+        industry:
+          type: string
+        timezone:
+          type: string
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        clerkUserId:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        role:
+          type: string
+        createdAt:
+          type: string
+      required: [id, clerkUserId, email, role, createdAt]
+
+    UserList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [data, pagination]
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        department:
+          type: string
+        category:
+          type: string
+        industry:
+          type: string
+        seniorityLevel:
+          type: string
+        description:
+          type: string
+        coreResponsibilities:
+          type: object
+        tasks:
+          type: object
+        toolsAndIntegrations:
+          type: object
+          nullable: true
+        performanceMetrics:
+          type: object
+          nullable: true
+        personalityDefaults:
+          type: object
+          nullable: true
+        skillsTags:
+          type: object
+          nullable: true
+        priceMonthly:
+          type: integer
+        avatarUrl:
+          type: string
+          nullable: true
+        rating:
+          type: number
+          nullable: true
+      required: [id, title, department, category, industry, seniorityLevel, description, coreResponsibilities, tasks, priceMonthly]
+
+    RoleList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Role"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [data, pagination]
+
+    CategoryItem:
+      type: object
+      properties:
+        category:
+          type: string
+        count:
+          type: integer
+      required: [category, count]
+
+    CategoryList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryItem"
+      required: [data]
+
+    Employee:
+      type: object
+      properties:
+        id:
+          type: integer
+        orgId:
+          type: integer
+        roleId:
+          type: integer
+        name:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        department:
+          type: string
+          nullable: true
+        team:
+          type: string
+          nullable: true
+        status:
+          type: string
+        personality:
+          type: object
+          nullable: true
+        customInstructions:
+          type: string
+          nullable: true
+        hiredAt:
+          type: string
+        role:
+          $ref: "#/components/schemas/Role"
+      required: [id, orgId, roleId, name, status, hiredAt]
+
+    EmployeeList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Employee"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [data, pagination]
+
+    HireEmployee:
+      type: object
+      properties:
+        roleId:
+          type: integer
+        name:
+          type: string
+        department:
+          type: string
+        team:
+          type: string
+        personality:
+          type: object
+        customInstructions:
+          type: string
+      required: [roleId, name]
+
+    UpdateEmployee:
+      type: object
+      properties:
+        name:
+          type: string
+        department:
+          type: string
+        team:
+          type: string
+        status:
+          type: string
+        personality:
+          type: object
+        customInstructions:
+          type: string
+
+    CreateInterview:
+      type: object
+      properties:
+        roleId:
+          type: integer
+        mode:
+          type: string
+          enum: [text, voice]
+      required: [roleId]
+
+    InterviewCandidate:
+      type: object
+      properties:
+        id:
+          type: integer
+        candidateName:
+          type: string
+        personalityProfile:
+          type: object
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        scores:
+          type: object
+          nullable: true
+        selected:
+          type: integer
+      required: [id, candidateName]
+
+    InterviewSession:
+      type: object
+      properties:
+        id:
+          type: integer
+        roleId:
+          type: integer
+        status:
+          type: string
+        mode:
+          type: string
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/InterviewCandidate"
+        createdAt:
+          type: string
+      required: [id, roleId, status, mode, candidates, createdAt]
+
+    SendInterviewMessage:
+      type: object
+      properties:
+        candidateId:
+          type: integer
+        content:
+          type: string
+      required: [candidateId, content]
+
+    InterviewMessageResponse:
+      type: object
+      properties:
+        userMessage:
+          type: object
+          properties:
+            id:
+              type: integer
+            content:
+              type: string
+            role:
+              type: string
+          required: [id, content, role]
+        aiMessage:
+          type: object
+          properties:
+            id:
+              type: integer
+            content:
+              type: string
+            role:
+              type: string
+            audioUrl:
+              type: string
+              nullable: true
+          required: [id, content, role]
+      required: [userMessage, aiMessage]
+
+    TaskItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        orgId:
+          type: integer
+        assigneeId:
+          type: integer
+          nullable: true
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+        priority:
+          type: string
+        category:
+          type: string
+          nullable: true
+        dueDate:
+          type: string
+          nullable: true
+        deliverable:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        assignee:
+          $ref: "#/components/schemas/Employee"
+      required: [id, orgId, title, status, priority, createdAt]
+
+    TaskList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskItem"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [data, pagination]
+
+    CreateTask:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        assigneeId:
+          type: integer
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        category:
+          type: string
+        dueDate:
+          type: string
+      required: [title]
+
+    UpdateTask:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        assigneeId:
+          type: integer
+        status:
+          type: string
+        priority:
+          type: string
+        deliverable:
+          type: string
+
+    WorkflowItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        orgId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+        triggerType:
+          type: string
+          nullable: true
+        steps:
+          type: array
+          items:
+            type: object
+        createdAt:
+          type: string
+      required: [id, orgId, name, status, createdAt]
+
+    WorkflowList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkflowItem"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [data, pagination]
+
+    CreateWorkflow:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        triggerType:
+          type: string
+      required: [name]
+
+    UpdateWorkflow:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+
+    ConversationItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        aiEmployeeId:
+          type: integer
+        title:
+          type: string
+          nullable: true
+        status:
+          type: string
+        lastMessageAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        aiEmployee:
+          $ref: "#/components/schemas/Employee"
+      required: [id, aiEmployeeId, status, createdAt]
+
+    ConversationList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConversationItem"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [data, pagination]
+
+    CreateConversation:
+      type: object
+      properties:
+        aiEmployeeId:
+          type: integer
+        title:
+          type: string
+      required: [aiEmployeeId]
+
+    MessageItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        role:
+          type: string
+        content:
+          type: string
+        audioUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, role, content, createdAt]
+
+    ConversationDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        aiEmployeeId:
+          type: integer
+        title:
+          type: string
+          nullable: true
+        status:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessageItem"
+        aiEmployee:
+          $ref: "#/components/schemas/Employee"
+      required: [id, aiEmployeeId, status, messages]
+
+    SendMessage:
+      type: object
+      properties:
+        content:
+          type: string
+      required: [content]
+
+    MessageResponse:
+      type: object
+      properties:
+        userMessage:
+          $ref: "#/components/schemas/MessageItem"
+        aiMessage:
+          $ref: "#/components/schemas/MessageItem"
+      required: [userMessage, aiMessage]
+
+    IntegrationTool:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        displayName:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+          nullable: true
+        iconUrl:
+          type: string
+          nullable: true
+        isConnected:
+          type: boolean
+        connectedAt:
+          type: string
+          nullable: true
+      required: [id, name, displayName, category, isConnected]
+
+    IntegrationList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/IntegrationTool"
+      required: [data]
+
+    IntegrationItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        toolId:
+          type: integer
+        status:
+          type: string
+        connectedAt:
+          type: string
+          nullable: true
+      required: [id, toolId, status]
+
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: integer
+        plan:
+          type: string
+        billingCycle:
+          type: string
+          nullable: true
+        status:
+          type: string
+        currentPeriodStart:
+          type: string
+          nullable: true
+        currentPeriodEnd:
+          type: string
+          nullable: true
+        trialEndsAt:
+          type: string
+          nullable: true
+        allocations:
+          type: object
+          nullable: true
+      required: [id, plan, status]
+
+    UsageDimension:
+      type: object
+      properties:
+        dimension:
+          type: string
+        used:
+          type: integer
+        limit:
+          type: integer
+        percentage:
+          type: number
+      required: [dimension, used, limit, percentage]
+
+    UsageSummary:
+      type: object
+      properties:
+        dimensions:
+          type: array
+          items:
+            $ref: "#/components/schemas/UsageDimension"
+      required: [dimensions]
+
+    NotificationItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        isRead:
+          type: integer
+        createdAt:
+          type: string
+      required: [id, type, title, message, isRead, createdAt]
+
+    NotificationList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationItem"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        unreadCount:
+          type: integer
+      required: [data, pagination, unreadCount]
+
+    TicketItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        subject:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          nullable: true
+        priority:
+          type: string
+          nullable: true
+        status:
+          type: string
+        createdAt:
+          type: string
+      required: [id, subject, description, status, createdAt]
+
+    TicketList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TicketItem"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [data, pagination]
+
+    CreateTicket:
+      type: object
+      properties:
+        subject:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+      required: [subject, description]
+
+    ArticleItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        category:
+          type: string
+          nullable: true
+        tags:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, title, content, createdAt]
+
+    ArticleList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArticleItem"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [data, pagination]
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalEmployees:
+          type: integer
+        activeTasks:
+          type: integer
+        completedThisMonth:
+          type: integer
+        utilizationPercent:
+          type: number
+        employeesByDepartment:
+          type: array
+          items:
+            type: object
+            properties:
+              department:
+                type: string
+              count:
+                type: integer
+            required: [department, count]
+        tasksByStatus:
+          type: array
+          items:
+            type: object
+            properties:
+              status:
+                type: string
+              count:
+                type: integer
+            required: [status, count]
+      required: [totalEmployees, activeTasks, completedThisMonth, utilizationPercent]
+
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        timestamp:
+          type: string
+      required: [id, type, title, description, timestamp]
+
+    ActivityList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityItem"
+      required: [data]
+
+    AnalyticsOverview:
+      type: object
+      properties:
+        tasksOverTime:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              completed:
+                type: integer
+              created:
+                type: integer
+            required: [date, completed, created]
+        utilizationByDepartment:
+          type: array
+          items:
+            type: object
+            properties:
+              department:
+                type: string
+              utilization:
+                type: number
+            required: [department, utilization]
+        taskDistribution:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              count:
+                type: integer
+            required: [category, count]
+        topPerformers:
+          type: array
+          items:
+            type: object
+            properties:
+              employeeId:
+                type: integer
+              name:
+                type: string
+              tasksCompleted:
+                type: integer
+              rating:
+                type: number
+            required: [employeeId, name, tasksCompleted, rating]
+      required: [tasksOverTime, utilizationByDepartment, taskDistribution, topPerformers]

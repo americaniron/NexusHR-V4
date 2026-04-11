@@ -1,0 +1,89 @@
+import { Link, useLocation } from "wouter";
+import { LayoutDashboard, Users, CheckSquare, GitMerge, MessageSquare, BarChart, Plug, CreditCard, Settings, HelpCircle, LogOut } from "lucide-react";
+import { useClerk, useUser } from "@clerk/react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const navigation = [
+  { name: "Command Center", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Marketplace", href: "/marketplace", icon: Users },
+  { name: "My AI Team", href: "/team", icon: Users },
+  { name: "Tasks", href: "/tasks", icon: CheckSquare },
+  { name: "Workflows", href: "/workflows", icon: GitMerge },
+  { name: "Conversations", href: "/conversations", icon: MessageSquare },
+  { name: "Analytics", href: "/analytics", icon: BarChart },
+  { name: "Integrations", href: "/integrations", icon: Plug },
+  { name: "Billing", href: "/billing", icon: CreditCard },
+  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Help & Support", href: "/help", icon: HelpCircle },
+];
+
+export function Sidebar() {
+  const [location] = useLocation();
+  const { signOut } = useClerk();
+  const { user } = useUser();
+
+  return (
+    <div className="flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border">
+      <div className="flex h-16 shrink-0 items-center px-6 border-b border-sidebar-border">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-bold font-mono text-sm">NX</span>
+          </div>
+          <span className="text-lg font-bold text-sidebar-foreground tracking-tight">NexusHR VX</span>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto py-4">
+        <nav className="flex flex-col gap-1 px-3">
+          {navigation.map((item) => {
+            const isActive = location === item.href || location.startsWith(`${item.href}/`);
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  isActive 
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+                    : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                )}
+              >
+                <item.icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div className="p-4 border-t border-sidebar-border">
+        <div className="flex items-center gap-3 mb-4 px-2">
+          <Avatar className="h-9 w-9 border border-sidebar-border">
+            <AvatarImage src={user?.imageUrl} />
+            <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">
+              {user?.firstName?.charAt(0) || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col overflow-hidden">
+            <span className="text-sm font-medium text-sidebar-foreground truncate">
+              {user?.fullName || "User"}
+            </span>
+            <span className="text-xs text-muted-foreground truncate">
+              {user?.primaryEmailAddress?.emailAddress}
+            </span>
+          </div>
+        </div>
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start text-muted-foreground hover:text-sidebar-foreground"
+          onClick={() => signOut()}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign out
+        </Button>
+      </div>
+    </div>
+  );
+}
