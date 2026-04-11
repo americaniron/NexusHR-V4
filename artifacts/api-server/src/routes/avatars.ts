@@ -1,9 +1,10 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { generateAvatar, generateAvatarBatch, getDiceBearFallback } from "../lib/avatars";
+import { generateAvatar, getDiceBearFallback } from "../lib/avatars";
 import { AppError } from "../middlewares/errorHandler";
 import { requireAuth } from "../middlewares/requireAuth";
+import { getAuthContext } from "../lib/auth-helpers";
 import { db, aiEmployees } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -57,10 +58,11 @@ router.post("/avatars/generate", requireAuth, async (req: Request, res: Response
   } catch (error) {
     console.error("[Avatars] Generation failed:", error instanceof Error ? error.message : error);
     const fallbackSeed = req.body?.seed || req.body?.roleTitle || "default";
-    res.json({
+    res.status(500).json({
       avatarUrl: getDiceBearFallback(fallbackSeed),
       objectPath: "",
-      prompt: "Fallback to DiceBear avatar",
+      prompt: "Fallback to DiceBear avatar - generation failed",
+      error: "Avatar generation failed",
     });
   }
 });
@@ -73,7 +75,17 @@ router.post("/avatars/regenerate/:employeeId", requireAuth, async (req: Request,
       throw AppError.badRequest("Invalid employee ID");
     }
 
-    const [employee] = await db.select().from(aiEmployees).where(eq(aiEmployees.id, employeeId)).limit(1);
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) {
+      throw AppError.forbidden("Organization context required");
+    }
+
+    const [employee] = await db
+      .select()
+      .from(aiEmployees)
+      .where(and(eq(aiEmployees.id, employeeId), eq(aiEmployees.organizationId, orgId)))
+      .limit(1);
+
     if (!employee) {
       throw AppError.notFound("Employee not found");
     }

@@ -17,6 +17,13 @@ const AVATAR_STYLES = [
   "micah", "miniavs", "notionists", "personas",
 ];
 
+const VALID_SENIORITY = ["junior", "mid", "senior", "lead", "executive"] as const;
+type Seniority = typeof VALID_SENIORITY[number];
+
+function toSeniority(val: string): Seniority {
+  return VALID_SENIORITY.includes(val as Seniority) ? (val as Seniority) : "mid";
+}
+
 function generateAvatarUrl(seed: string, style: string) {
   return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
 }
@@ -48,7 +55,7 @@ export default function MarketplaceDetailPage() {
         data: {
           roleTitle: role.title,
           industry: role.industry,
-          seniority: role.seniorityLevel as any,
+          seniority: toSeniority(role.seniorityLevel),
           attireStyle: "business-casual",
         },
       });
@@ -159,10 +166,10 @@ export default function MarketplaceDetailPage() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {Object.entries(role.coreResponsibilities || {}).map(([key, val]: [string, any]) => (
+                  {Object.entries(role.coreResponsibilities || {}).map(([key, val]: [string, unknown]) => (
                     <li key={key} className="flex items-start gap-2 text-sm text-muted-foreground">
                       <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                      <span><strong className="text-foreground">{key}:</strong> {val}</span>
+                      <span><strong className="text-foreground">{key}:</strong> {String(val)}</span>
                     </li>
                   ))}
                   {Object.keys(role.coreResponsibilities || {}).length === 0 && (
@@ -181,10 +188,10 @@ export default function MarketplaceDetailPage() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {Object.entries(role.tasks || {}).map(([key, val]: [string, any]) => (
+                  {Object.entries(role.tasks || {}).map(([key, val]: [string, unknown]) => (
                     <li key={key} className="flex items-start gap-2 text-sm text-muted-foreground">
                       <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                      <span>{val}</span>
+                      <span>{String(val)}</span>
                     </li>
                   ))}
                   {Object.keys(role.tasks || {}).length === 0 && (
@@ -332,7 +339,7 @@ export default function MarketplaceDetailPage() {
                         className="w-full h-9 px-3 rounded-md border border-border bg-background text-sm text-foreground"
                       >
                         <option value="">Default Voice</option>
-                        {voicesData.data.map((v: any) => (
+                        {voicesData.data.map((v) => (
                           <option key={v.voice_id} value={v.voice_id}>
                             {v.name}{v.gender ? ` (${v.gender})` : ""}{v.accent ? ` - ${v.accent}` : ""}
                           </option>

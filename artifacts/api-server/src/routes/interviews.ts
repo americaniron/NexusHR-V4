@@ -6,6 +6,7 @@ import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext } from "../lib/auth-helpers";
 import { chatCompletion } from "../lib/ai";
 import { textToSpeech } from "../lib/elevenlabs";
+import { generateInterviewCandidateAvatars } from "../lib/avatars";
 import { z } from "zod/v4";
 import { validate, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
@@ -43,15 +44,23 @@ router.post("/interviews", requireAuth, validate({ body: createInterviewBody }),
       orgId, userId, roleId, mode: mode || "text",
     }).returning();
 
+    let candidateAvatars: { avatarUrl: string }[] = [];
+    try {
+      candidateAvatars = await generateInterviewCandidateAvatars(role.title, role.industry, 3);
+    } catch (err) {
+      logger.warn({ err }, "Failed to generate interview candidate avatars, using role avatar");
+    }
+
     const candidates = [];
     for (let i = 0; i < 3; i++) {
       const personality = CANDIDATE_PERSONALITIES[i];
       const firstName = ["Alex", "Jordan", "Morgan"][i];
+      const avatarUrl = candidateAvatars[i]?.avatarUrl || role.avatarUrl;
       const [candidate] = await db.insert(interviewCandidates).values({
         sessionId: session.id,
         candidateName: `${firstName} ${role.title.split(" ")[0]}`,
         personalityProfile: personality,
-        avatarUrl: role.avatarUrl,
+        avatarUrl,
       }).returning();
       candidates.push(candidate);
     }

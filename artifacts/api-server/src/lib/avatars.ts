@@ -18,6 +18,9 @@ interface AvatarGenerateResult {
   prompt: string;
 }
 
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1000;
+
 let _openai: OpenAI | null = null;
 function getOpenAI(): OpenAI {
   if (!_openai) {
@@ -55,33 +58,53 @@ function buildPrompt(params: AvatarParams): string {
   return `Professional corporate headshot photograph of a ${seniorityDesc[seniority] || "professional"} ${gender} ${ethnicity} person working as a ${role} in the ${industry} industry. ${attireDesc[attire] || "wearing professional attire"}. Clean studio background with soft professional lighting. Sharp focus, high resolution, photorealistic. The person has a warm, approachable expression. Shot from shoulders up, centered composition. No text, no watermarks, no logos.`;
 }
 
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export async function generateAvatar(params: AvatarParams): Promise<AvatarGenerateResult> {
   const openai = getOpenAI();
   const prompt = buildPrompt(params);
 
-  const response = await openai.images.generate({
-    model: "gpt-image-1",
-    prompt,
-    n: 1,
-    size: "1024x1024",
-    quality: "medium",
-  });
+  let lastError: Error | null = null;
 
-  const imageData = response.data?.[0];
-  if (!imageData?.b64_json) {
-    throw new Error("No image data returned from OpenAI");
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        await sleep(RETRY_DELAY_MS * attempt);
+        console.log(`[Avatars] Retry attempt ${attempt}/${MAX_RETRIES}`);
+      }
+
+      const response = await openai.images.generate({
+        model: "gpt-image-1",
+        prompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "medium",
+      });
+
+      const imageData = response.data?.[0];
+      if (!imageData?.b64_json) {
+        throw new Error("No image data returned from OpenAI");
+      }
+
+      const buffer = Buffer.from(imageData.b64_json, "base64");
+      const objectPath = await uploadAvatarToStorage(buffer, params.seed);
+
+      const storageService = new ObjectStorageService();
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : "";
+      const avatarUrl = `${baseUrl}/api/storage/public-objects/avatars/${objectPath.split("/").pop()}`;
+
+      return { avatarUrl, objectPath, prompt };
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.error(`[Avatars] Generation attempt ${attempt + 1} failed:`, lastError.message);
+    }
   }
 
-  const buffer = Buffer.from(imageData.b64_json, "base64");
-  const objectPath = await uploadAvatarToStorage(buffer, params.seed);
-
-  const storageService = new ObjectStorageService();
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : "";
-  const avatarUrl = `${baseUrl}/api/storage/public-objects/avatars/${objectPath.split("/").pop()}`;
-
-  return { avatarUrl, objectPath, prompt };
+  throw lastError || new Error("Avatar generation failed after retries");
 }
 
 async function uploadAvatarToStorage(buffer: Buffer, seed?: string): Promise<string> {
@@ -112,28 +135,41 @@ async function uploadAvatarToStorage(buffer: Buffer, seed?: string): Promise<str
   return fullPath;
 }
 
-export async function generateAvatarBatch(
-  count: number,
-  baseParams: AvatarParams
+export async function generateInterviewCandidateAvatars(
+  roleTitle: string,
+  industry: string,
+  count: number = 3
 ): Promise<AvatarGenerateResult[]> {
-  const genders = ["male", "female", "neutral"];
-  const ethnicities = [
-    "East Asian", "South Asian", "African", "European", "Latin American",
-    "Middle Eastern", "Southeast Asian", "Pacific Islander",
+  const diverseParams: AvatarParams[] = [
+    { gender: "female", ethnicity: "East Asian", attireStyle: "business-casual" },
+    { gender: "male", ethnicity: "African", attireStyle: "formal" },
+    { gender: "female", ethnicity: "European", attireStyle: "creative" },
+    { gender: "male", ethnicity: "South Asian", attireStyle: "business-casual" },
+    { gender: "female", ethnicity: "Latin American", attireStyle: "formal" },
+    { gender: "male", ethnicity: "Middle Eastern", attireStyle: "business-casual" },
   ];
 
   const results: AvatarGenerateResult[] = [];
+  const selected = diverseParams.slice(0, count);
 
-  for (let i = 0; i < count; i++) {
-    const params: AvatarParams = {
-      ...baseParams,
-      gender: baseParams.gender || genders[i % genders.length],
-      ethnicity: baseParams.ethnicity || ethnicities[i % ethnicities.length],
-      seed: `${baseParams.roleTitle || "avatar"}-${randomUUID().slice(0, 8)}`,
-    };
-
-    const result = await generateAvatar(params);
-    results.push(result);
+  for (const baseParams of selected) {
+    try {
+      const result = await generateAvatar({
+        ...baseParams,
+        roleTitle,
+        industry,
+        seniority: "mid",
+        seed: `interview-${roleTitle}-${randomUUID().slice(0, 8)}`,
+      });
+      results.push(result);
+    } catch (error) {
+      console.error("[Avatars] Interview candidate avatar failed, using fallback:", error instanceof Error ? error.message : error);
+      results.push({
+        avatarUrl: getDiceBearFallback(`${roleTitle}-candidate-${results.length}`),
+        objectPath: "",
+        prompt: "DiceBear fallback",
+      });
+    }
   }
 
   return results;
