@@ -80,7 +80,9 @@ router.post("/interviews/:id/messages", requireAuth, async (req, res) => {
     );
     if (!session) return res.status(404).json({ error: "Session not found" });
 
-    const [candidate] = await db.select().from(interviewCandidates).where(eq(interviewCandidates.id, candidateId));
+    const [candidate] = await db.select().from(interviewCandidates).where(
+      and(eq(interviewCandidates.id, candidateId), eq(interviewCandidates.sessionId, sessionId))
+    );
     if (!candidate) return res.status(404).json({ error: "Candidate not found" });
 
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, session.roleId));
