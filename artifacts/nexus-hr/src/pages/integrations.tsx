@@ -15,10 +15,10 @@ export default function IntegrationsPage() {
   const handleToggle = async (toolId: number, currentlyConnected: boolean) => {
     try {
       if (currentlyConnected) {
-        await disconnectTool.mutateAsync(toolId);
+        await disconnectTool.mutateAsync({ toolId });
         toast({ title: "Integration disconnected" });
       } else {
-        await connectTool.mutateAsync(toolId);
+        await connectTool.mutateAsync({ toolId });
         toast({ title: "Integration connected successfully" });
       }
       refetch();

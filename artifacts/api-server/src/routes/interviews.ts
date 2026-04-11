@@ -53,7 +53,7 @@ router.get("/interviews/:id", requireAuth, async (req, res) => {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(403).json({ error: "Forbidden" });
 
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [session] = await db.select().from(interviewSessions).where(
       and(eq(interviewSessions.id, id), eq(interviewSessions.orgId, orgId))
     );
@@ -71,7 +71,7 @@ router.post("/interviews/:id/messages", requireAuth, async (req, res) => {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(403).json({ error: "Forbidden" });
 
-    const sessionId = parseInt(req.params.id);
+    const sessionId = parseInt(String(req.params.id));
     const { candidateId, content } = req.body;
     if (!candidateId || !content) return res.status(400).json({ error: "candidateId and content required" });
 

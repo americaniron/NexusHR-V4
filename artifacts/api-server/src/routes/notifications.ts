@@ -37,7 +37,7 @@ router.post("/notifications/:id/read", requireAuth, async (req, res) => {
     const { userId } = await getAuthContext(req);
     if (!userId) return res.status(403).json({ error: "Forbidden" });
 
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(notifications).where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
     if (!existing) return res.status(404).json({ error: "Notification not found" });
 

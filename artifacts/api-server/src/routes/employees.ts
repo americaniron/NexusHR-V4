@@ -74,7 +74,7 @@ router.get("/employees/:id", requireAuth, async (req, res) => {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(403).json({ error: "Forbidden" });
 
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [employee] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, id), eq(aiEmployees.orgId, orgId)));
     if (!employee) return res.status(404).json({ error: "Employee not found" });
 
@@ -90,7 +90,7 @@ router.patch("/employees/:id", requireAuth, async (req, res) => {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(403).json({ error: "Forbidden" });
 
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, id), eq(aiEmployees.orgId, orgId)));
     if (!existing) return res.status(404).json({ error: "Employee not found" });
 
@@ -116,7 +116,7 @@ router.delete("/employees/:id", requireAuth, async (req, res) => {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(403).json({ error: "Forbidden" });
 
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, id), eq(aiEmployees.orgId, orgId)));
     if (!existing) return res.status(404).json({ error: "Employee not found" });
 

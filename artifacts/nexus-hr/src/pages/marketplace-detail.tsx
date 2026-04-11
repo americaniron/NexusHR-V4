@@ -12,7 +12,7 @@ import { useState } from "react";
 export default function MarketplaceDetailPage() {
   const params = useParams();
   const id = parseInt(params.id || "0", 10);
-  const { data: role, isLoading } = useGetRole(id, { query: { enabled: !!id } });
+  const { data: role, isLoading } = useGetRole(id);
   const hireMutation = useHireEmployee();
   const { toast } = useToast();
   const [isHiring, setIsHiring] = useState(false);

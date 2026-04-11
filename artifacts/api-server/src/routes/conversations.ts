@@ -65,7 +65,7 @@ router.get("/conversations/:id", requireAuth, async (req, res) => {
     const { orgId, userId } = await getAuthContext(req);
     if (!orgId || !userId) return res.status(403).json({ error: "Forbidden" });
 
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [conv] = await db.select().from(conversations).where(
       and(eq(conversations.id, id), eq(conversations.orgId, orgId), eq(conversations.userId, userId))
     );
@@ -89,7 +89,7 @@ router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
     const { orgId, userId } = await getAuthContext(req);
     if (!orgId || !userId) return res.status(403).json({ error: "Forbidden" });
 
-    const convId = parseInt(req.params.id);
+    const convId = parseInt(String(req.params.id));
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: "content required" });
 

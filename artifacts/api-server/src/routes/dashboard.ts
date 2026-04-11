@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { aiEmployees, tasks } from "@workspace/db";
-import { eq, and, sql, gte, desc, lte } from "drizzle-orm";
+import { eq, and, sql, gte, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext } from "../lib/auth-helpers";
 
@@ -136,11 +136,11 @@ router.get("/analytics/overview", requireAuth, async (req, res) => {
       .groupBy(aiEmployees.department);
 
     const tasksByAssignee = await db.select({
-      assigneeId: tasks.assignedToId,
+      assigneeId: tasks.assigneeId,
       activeCount: sql<number>`count(*)`,
     }).from(tasks)
       .where(and(eq(tasks.orgId, orgId), eq(tasks.status, "in_progress")))
-      .groupBy(tasks.assignedToId);
+      .groupBy(tasks.assigneeId);
 
     const activeByEmployee = new Map(
       tasksByAssignee.filter(t => t.assigneeId != null).map(t => [t.assigneeId, Number(t.activeCount)])
@@ -168,7 +168,7 @@ router.get("/analytics/overview", requireAuth, async (req, res) => {
       category: aiEmployees.department,
       count: sql<number>`count(*)`,
     }).from(tasks)
-      .innerJoin(aiEmployees, eq(tasks.assignedToId, aiEmployees.id))
+      .innerJoin(aiEmployees, eq(tasks.assigneeId, aiEmployees.id))
       .where(eq(tasks.orgId, orgId))
       .groupBy(aiEmployees.department);
 
@@ -178,11 +178,11 @@ router.get("/analytics/overview", requireAuth, async (req, res) => {
     }));
 
     const topPerformerRows = await db.select({
-      employeeId: tasks.assignedToId,
+      employeeId: tasks.assigneeId,
       completed: sql<number>`count(*)`,
     }).from(tasks)
       .where(and(eq(tasks.orgId, orgId), eq(tasks.status, "completed")))
-      .groupBy(tasks.assignedToId)
+      .groupBy(tasks.assigneeId)
       .orderBy(desc(sql`count(*)`))
       .limit(5);
 

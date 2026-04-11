@@ -48,6 +48,6 @@ export async function listVoices() {
     throw new Error(`ElevenLabs voices error: ${response.status}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as { voices: Array<Record<string, unknown>> };
   return data.voices;
 }

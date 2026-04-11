@@ -77,7 +77,7 @@ router.get("/tasks/:id", requireAuth, async (req, res) => {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(403).json({ error: "Forbidden" });
 
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [task] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
     if (!task) return res.status(404).json({ error: "Task not found" });
     res.json(task);
@@ -91,7 +91,7 @@ router.patch("/tasks/:id", requireAuth, async (req, res) => {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(403).json({ error: "Forbidden" });
 
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
     if (!existing) return res.status(404).json({ error: "Task not found" });
 
@@ -120,7 +120,7 @@ router.delete("/tasks/:id", requireAuth, async (req, res) => {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(403).json({ error: "Forbidden" });
 
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
     if (!existing) return res.status(404).json({ error: "Task not found" });
 

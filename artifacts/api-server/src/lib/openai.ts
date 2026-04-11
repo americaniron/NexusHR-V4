@@ -45,12 +45,12 @@ export async function generateImage(
     size: options?.size || "1024x1024",
     quality: options?.quality || "standard",
   });
-  return response.data[0]?.url || "";
+  return response.data?.[0]?.url || "";
 }
 
 export async function transcribeAudio(audioBuffer: Buffer, filename: string) {
   const openai = getOpenAI();
-  const file = new File([audioBuffer], filename, { type: "audio/webm" });
+  const file = new File([new Uint8Array(audioBuffer)], filename, { type: "audio/webm" });
   const response = await openai.audio.transcriptions.create({
     model: "whisper-1",
     file,

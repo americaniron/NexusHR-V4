@@ -46,7 +46,7 @@ router.post("/integrations/:toolId/connect", requireAuth, async (req, res) => {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(400).json({ error: "No organization" });
 
-    const toolId = parseInt(req.params.toolId);
+    const toolId = parseInt(String(req.params.toolId));
     const [existing] = await db.select().from(integrations)
       .where(and(eq(integrations.orgId, orgId), eq(integrations.toolId, toolId)));
 
@@ -73,7 +73,7 @@ router.post("/integrations/:toolId/disconnect", requireAuth, async (req, res) =>
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(400).json({ error: "No organization" });
 
-    const toolId = parseInt(req.params.toolId);
+    const toolId = parseInt(String(req.params.toolId));
     const [updated] = await db.update(integrations)
       .set({ status: "disconnected" })
       .where(and(eq(integrations.orgId, orgId), eq(integrations.toolId, toolId)))

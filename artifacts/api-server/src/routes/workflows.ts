@@ -57,7 +57,7 @@ router.get("/workflows/:id", requireAuth, async (req, res) => {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(403).json({ error: "Forbidden" });
 
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [workflow] = await db.select().from(workflows).where(and(eq(workflows.id, id), eq(workflows.orgId, orgId)));
     if (!workflow) return res.status(404).json({ error: "Workflow not found" });
 
@@ -73,7 +73,7 @@ router.patch("/workflows/:id", requireAuth, async (req, res) => {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(403).json({ error: "Forbidden" });
 
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(workflows).where(and(eq(workflows.id, id), eq(workflows.orgId, orgId)));
     if (!existing) return res.status(404).json({ error: "Workflow not found" });
 
@@ -95,7 +95,7 @@ router.delete("/workflows/:id", requireAuth, async (req, res) => {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.status(403).json({ error: "Forbidden" });
 
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(workflows).where(and(eq(workflows.id, id), eq(workflows.orgId, orgId)));
     if (!existing) return res.status(404).json({ error: "Workflow not found" });
 

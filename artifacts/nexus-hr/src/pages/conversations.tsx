@@ -67,8 +67,8 @@ export default function ConversationsPage() {
 }
 
 function ChatWindow({ conversationId }: { conversationId: number }) {
-  const { data: conv, isLoading, refetch } = useGetConversation(conversationId, { query: { enabled: !!conversationId } });
-  const sendMutation = useSendMessage(conversationId);
+  const { data: conv, isLoading, refetch } = useGetConversation(conversationId);
+  const sendMutation = useSendMessage();
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -86,7 +86,7 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
     setInput("");
     
     try {
-      await sendMutation.mutateAsync({ data: { content: text } });
+      await sendMutation.mutateAsync({ id: conversationId, data: { content: text } });
       refetch();
     } catch (err) {
       console.error(err);
