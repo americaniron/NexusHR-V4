@@ -6,6 +6,7 @@ import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext } from "../lib/auth-helpers";
 import { z } from "zod/v4";
 import { validate } from "../middlewares/validate";
+import { AppError } from "../middlewares/errorHandler";
 
 const router = Router();
 
@@ -13,7 +14,7 @@ const toolIdParam = z.object({
   toolId: z.coerce.number().int().min(1),
 });
 
-router.get("/integrations", requireAuth, async (req, res) => {
+router.get("/integrations", requireAuth, async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
     const tools = await db.select().from(toolRegistry).where(eq(toolRegistry.isActive, 1));
@@ -43,14 +44,14 @@ router.get("/integrations", requireAuth, async (req, res) => {
 
     res.json({ data });
   } catch (error) {
-    res.status(500).json({ error: "Failed to list integrations", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.post("/integrations/:toolId/connect", requireAuth, validate({ params: toolIdParam }), async (req, res) => {
+router.post("/integrations/:toolId/connect", requireAuth, validate({ params: toolIdParam }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(400).json({ error: "No organization", code: "BAD_REQUEST", statusCode: 400 });
+    if (!orgId) throw AppError.badRequest("No organization");
 
     const toolId = parseInt(String(req.params.toolId));
     const [existing] = await db.select().from(integrations)
@@ -61,7 +62,8 @@ router.post("/integrations/:toolId/connect", requireAuth, validate({ params: too
         .set({ status: "connected", connectedAt: new Date() })
         .where(eq(integrations.id, existing.id))
         .returning();
-      return res.json(updated);
+      res.json(updated);
+      return;
     }
 
     const [created] = await db.insert(integrations).values({
@@ -70,14 +72,14 @@ router.post("/integrations/:toolId/connect", requireAuth, validate({ params: too
 
     res.json(created);
   } catch (error) {
-    res.status(500).json({ error: "Failed to connect integration", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.post("/integrations/:toolId/disconnect", requireAuth, validate({ params: toolIdParam }), async (req, res) => {
+router.post("/integrations/:toolId/disconnect", requireAuth, validate({ params: toolIdParam }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(400).json({ error: "No organization", code: "BAD_REQUEST", statusCode: 400 });
+    if (!orgId) throw AppError.badRequest("No organization");
 
     const toolId = parseInt(String(req.params.toolId));
     const [updated] = await db.update(integrations)
@@ -85,10 +87,10 @@ router.post("/integrations/:toolId/disconnect", requireAuth, validate({ params: 
       .where(and(eq(integrations.orgId, orgId), eq(integrations.toolId, toolId)))
       .returning();
 
-    if (!updated) return res.status(404).json({ error: "Integration not found", code: "NOT_FOUND", statusCode: 404 });
+    if (!updated) throw AppError.notFound("Integration not found");
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: "Failed to disconnect integration", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 

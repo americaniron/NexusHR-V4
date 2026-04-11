@@ -7,6 +7,7 @@ import { getAuthContext } from "../lib/auth-helpers";
 import { chatCompletion } from "../lib/ai";
 import { z } from "zod/v4";
 import { validate, idParam } from "../middlewares/validate";
+import { AppError } from "../middlewares/errorHandler";
 
 const router = Router();
 
@@ -26,15 +27,15 @@ const sendInterviewMessageBody = z.object({
   content: z.string().min(1).max(10000),
 });
 
-router.post("/interviews", requireAuth, validate({ body: createInterviewBody }), async (req, res) => {
+router.post("/interviews", requireAuth, validate({ body: createInterviewBody }), async (req, res, next) => {
   try {
     const { orgId, userId } = await getAuthContext(req);
-    if (!orgId || !userId) return res.status(400).json({ error: "Missing org or user", code: "BAD_REQUEST", statusCode: 400 });
+    if (!orgId || !userId) throw AppError.badRequest("Missing org or user");
 
     const { roleId, mode } = req.body;
 
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, roleId));
-    if (!role) return res.status(404).json({ error: "Role not found", code: "NOT_FOUND", statusCode: 404 });
+    if (!role) throw AppError.notFound("Role not found");
 
     const [session] = await db.insert(interviewSessions).values({
       orgId, userId, roleId, mode: mode || "text",
@@ -55,32 +56,32 @@ router.post("/interviews", requireAuth, validate({ body: createInterviewBody }),
 
     res.status(201).json({ ...session, candidates });
   } catch (error) {
-    res.status(500).json({ error: "Failed to create interview", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.get("/interviews/:id", requireAuth, validate({ params: idParam }), async (req, res) => {
+router.get("/interviews/:id", requireAuth, validate({ params: idParam }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
+    if (!orgId) throw AppError.forbidden();
 
     const id = parseInt(String(req.params.id));
     const [session] = await db.select().from(interviewSessions).where(
       and(eq(interviewSessions.id, id), eq(interviewSessions.orgId, orgId))
     );
-    if (!session) return res.status(404).json({ error: "Session not found", code: "NOT_FOUND", statusCode: 404 });
+    if (!session) throw AppError.notFound("Session not found");
 
     const candidates = await db.select().from(interviewCandidates).where(eq(interviewCandidates.sessionId, id));
     res.json({ ...session, candidates });
   } catch (error) {
-    res.status(500).json({ error: "Failed to get interview", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.post("/interviews/:id/messages", requireAuth, validate({ params: idParam, body: sendInterviewMessageBody }), async (req, res) => {
+router.post("/interviews/:id/messages", requireAuth, validate({ params: idParam, body: sendInterviewMessageBody }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
+    if (!orgId) throw AppError.forbidden();
 
     const sessionId = parseInt(String(req.params.id));
     const { candidateId, content } = req.body;
@@ -88,12 +89,12 @@ router.post("/interviews/:id/messages", requireAuth, validate({ params: idParam,
     const [session] = await db.select().from(interviewSessions).where(
       and(eq(interviewSessions.id, sessionId), eq(interviewSessions.orgId, orgId))
     );
-    if (!session) return res.status(404).json({ error: "Session not found", code: "NOT_FOUND", statusCode: 404 });
+    if (!session) throw AppError.notFound("Session not found");
 
     const [candidate] = await db.select().from(interviewCandidates).where(
       and(eq(interviewCandidates.id, candidateId), eq(interviewCandidates.sessionId, sessionId))
     );
-    if (!candidate) return res.status(404).json({ error: "Candidate not found", code: "NOT_FOUND", statusCode: 404 });
+    if (!candidate) throw AppError.notFound("Candidate not found");
 
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, session.roleId));
 
@@ -127,9 +128,8 @@ Keep responses concise (2-3 paragraphs max).`;
       userMessage: { id: userMsg.id, content: userMsg.content, role: userMsg.role },
       aiMessage: { id: aiMsg.id, content: aiResponse, role: "assistant", audioUrl: null },
     });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "unknown";
-    res.status(500).json({ error: "Failed to send message: " + message, code: "INTERNAL_ERROR", statusCode: 500 });
+  } catch (error) {
+    next(error);
   }
 });
 

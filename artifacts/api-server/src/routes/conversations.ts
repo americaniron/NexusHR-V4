@@ -7,6 +7,7 @@ import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
 import { chatCompletion } from "../lib/ai";
 import { z } from "zod/v4";
 import { validate, paginationQuery, idParam } from "../middlewares/validate";
+import { AppError } from "../middlewares/errorHandler";
 
 const router = Router();
 
@@ -19,7 +20,7 @@ const sendMessageBody = z.object({
   content: z.string().min(1).max(10000),
 });
 
-router.get("/conversations", requireAuth, validate({ query: paginationQuery }), async (req, res) => {
+router.get("/conversations", requireAuth, validate({ query: paginationQuery }), async (req, res, next) => {
   try {
     const { orgId, userId } = await getAuthContext(req);
     if (!orgId || !userId) return res.json(emptyPagination());
@@ -46,19 +47,19 @@ router.get("/conversations", requireAuth, validate({ query: paginationQuery }), 
       pagination: { page, limit, total: Number(count), totalPages: Math.ceil(Number(count) / limit) },
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to list conversations", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.post("/conversations", requireAuth, validate({ body: createConversationBody }), async (req, res) => {
+router.post("/conversations", requireAuth, validate({ body: createConversationBody }), async (req, res, next) => {
   try {
     const { orgId, userId } = await getAuthContext(req);
-    if (!orgId || !userId) return res.status(400).json({ error: "No org or user", code: "BAD_REQUEST", statusCode: 400 });
+    if (!orgId || !userId) throw AppError.badRequest("No org or user");
 
     const { aiEmployeeId, title } = req.body;
 
     const [emp] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, aiEmployeeId), eq(aiEmployees.orgId, orgId)));
-    if (!emp) return res.status(404).json({ error: "Employee not found in your organization", code: "NOT_FOUND", statusCode: 404 });
+    if (!emp) throw AppError.notFound("Employee not found in your organization");
 
     const [conv] = await db.insert(conversations).values({
       orgId, userId, aiEmployeeId, title,
@@ -66,20 +67,20 @@ router.post("/conversations", requireAuth, validate({ body: createConversationBo
 
     res.status(201).json({ ...conv, aiEmployee: emp });
   } catch (error) {
-    res.status(500).json({ error: "Failed to create conversation", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.get("/conversations/:id", requireAuth, validate({ params: idParam }), async (req, res) => {
+router.get("/conversations/:id", requireAuth, validate({ params: idParam }), async (req, res, next) => {
   try {
     const { orgId, userId } = await getAuthContext(req);
-    if (!orgId || !userId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
+    if (!orgId || !userId) throw AppError.forbidden();
 
     const id = parseInt(String(req.params.id));
     const [conv] = await db.select().from(conversations).where(
       and(eq(conversations.id, id), eq(conversations.orgId, orgId), eq(conversations.userId, userId))
     );
-    if (!conv) return res.status(404).json({ error: "Conversation not found", code: "NOT_FOUND", statusCode: 404 });
+    if (!conv) throw AppError.notFound("Conversation not found");
 
     const msgs = await db.select().from(messages).where(eq(messages.conversationId, id));
     const [emp] = await db.select().from(aiEmployees).where(eq(aiEmployees.id, conv.aiEmployeeId));
@@ -90,14 +91,14 @@ router.get("/conversations/:id", requireAuth, validate({ params: idParam }), asy
 
     res.json({ ...conv, messages: msgs, aiEmployee: emp ? { ...emp, role } : null });
   } catch (error) {
-    res.status(500).json({ error: "Failed to get conversation", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.post("/conversations/:id/messages", requireAuth, validate({ params: idParam, body: sendMessageBody }), async (req, res) => {
+router.post("/conversations/:id/messages", requireAuth, validate({ params: idParam, body: sendMessageBody }), async (req, res, next) => {
   try {
     const { orgId, userId } = await getAuthContext(req);
-    if (!orgId || !userId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
+    if (!orgId || !userId) throw AppError.forbidden();
 
     const convId = parseInt(String(req.params.id));
     const { content } = req.body;
@@ -105,7 +106,7 @@ router.post("/conversations/:id/messages", requireAuth, validate({ params: idPar
     const [conv] = await db.select().from(conversations).where(
       and(eq(conversations.id, convId), eq(conversations.orgId, orgId), eq(conversations.userId, userId))
     );
-    if (!conv) return res.status(404).json({ error: "Conversation not found", code: "NOT_FOUND", statusCode: 404 });
+    if (!conv) throw AppError.notFound("Conversation not found");
 
     const [emp] = await db.select().from(aiEmployees).where(eq(aiEmployees.id, conv.aiEmployeeId));
     const role = emp ? (await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, emp.roleId)))[0] : null;
@@ -134,9 +135,8 @@ Be helpful, professional, and demonstrate expertise in your role. Keep responses
     await db.update(conversations).set({ lastMessageAt: new Date() }).where(eq(conversations.id, convId));
 
     res.json({ userMessage: userMsg, aiMessage: aiMsg });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "unknown";
-    res.status(500).json({ error: "Failed to send message: " + message, code: "INTERNAL_ERROR", statusCode: 500 });
+  } catch (error) {
+    next(error);
   }
 });
 

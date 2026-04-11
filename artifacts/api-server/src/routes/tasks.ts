@@ -6,6 +6,7 @@ import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
 import { z } from "zod/v4";
 import { validate, paginationQuery, idParam } from "../middlewares/validate";
+import { AppError } from "../middlewares/errorHandler";
 
 const router = Router();
 
@@ -33,7 +34,7 @@ const updateTaskBody = z.object({
   deliverable: z.string().optional(),
 });
 
-router.get("/tasks", requireAuth, validate({ query: listTasksQuery }), async (req, res) => {
+router.get("/tasks", requireAuth, validate({ query: listTasksQuery }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.json(emptyPagination());
@@ -70,20 +71,20 @@ router.get("/tasks", requireAuth, validate({ query: listTasksQuery }), async (re
       pagination: { page, limit, total: Number(count), totalPages: Math.ceil(Number(count) / limit) },
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to list tasks", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.post("/tasks", requireAuth, validate({ body: createTaskBody }), async (req, res) => {
+router.post("/tasks", requireAuth, validate({ body: createTaskBody }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(400).json({ error: "No organization", code: "BAD_REQUEST", statusCode: 400 });
+    if (!orgId) throw AppError.badRequest("No organization");
 
     const { title, description, assigneeId, priority, category, dueDate } = req.body;
 
     if (assigneeId) {
       const [emp] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, assigneeId), eq(aiEmployees.orgId, orgId)));
-      if (!emp) return res.status(400).json({ error: "Assignee not found in your organization", code: "BAD_REQUEST", statusCode: 400 });
+      if (!emp) throw AppError.badRequest("Assignee not found in your organization");
     }
 
     const [task] = await db.insert(tasks).values({
@@ -98,38 +99,38 @@ router.post("/tasks", requireAuth, validate({ body: createTaskBody }), async (re
 
     res.status(201).json(task);
   } catch (error) {
-    res.status(500).json({ error: "Failed to create task", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.get("/tasks/:id", requireAuth, validate({ params: idParam }), async (req, res) => {
+router.get("/tasks/:id", requireAuth, validate({ params: idParam }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
+    if (!orgId) throw AppError.forbidden();
 
     const id = parseInt(String(req.params.id));
     const [task] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
-    if (!task) return res.status(404).json({ error: "Task not found", code: "NOT_FOUND", statusCode: 404 });
+    if (!task) throw AppError.notFound("Task not found");
     res.json(task);
   } catch (error) {
-    res.status(500).json({ error: "Failed to get task", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.patch("/tasks/:id", requireAuth, validate({ params: idParam, body: updateTaskBody }), async (req, res) => {
+router.patch("/tasks/:id", requireAuth, validate({ params: idParam, body: updateTaskBody }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
+    if (!orgId) throw AppError.forbidden();
 
     const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
-    if (!existing) return res.status(404).json({ error: "Task not found", code: "NOT_FOUND", statusCode: 404 });
+    if (!existing) throw AppError.notFound("Task not found");
 
     const { title, description, assigneeId, status, priority, deliverable } = req.body;
 
     if (assigneeId !== undefined && assigneeId !== null) {
       const [emp] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, assigneeId), eq(aiEmployees.orgId, orgId)));
-      if (!emp) return res.status(400).json({ error: "Assignee not found in your organization", code: "BAD_REQUEST", statusCode: 400 });
+      if (!emp) throw AppError.badRequest("Assignee not found in your organization");
     }
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -147,23 +148,23 @@ router.patch("/tasks/:id", requireAuth, validate({ params: idParam, body: update
     const [updated] = await db.update(tasks).set(updates).where(eq(tasks.id, id)).returning();
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: "Failed to update task", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.delete("/tasks/:id", requireAuth, validate({ params: idParam }), async (req, res) => {
+router.delete("/tasks/:id", requireAuth, validate({ params: idParam }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
+    if (!orgId) throw AppError.forbidden();
 
     const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
-    if (!existing) return res.status(404).json({ error: "Task not found", code: "NOT_FOUND", statusCode: 404 });
+    if (!existing) throw AppError.notFound("Task not found");
 
     await db.delete(tasks).where(eq(tasks.id, id));
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: "Failed to delete task", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 

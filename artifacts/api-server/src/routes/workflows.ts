@@ -6,6 +6,7 @@ import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
 import { z } from "zod/v4";
 import { validate, paginationQuery, idParam } from "../middlewares/validate";
+import { AppError } from "../middlewares/errorHandler";
 
 const router = Router();
 
@@ -21,7 +22,7 @@ const updateWorkflowBody = z.object({
   status: z.enum(["draft", "active", "paused", "archived"]).optional(),
 });
 
-router.get("/workflows", requireAuth, validate({ query: paginationQuery }), async (req, res) => {
+router.get("/workflows", requireAuth, validate({ query: paginationQuery }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.json(emptyPagination());
@@ -44,14 +45,14 @@ router.get("/workflows", requireAuth, validate({ query: paginationQuery }), asyn
       pagination: { page, limit, total: Number(count), totalPages: Math.ceil(Number(count) / limit) },
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to list workflows", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.post("/workflows", requireAuth, validate({ body: createWorkflowBody }), async (req, res) => {
+router.post("/workflows", requireAuth, validate({ body: createWorkflowBody }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(400).json({ error: "No organization", code: "BAD_REQUEST", statusCode: 400 });
+    if (!orgId) throw AppError.badRequest("No organization");
 
     const { name, description, triggerType } = req.body;
 
@@ -61,34 +62,34 @@ router.post("/workflows", requireAuth, validate({ body: createWorkflowBody }), a
 
     res.status(201).json({ ...workflow, steps: [] });
   } catch (error) {
-    res.status(500).json({ error: "Failed to create workflow", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.get("/workflows/:id", requireAuth, validate({ params: idParam }), async (req, res) => {
+router.get("/workflows/:id", requireAuth, validate({ params: idParam }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
+    if (!orgId) throw AppError.forbidden();
 
     const id = parseInt(String(req.params.id));
     const [workflow] = await db.select().from(workflows).where(and(eq(workflows.id, id), eq(workflows.orgId, orgId)));
-    if (!workflow) return res.status(404).json({ error: "Workflow not found", code: "NOT_FOUND", statusCode: 404 });
+    if (!workflow) throw AppError.notFound("Workflow not found");
 
     const steps = await db.select().from(workflowSteps).where(eq(workflowSteps.workflowId, id));
     res.json({ ...workflow, steps });
   } catch (error) {
-    res.status(500).json({ error: "Failed to get workflow", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.patch("/workflows/:id", requireAuth, validate({ params: idParam, body: updateWorkflowBody }), async (req, res) => {
+router.patch("/workflows/:id", requireAuth, validate({ params: idParam, body: updateWorkflowBody }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
+    if (!orgId) throw AppError.forbidden();
 
     const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(workflows).where(and(eq(workflows.id, id), eq(workflows.orgId, orgId)));
-    if (!existing) return res.status(404).json({ error: "Workflow not found", code: "NOT_FOUND", statusCode: 404 });
+    if (!existing) throw AppError.notFound("Workflow not found");
 
     const { name, description, status } = req.body;
     const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -99,24 +100,24 @@ router.patch("/workflows/:id", requireAuth, validate({ params: idParam, body: up
     const [updated] = await db.update(workflows).set(updates).where(eq(workflows.id, id)).returning();
     res.json({ ...updated, steps: [] });
   } catch (error) {
-    res.status(500).json({ error: "Failed to update workflow", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.delete("/workflows/:id", requireAuth, validate({ params: idParam }), async (req, res) => {
+router.delete("/workflows/:id", requireAuth, validate({ params: idParam }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
+    if (!orgId) throw AppError.forbidden();
 
     const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(workflows).where(and(eq(workflows.id, id), eq(workflows.orgId, orgId)));
-    if (!existing) return res.status(404).json({ error: "Workflow not found", code: "NOT_FOUND", statusCode: 404 });
+    if (!existing) throw AppError.notFound("Workflow not found");
 
     await db.delete(workflowSteps).where(eq(workflowSteps.workflowId, id));
     await db.delete(workflows).where(eq(workflows.id, id));
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: "Failed to delete workflow", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 

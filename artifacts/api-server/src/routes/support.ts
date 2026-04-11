@@ -6,6 +6,7 @@ import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
 import { z } from "zod/v4";
 import { validate, paginationQuery } from "../middlewares/validate";
+import { AppError } from "../middlewares/errorHandler";
 
 const router = Router();
 
@@ -21,7 +22,7 @@ const listArticlesQuery = paginationQuery.extend({
   search: z.string().optional(),
 });
 
-router.get("/support/tickets", requireAuth, validate({ query: paginationQuery }), async (req, res) => {
+router.get("/support/tickets", requireAuth, validate({ query: paginationQuery }), async (req, res, next) => {
   try {
     const { userId } = await getAuthContext(req);
     if (!userId) return res.json(emptyPagination());
@@ -39,14 +40,14 @@ router.get("/support/tickets", requireAuth, validate({ query: paginationQuery })
       pagination: { page, limit, total: Number(count), totalPages: Math.ceil(Number(count) / limit) },
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to list tickets", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.post("/support/tickets", requireAuth, validate({ body: createTicketBody }), async (req, res) => {
+router.post("/support/tickets", requireAuth, validate({ body: createTicketBody }), async (req, res, next) => {
   try {
     const { orgId, userId } = await getAuthContext(req);
-    if (!orgId || !userId) return res.status(400).json({ error: "No org or user", code: "BAD_REQUEST", statusCode: 400 });
+    if (!orgId || !userId) throw AppError.badRequest("No org or user");
 
     const { subject, description, category, priority } = req.body;
 
@@ -56,11 +57,11 @@ router.post("/support/tickets", requireAuth, validate({ body: createTicketBody }
 
     res.status(201).json(ticket);
   } catch (error) {
-    res.status(500).json({ error: "Failed to create ticket", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.get("/support/articles", validate({ query: listArticlesQuery }), async (req, res) => {
+router.get("/support/articles", validate({ query: listArticlesQuery }), async (req, res, next) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 12));
@@ -81,7 +82,7 @@ router.get("/support/articles", validate({ query: listArticlesQuery }), async (r
       pagination: { page, limit, total: Number(count), totalPages: Math.ceil(Number(count) / limit) },
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to list articles", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 

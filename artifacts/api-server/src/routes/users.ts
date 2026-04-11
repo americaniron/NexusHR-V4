@@ -5,17 +5,15 @@ import { eq, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuth } from "@clerk/express";
 import { validate, paginationQuery } from "../middlewares/validate";
+import { AppError } from "../middlewares/errorHandler";
 
 const router = Router();
 
-router.get("/users/me", requireAuth, async (req, res) => {
+router.get("/users/me", requireAuth, async (req, res, next) => {
   try {
     const auth = getAuth(req);
     const clerkUserId = auth?.userId;
-    if (!clerkUserId) {
-      res.status(401).json({ error: "Unauthorized", code: "UNAUTHORIZED", statusCode: 401 });
-      return;
-    }
+    if (!clerkUserId) throw new AppError(401, "UNAUTHORIZED", "Unauthorized");
 
     let [user] = await db.select().from(users).where(eq(users.clerkUserId, clerkUserId));
 
@@ -52,11 +50,11 @@ router.get("/users/me", requireAuth, async (req, res) => {
 
     res.json(user);
   } catch (error) {
-    res.status(500).json({ error: "Failed to get user", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.get("/users", requireAuth, validate({ query: paginationQuery }), async (req, res) => {
+router.get("/users", requireAuth, validate({ query: paginationQuery }), async (req, res, next) => {
   try {
     const auth = getAuth(req);
     const orgId = auth?.orgId;
@@ -84,7 +82,7 @@ router.get("/users", requireAuth, validate({ query: paginationQuery }), async (r
       pagination: { page, limit, total: Number(count), totalPages: Math.ceil(Number(count) / limit) },
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to list users", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 

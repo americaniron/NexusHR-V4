@@ -4,14 +4,9 @@ import { billingSubscriptions, usageEvents } from "@workspace/db";
 import { eq, and, sql, gte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext } from "../lib/auth-helpers";
-import { z } from "zod/v4";
-import { validate } from "../middlewares/validate";
+import { AppError } from "../middlewares/errorHandler";
 
 const router = Router();
-
-const changePlanBody = z.object({
-  plan: z.enum(["starter", "growth", "business", "enterprise"]),
-});
 
 const PLAN_LIMITS: Record<string, Record<string, number>> = {
   trial: { ai_employees: 2, voice_hours: 40, messages: 5000, workflows: 10, tasks: 2000, integrations: 3, storage_gb: 10, users: 3 },
@@ -21,10 +16,10 @@ const PLAN_LIMITS: Record<string, Record<string, number>> = {
   enterprise: { ai_employees: 999999, voice_hours: 999999, messages: 999999, workflows: 999999, tasks: 999999, integrations: 999, storage_gb: 999999, users: 999999 },
 };
 
-router.get("/billing/subscription", requireAuth, async (req, res) => {
+router.get("/billing/subscription", requireAuth, async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(404).json({ error: "No organization", code: "NOT_FOUND", statusCode: 404 });
+    if (!orgId) throw AppError.notFound("No organization");
 
     let [sub] = await db.select().from(billingSubscriptions).where(eq(billingSubscriptions.orgId, orgId));
 
@@ -42,11 +37,11 @@ router.get("/billing/subscription", requireAuth, async (req, res) => {
 
     res.json(sub);
   } catch (error) {
-    res.status(500).json({ error: "Failed to get subscription", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.get("/billing/usage", requireAuth, async (req, res) => {
+router.get("/billing/usage", requireAuth, async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.json({ dimensions: [] });
@@ -72,7 +67,7 @@ router.get("/billing/usage", requireAuth, async (req, res) => {
 
     res.json({ dimensions });
   } catch (error) {
-    res.status(500).json({ error: "Failed to get usage", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 

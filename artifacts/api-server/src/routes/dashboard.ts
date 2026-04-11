@@ -13,7 +13,7 @@ const activityQuery = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(10).optional(),
 });
 
-router.get("/dashboard/summary", requireAuth, async (req, res) => {
+router.get("/dashboard/summary", requireAuth, async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
     if (!orgId) {
@@ -58,11 +58,11 @@ router.get("/dashboard/summary", requireAuth, async (req, res) => {
       tasksByStatus: tasksByStatus.map(t => ({ status: t.status, count: Number(t.count) })),
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to get dashboard summary", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.get("/dashboard/activity", requireAuth, validate({ query: activityQuery }), async (req, res) => {
+router.get("/dashboard/activity", requireAuth, validate({ query: activityQuery }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
     const limit = Math.min(20, parseInt(req.query.limit as string) || 10);
@@ -84,11 +84,11 @@ router.get("/dashboard/activity", requireAuth, validate({ query: activityQuery }
 
     res.json({ data });
   } catch (error) {
-    res.status(500).json({ error: "Failed to get activity", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.get("/analytics/overview", requireAuth, async (req, res) => {
+router.get("/analytics/overview", requireAuth, async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
     if (!orgId) {
@@ -206,7 +206,7 @@ router.get("/analytics/overview", requireAuth, async (req, res) => {
       topPerformers: topPerformers.filter(Boolean),
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to get analytics", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 

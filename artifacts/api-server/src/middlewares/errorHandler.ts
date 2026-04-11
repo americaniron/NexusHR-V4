@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction, RequestHandler } from "express";
 
 export class AppError extends Error {
   constructor(
@@ -9,6 +9,18 @@ export class AppError extends Error {
   ) {
     super(message);
     this.name = "AppError";
+  }
+
+  static notFound(message = "Not found") {
+    return new AppError(404, "NOT_FOUND", message);
+  }
+
+  static forbidden(message = "Forbidden") {
+    return new AppError(403, "FORBIDDEN", message);
+  }
+
+  static badRequest(message: string) {
+    return new AppError(400, "BAD_REQUEST", message);
   }
 }
 

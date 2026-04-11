@@ -6,6 +6,7 @@ import { requireAuth } from "../middlewares/requireAuth";
 import { getAuth } from "@clerk/express";
 import { z } from "zod/v4";
 import { validate } from "../middlewares/validate";
+import { AppError } from "../middlewares/errorHandler";
 
 const router = Router();
 
@@ -16,13 +17,11 @@ const updateOrgBody = z.object({
   timezone: z.string().optional(),
 });
 
-router.get("/organizations/current", requireAuth, async (req, res) => {
+router.get("/organizations/current", requireAuth, async (req, res, next) => {
   try {
     const auth = getAuth(req);
     const orgId = auth?.orgId;
-    if (!orgId) {
-      return res.status(404).json({ error: "No organization found", code: "NOT_FOUND", statusCode: 404 });
-    }
+    if (!orgId) throw AppError.notFound("No organization found");
 
     let [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, orgId));
 
@@ -36,17 +35,15 @@ router.get("/organizations/current", requireAuth, async (req, res) => {
 
     res.json(org);
   } catch (error) {
-    res.status(500).json({ error: "Failed to get organization", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.patch("/organizations/current", requireAuth, validate({ body: updateOrgBody }), async (req, res) => {
+router.patch("/organizations/current", requireAuth, validate({ body: updateOrgBody }), async (req, res, next) => {
   try {
     const auth = getAuth(req);
     const orgId = auth?.orgId;
-    if (!orgId) {
-      return res.status(404).json({ error: "No organization found", code: "NOT_FOUND", statusCode: 404 });
-    }
+    if (!orgId) throw AppError.notFound("No organization found");
 
     const { name, logoUrl, industry, timezone } = req.body;
     const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -62,7 +59,7 @@ router.patch("/organizations/current", requireAuth, validate({ body: updateOrgBo
 
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: "Failed to update organization", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 

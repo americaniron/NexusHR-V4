@@ -5,6 +5,7 @@ import { eq, sql, ilike, and, asc, desc } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { z } from "zod/v4";
 import { validate, paginationQuery, idParam } from "../middlewares/validate";
+import { AppError } from "../middlewares/errorHandler";
 
 const router = Router();
 
@@ -15,7 +16,7 @@ const listRolesQuery = paginationQuery.extend({
   sortBy: z.enum(["relevance", "price_asc", "price_desc", "newest"]).optional(),
 });
 
-router.get("/roles", validate({ query: listRolesQuery }), async (req, res) => {
+router.get("/roles", validate({ query: listRolesQuery }), async (req, res, next) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 12));
@@ -42,11 +43,11 @@ router.get("/roles", validate({ query: listRolesQuery }), async (req, res) => {
       pagination: { page, limit, total: Number(count), totalPages: Math.ceil(Number(count) / limit) },
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to list roles", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.get("/roles/categories", async (_req, res) => {
+router.get("/roles/categories", async (_req, res, next) => {
   try {
     const data = await db.select({
       category: aiEmployeeRoles.category,
@@ -55,21 +56,18 @@ router.get("/roles/categories", async (_req, res) => {
 
     res.json({ data });
   } catch (error) {
-    res.status(500).json({ error: "Failed to get categories", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
-router.get("/roles/:id", validate({ params: idParam }), async (req, res) => {
+router.get("/roles/:id", validate({ params: idParam }), async (req, res, next) => {
   try {
     const id = parseInt(String(req.params.id));
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, id));
-    if (!role) {
-      res.status(404).json({ error: "Role not found", code: "NOT_FOUND", statusCode: 404 });
-      return;
-    }
+    if (!role) throw AppError.notFound("Role not found");
     res.json(role);
   } catch (error) {
-    res.status(500).json({ error: "Failed to get role", code: "INTERNAL_ERROR", statusCode: 500 });
+    next(error);
   }
 });
 
