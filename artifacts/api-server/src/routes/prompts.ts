@@ -44,7 +44,7 @@ router.get("/prompts/templates/:id", requireAuth, async (req: Request, res: Resp
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.forbidden("Organization required");
 
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) throw AppError.badRequest("Invalid template ID");
 
     const [template] = await db
@@ -127,7 +127,7 @@ router.put("/prompts/templates/:id", requireAuth, validate({ body: updateTemplat
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.forbidden("Organization required");
 
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) throw AppError.badRequest("Invalid template ID");
 
     const [existing] = await db
@@ -283,7 +283,7 @@ router.get("/prompts/audit-logs/:id", requireAuth, async (req: Request, res: Res
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.forbidden("Organization required");
 
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) throw AppError.badRequest("Invalid log ID");
 
     const [log] = await db

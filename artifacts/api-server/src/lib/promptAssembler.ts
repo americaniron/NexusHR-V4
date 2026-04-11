@@ -49,6 +49,7 @@ export interface AssembledPrompt {
     layerCount: number;
     assemblyDurationMs: number;
     templateVersion: number;
+    selectedVariants: Record<string, string>;
   };
 }
 
@@ -80,7 +81,7 @@ const SYSTEM_PROMPT_TEMPLATE = `You are an AI employee operating on NexsusHR VX 
 - Technical issues requiring human infrastructure access
 - Situations involving personal safety or wellbeing concerns`;
 
-function resolveTemplate(template: string, variables: Record<string, string>): string {
+function resolveTemplate(template: string, variables: Record<string, string | null>): string {
   let result = template;
   for (const [key, value] of Object.entries(variables)) {
     result = result.replace(new RegExp(`\\{${key}\\}`, "g"), value || "");
@@ -88,7 +89,7 @@ function resolveTemplate(template: string, variables: Record<string, string>): s
   return result;
 }
 
-async function assembleLayer1System(role: { title: string; department: string }): Promise<string> {
+async function assembleLayer1System(role: { title: string; department: string | null }): Promise<string> {
   return resolveTemplate(SYSTEM_PROMPT_TEMPLATE, {
     ROLE_TITLE: role.title,
     DEPARTMENT: role.department,
@@ -97,7 +98,7 @@ async function assembleLayer1System(role: { title: string; department: string })
 
 async function assembleLayer2RoleDefinition(role: {
   title: string;
-  department: string;
+  department: string | null;
   category: string | null;
   industry: string | null;
   seniorityLevel: string | null;
@@ -439,20 +440,61 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
     .where(and(eq(promptTemplates.orgId, input.orgId), eq(promptTemplates.isActive, 1)))
     .orderBy(desc(promptTemplates.version));
 
-  const templateMap: Record<string, { content: string; version: number; variables: unknown }> = {};
-  for (const t of orgTemplates) {
-    if (!templateMap[t.layer]) {
-      const isRoleMatch = t.roleId && employee.roleId && t.roleId === employee.roleId;
-      const isGeneric = !t.roleId;
+  interface TemplateCandidate {
+    content: string;
+    version: number;
+    variables: unknown;
+    variant: string;
+    trafficWeight: number;
+    roleSpecific: boolean;
+  }
 
-      if (isRoleMatch) {
-        templateMap[t.layer] = { content: t.content, version: t.version, variables: t.variables };
-      } else if (isGeneric && !templateMap[t.layer]) {
-        templateMap[t.layer] = { content: t.content, version: t.version, variables: t.variables };
-      }
-    } else if (t.roleId && employee.roleId && t.roleId === employee.roleId) {
-      templateMap[t.layer] = { content: t.content, version: t.version, variables: t.variables };
+  const layerCandidates: Record<string, TemplateCandidate[]> = {};
+  for (const t of orgTemplates) {
+    const isRoleMatch = !!(t.roleId && employee.roleId && t.roleId === employee.roleId);
+    const isGeneric = !t.roleId;
+
+    if (isRoleMatch || isGeneric) {
+      if (!layerCandidates[t.layer]) layerCandidates[t.layer] = [];
+      layerCandidates[t.layer].push({
+        content: t.content,
+        version: t.version,
+        variables: t.variables,
+        variant: t.variant || "default",
+        trafficWeight: t.trafficWeight ?? 100,
+        roleSpecific: isRoleMatch,
+      });
     }
+  }
+
+  function selectVariant(candidates: TemplateCandidate[], cohortKey: string): TemplateCandidate {
+    const roleSpecific = candidates.filter(c => c.roleSpecific);
+    const pool = roleSpecific.length > 0 ? roleSpecific : candidates;
+
+    if (pool.length === 1) return pool[0];
+
+    const totalWeight = pool.reduce((sum, c) => sum + c.trafficWeight, 0);
+    let hash = 0;
+    for (let i = 0; i < cohortKey.length; i++) {
+      hash = ((hash << 5) - hash + cohortKey.charCodeAt(i)) | 0;
+    }
+    const bucket = Math.abs(hash) % totalWeight;
+
+    let cumulative = 0;
+    for (const candidate of pool) {
+      cumulative += candidate.trafficWeight;
+      if (bucket < cumulative) return candidate;
+    }
+    return pool[pool.length - 1];
+  }
+
+  const cohortKey = `${input.orgId}-${input.userId}-${input.aiEmployeeId}`;
+  const selectedVariants: Record<string, string> = {};
+  const templateMap: Record<string, { content: string; version: number; variables: unknown }> = {};
+  for (const [layer, candidates] of Object.entries(layerCandidates)) {
+    const selected = selectVariant(candidates, cohortKey + "-" + layer);
+    templateMap[layer] = { content: selected.content, version: selected.version, variables: selected.variables };
+    selectedVariants[layer] = selected.variant;
   }
 
   // ── Stage 3: Layer Content Assembly ──────────────────────────────────
@@ -539,10 +581,17 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
   };
 
   // ── Stage 6: Context Overrides ──────────────────────────────────────
-  // Apply per-request overrides from the caller (e.g., task-specific context).
+  // Apply per-request overrides for non-critical layers only.
+  // system and compliance are locked — callers cannot override safety controls.
+  const LOCKED_LAYERS = new Set(["system", "compliance"]);
+  const OVERRIDABLE_LAYERS = new Set([
+    "role_definition", "job_instructions", "task_instructions",
+    "memory_context", "user_context", "company_context", "tool_access",
+  ]);
   if (input.contextOverrides) {
     for (const [key, value] of Object.entries(input.contextOverrides)) {
-      if (value !== undefined && layerContents[key] !== undefined) {
+      if (LOCKED_LAYERS.has(key)) continue;
+      if (value !== undefined && OVERRIDABLE_LAYERS.has(key) && layerContents[key] !== undefined) {
         layerContents[key] = value;
       }
     }
@@ -610,6 +659,7 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
       layerCount: assembledParts.length,
       assemblyDurationMs: Date.now() - startTime,
       templateVersion: maxTemplateVersion || 1,
+      selectedVariants,
     },
   };
 }

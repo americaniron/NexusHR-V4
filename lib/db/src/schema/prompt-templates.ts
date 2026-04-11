@@ -14,6 +14,8 @@ export const promptTemplates = pgTable("prompt_templates", {
   variables: jsonb("variables"),
   metadata: jsonb("metadata"),
   roleId: integer("role_id"),
+  variant: text("variant").default("default"),
+  trafficWeight: integer("traffic_weight").default(100),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
