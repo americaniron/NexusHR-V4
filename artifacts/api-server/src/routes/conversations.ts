@@ -34,7 +34,7 @@ router.get("/conversations", requireAuth, validate({ query: paginationQuery }), 
     const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(conversations).where(where);
 
     const enriched = await Promise.all(data.map(async (conv) => {
-      const [emp] = await db.select().from(aiEmployees).where(eq(aiEmployees.id, conv.aiEmployeeId));
+      const [emp] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, conv.aiEmployeeId), eq(aiEmployees.orgId, orgId)));
       let role = null;
       if (emp) {
         [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, emp.roleId));
@@ -83,7 +83,7 @@ router.get("/conversations/:id", requireAuth, validate({ params: idParam }), asy
     if (!conv) throw AppError.notFound("Conversation not found");
 
     const msgs = await db.select().from(messages).where(eq(messages.conversationId, id));
-    const [emp] = await db.select().from(aiEmployees).where(eq(aiEmployees.id, conv.aiEmployeeId));
+    const [emp] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, conv.aiEmployeeId), eq(aiEmployees.orgId, orgId)));
     let role = null;
     if (emp) {
       [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, emp.roleId));
@@ -108,7 +108,7 @@ router.post("/conversations/:id/messages", requireAuth, validate({ params: idPar
     );
     if (!conv) throw AppError.notFound("Conversation not found");
 
-    const [emp] = await db.select().from(aiEmployees).where(eq(aiEmployees.id, conv.aiEmployeeId));
+    const [emp] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, conv.aiEmployeeId), eq(aiEmployees.orgId, orgId)));
     const role = emp ? (await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, emp.roleId)))[0] : null;
 
     const [userMsg] = await db.insert(messages).values({

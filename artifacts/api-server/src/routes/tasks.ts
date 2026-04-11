@@ -57,7 +57,7 @@ router.get("/tasks", requireAuth, validate({ query: listTasksQuery }), async (re
 
     const enriched = await Promise.all(data.map(async (task) => {
       if (task.assigneeId) {
-        const [emp] = await db.select().from(aiEmployees).where(eq(aiEmployees.id, task.assigneeId));
+        const [emp] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, task.assigneeId), eq(aiEmployees.orgId, orgId)));
         if (emp) {
           const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, emp.roleId));
           return { ...task, assignee: { ...emp, role } };

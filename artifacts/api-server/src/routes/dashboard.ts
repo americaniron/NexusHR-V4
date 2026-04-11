@@ -194,7 +194,7 @@ router.get("/analytics/overview", requireAuth, async (req, res, next) => {
 
     const topPerformers = await Promise.all(
       topPerformerRows.filter(r => r.employeeId != null).map(async (r) => {
-        const [emp] = await db.select().from(aiEmployees).where(eq(aiEmployees.id, r.employeeId!));
+        const [emp] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, r.employeeId!), eq(aiEmployees.orgId, orgId)));
         return emp ? { id: emp.id, name: emp.name, department: emp.department, completedTasks: Number(r.completed) } : null;
       })
     );
