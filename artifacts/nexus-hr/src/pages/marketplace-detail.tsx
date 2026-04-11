@@ -1,9 +1,9 @@
-import { useGetRole, useHireEmployee, useListVoices, useGenerateAvatar } from "@workspace/api-client-react";
+import { useGetRole, useHireEmployee, useListVoices, useGenerateAvatar, useGetAvatarGallery, useGetAvatarBrandingPresets } from "@workspace/api-client-react";
 import { useParams, Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CheckCircle2, Zap, Briefcase, Star, Cpu, DollarSign, User, Volume2, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Briefcase, Star, Cpu, User, Volume2, Sparkles, Loader2, Building2, Image } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AIAvatar } from "@/components/ai-avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -11,21 +11,32 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const AVATAR_STYLES = [
-  "adventurer", "adventurer-neutral", "avataaars", "big-ears",
-  "bottts", "croodles", "fun-emoji", "lorelei",
-  "micah", "miniavs", "notionists", "personas",
-];
-
 const VALID_SENIORITY = ["junior", "mid", "senior", "lead", "executive"] as const;
 type Seniority = typeof VALID_SENIORITY[number];
 
+const GENDER_OPTIONS = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "non-binary", label: "Non-Binary" },
+] as const;
+
+const AGE_RANGE_OPTIONS = [
+  { value: "20-30", label: "20-30" },
+  { value: "30-40", label: "30-40" },
+  { value: "40-50", label: "40-50" },
+  { value: "50-60", label: "50-60" },
+  { value: "60+", label: "60+" },
+] as const;
+
+const ATTIRE_OPTIONS = [
+  { value: "formal", label: "Formal" },
+  { value: "business-casual", label: "Business Casual" },
+  { value: "casual", label: "Casual" },
+  { value: "creative", label: "Creative" },
+] as const;
+
 function toSeniority(val: string): Seniority {
   return VALID_SENIORITY.includes(val as Seniority) ? (val as Seniority) : "mid";
-}
-
-function generateAvatarUrl(seed: string, style: string) {
-  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
 }
 
 export default function MarketplaceDetailPage() {
@@ -35,17 +46,26 @@ export default function MarketplaceDetailPage() {
   const { data: voicesData } = useListVoices();
   const hireMutation = useHireEmployee();
   const generateAvatarMutation = useGenerateAvatar();
+  const { data: brandingData } = useGetAvatarBrandingPresets();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [isHiring, setIsHiring] = useState(false);
   const [showCustomize, setShowCustomize] = useState(false);
   const [employeeName, setEmployeeName] = useState("");
-  const [selectedStyle, setSelectedStyle] = useState("avataaars");
-  const [avatarSeed, setAvatarSeed] = useState("");
   const [selectedVoiceId, setSelectedVoiceId] = useState("");
   const [generatedAvatarUrl, setGeneratedAvatarUrl] = useState("");
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
-  const [avatarMode, setAvatarMode] = useState<"style" | "ai">("style");
+  const [avatarMode, setAvatarMode] = useState<"gallery" | "custom" | "branding">("gallery");
+  const [selectedGalleryUrl, setSelectedGalleryUrl] = useState("");
+
+  const [gender, setGender] = useState<string>("");
+  const [ageRange, setAgeRange] = useState<string>("");
+  const [attireStyle, setAttireStyle] = useState<string>("business-casual");
+  const [ethnicity, setEthnicity] = useState<string>("");
+  const [selectedBrandingPreset, setSelectedBrandingPreset] = useState<string>("");
+
+  const roleTitle = role?.title || "";
+  const { data: galleryData } = useGetAvatarGallery({ roleTitle: roleTitle || undefined, industry: role?.industry });
 
   const handleGenerateAIAvatar = async () => {
     if (!role) return;
@@ -56,16 +76,19 @@ export default function MarketplaceDetailPage() {
           roleTitle: role.title,
           industry: role.industry,
           seniority: toSeniority(role.seniorityLevel),
-          attireStyle: "business-casual",
+          attireStyle: (attireStyle || "business-casual") as "formal" | "business-casual" | "casual" | "creative",
+          ...(gender ? { gender: gender as "male" | "female" | "non-binary" } : {}),
+          ...(ageRange ? { ageRange: ageRange as "20-30" | "30-40" | "40-50" | "50-60" | "60+" } : {}),
+          ...(ethnicity ? { ethnicity } : {}),
+          ...(selectedBrandingPreset ? { brandingPreset: selectedBrandingPreset as "corporate" | "startup" | "creative" | "professional" } : {}),
         },
       });
       if (result.avatarUrl) {
         setGeneratedAvatarUrl(result.avatarUrl);
-        setAvatarMode("ai");
         toast({ title: "AI Avatar Generated", description: "Your custom avatar is ready." });
       }
     } catch {
-      toast({ title: "Avatar generation failed", description: "Using DiceBear style instead.", variant: "destructive" });
+      toast({ title: "Avatar generation failed", description: "Please try again.", variant: "destructive" });
     } finally {
       setIsGeneratingAvatar(false);
     }
@@ -77,10 +100,12 @@ export default function MarketplaceDetailPage() {
     try {
       const name = employeeName.trim() || `${role.title} Alpha`;
       let avatarUrl: string | undefined;
-      if (avatarMode === "ai" && generatedAvatarUrl) {
+      if (avatarMode === "custom" && generatedAvatarUrl) {
         avatarUrl = generatedAvatarUrl;
-      } else if (avatarSeed) {
-        avatarUrl = generateAvatarUrl(avatarSeed || name, selectedStyle);
+      } else if (avatarMode === "branding" && generatedAvatarUrl) {
+        avatarUrl = generatedAvatarUrl;
+      } else if (selectedGalleryUrl) {
+        avatarUrl = selectedGalleryUrl;
       }
 
       await hireMutation.mutateAsync({
@@ -129,11 +154,7 @@ export default function MarketplaceDetailPage() {
     return <div>Role not found</div>;
   }
 
-  const previewAvatarUrl = avatarMode === "ai" && generatedAvatarUrl
-    ? generatedAvatarUrl
-    : avatarSeed
-      ? generateAvatarUrl(avatarSeed || employeeName || role.title, selectedStyle)
-      : role.avatarUrl;
+  const previewAvatarUrl = generatedAvatarUrl || selectedGalleryUrl || role.avatarUrl;
 
   return (
     <div className="space-y-6 pb-12">
@@ -145,7 +166,7 @@ export default function MarketplaceDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <div className="flex flex-col md:flex-row gap-6 items-start md:items-center bg-card p-6 rounded-xl border border-border shadow-sm">
-            <AIAvatar src={previewAvatarUrl} name={role.title} size="lg" />
+            <AIAvatar src={previewAvatarUrl} name={role.title} roleTitle={role.department} size="lg" showLabel />
             <div className="flex-1 space-y-2">
               <div className="flex flex-wrap gap-2 items-center">
                 <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none">{role.category}</Badge>
@@ -255,10 +276,7 @@ export default function MarketplaceDetailPage() {
                     <Label className="text-xs text-muted-foreground">Employee Name</Label>
                     <Input
                       value={employeeName}
-                      onChange={(e) => {
-                        setEmployeeName(e.target.value);
-                        if (!avatarSeed) setAvatarSeed(e.target.value);
-                      }}
+                      onChange={(e) => setEmployeeName(e.target.value)}
                       placeholder={`${role.title} Alpha`}
                       className="h-9"
                     />
@@ -266,64 +284,157 @@ export default function MarketplaceDetailPage() {
 
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Avatar</Label>
-                    <div className="flex gap-2 mb-2">
+                    <div className="flex gap-1">
                       <Button
-                        variant={avatarMode === "style" ? "default" : "outline"}
+                        variant={avatarMode === "gallery" ? "default" : "outline"}
                         size="sm"
                         className="flex-1 h-8 text-xs"
-                        onClick={() => setAvatarMode("style")}
+                        onClick={() => setAvatarMode("gallery")}
                       >
-                        Style Picker
+                        <Image className="h-3 w-3 mr-1" /> Quick Select
                       </Button>
                       <Button
-                        variant={avatarMode === "ai" ? "default" : "outline"}
+                        variant={avatarMode === "custom" ? "default" : "outline"}
                         size="sm"
                         className="flex-1 h-8 text-xs"
-                        onClick={() => {
-                          setAvatarMode("ai");
-                          if (!generatedAvatarUrl) handleGenerateAIAvatar();
-                        }}
-                        disabled={isGeneratingAvatar}
+                        onClick={() => setAvatarMode("custom")}
                       >
-                        {isGeneratingAvatar ? (
-                          <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Generating...</>
-                        ) : (
-                          <><Sparkles className="h-3 w-3 mr-1" /> AI Generate</>
-                        )}
+                        <Sparkles className="h-3 w-3 mr-1" /> Custom
+                      </Button>
+                      <Button
+                        variant={avatarMode === "branding" ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1 h-8 text-xs"
+                        onClick={() => setAvatarMode("branding")}
+                      >
+                        <Building2 className="h-3 w-3 mr-1" /> Brand
                       </Button>
                     </div>
 
-                    {avatarMode === "ai" && generatedAvatarUrl && (
-                      <div className="flex flex-col items-center gap-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
-                        <AIAvatar src={generatedAvatarUrl} name={role.title} size="lg" />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs"
-                          onClick={handleGenerateAIAvatar}
-                          disabled={isGeneratingAvatar}
-                        >
-                          {isGeneratingAvatar ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
-                          Regenerate
-                        </Button>
+                    {avatarMode === "gallery" && (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">Pre-generated avatars for this role:</p>
+                        <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                          {galleryData?.data?.map((item) => (
+                            <button
+                              key={item.id}
+                              onClick={() => { setSelectedGalleryUrl(item.url); setGeneratedAvatarUrl(""); }}
+                              className={`rounded-lg border p-1 transition-all ${selectedGalleryUrl === item.url ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground"}`}
+                            >
+                              <img src={item.url} alt={item.label} className="w-full h-auto rounded" />
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     )}
 
-                    {avatarMode === "style" && (
-                      <div className="grid grid-cols-4 gap-2">
-                        {AVATAR_STYLES.map((style) => (
-                          <button
-                            key={style}
-                            onClick={() => { setSelectedStyle(style); if (!avatarSeed) setAvatarSeed(employeeName || role.title); }}
-                            className={`rounded-lg border p-1 transition-all ${selectedStyle === style ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground"}`}
-                          >
-                            <img
-                              src={generateAvatarUrl(employeeName || role.title, style)}
-                              alt={style}
-                              className="w-full h-auto rounded"
+                    {avatarMode === "custom" && (
+                      <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/30">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Gender</Label>
+                            <select
+                              value={gender}
+                              onChange={(e) => setGender(e.target.value)}
+                              className="w-full h-8 px-2 rounded-md border border-border bg-background text-xs text-foreground"
+                            >
+                              <option value="">Any</option>
+                              {GENDER_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Age Range</Label>
+                            <select
+                              value={ageRange}
+                              onChange={(e) => setAgeRange(e.target.value)}
+                              className="w-full h-8 px-2 rounded-md border border-border bg-background text-xs text-foreground"
+                            >
+                              <option value="">Any</option>
+                              {AGE_RANGE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Attire</Label>
+                            <select
+                              value={attireStyle}
+                              onChange={(e) => setAttireStyle(e.target.value)}
+                              className="w-full h-8 px-2 rounded-md border border-border bg-background text-xs text-foreground"
+                            >
+                              {ATTIRE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Ethnicity</Label>
+                            <Input
+                              value={ethnicity}
+                              onChange={(e) => setEthnicity(e.target.value)}
+                              placeholder="Any"
+                              className="h-8 text-xs"
                             />
-                          </button>
-                        ))}
+                          </div>
+                        </div>
+                        <Button
+                          className="w-full h-9 text-xs"
+                          onClick={handleGenerateAIAvatar}
+                          disabled={isGeneratingAvatar}
+                        >
+                          {isGeneratingAvatar ? (
+                            <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Generating...</>
+                          ) : (
+                            <><Sparkles className="h-3 w-3 mr-1" /> Generate Custom Avatar</>
+                          )}
+                        </Button>
+                        {generatedAvatarUrl && (
+                          <div className="flex flex-col items-center gap-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
+                            <AIAvatar src={generatedAvatarUrl} name={role.title} size="lg" />
+                            <Button variant="ghost" size="sm" className="text-xs" onClick={handleGenerateAIAvatar} disabled={isGeneratingAvatar}>
+                              {isGeneratingAvatar ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                              Regenerate
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {avatarMode === "branding" && (
+                      <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/30">
+                        <p className="text-xs text-muted-foreground">Select an enterprise branding preset:</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {brandingData?.data && Object.entries(brandingData.data).map(([key, preset]) => (
+                            <button
+                              key={key}
+                              onClick={() => {
+                                setSelectedBrandingPreset(key);
+                                const p = preset as { attireOptions?: string[]; description?: string };
+                                if (p.attireOptions?.[0]) setAttireStyle(p.attireOptions[0]);
+                              }}
+                              className={`text-left rounded-lg border p-2 transition-all ${selectedBrandingPreset === key ? "border-primary ring-1 ring-primary bg-primary/5" : "border-border hover:border-muted-foreground"}`}
+                            >
+                              <div className="font-medium text-xs text-foreground capitalize">{key}</div>
+                              <div className="text-[10px] text-muted-foreground mt-0.5">
+                                {(preset as { description?: string }).description}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <Button
+                          className="w-full h-9 text-xs"
+                          onClick={handleGenerateAIAvatar}
+                          disabled={isGeneratingAvatar || !selectedBrandingPreset}
+                        >
+                          {isGeneratingAvatar ? (
+                            <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Generating...</>
+                          ) : (
+                            <><Building2 className="h-3 w-3 mr-1" /> Generate Branded Avatar</>
+                          )}
+                        </Button>
+                        {generatedAvatarUrl && (
+                          <div className="flex flex-col items-center gap-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
+                            <AIAvatar src={generatedAvatarUrl} name={role.title} size="lg" />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -7,6 +7,7 @@ import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
 import { z } from "zod/v4";
 import { validate, paginationQuery, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
+import { getDiceBearFallback, type AvatarIdentityPackage } from "../lib/avatars";
 
 const router = Router();
 
@@ -80,6 +81,21 @@ router.post("/employees", requireAuth, validate({ body: createEmployeeBody }), a
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, roleId));
     if (!role) throw AppError.notFound("Role not found");
 
+    const resolvedAvatarUrl = avatarUrl || role.avatarUrl || getDiceBearFallback(name || role.title);
+    const aip: AvatarIdentityPackage = {
+      avatarUrl: resolvedAvatarUrl,
+      voiceId: voiceId || undefined,
+      renderConfig: {
+        size: "512x512",
+        style: resolvedAvatarUrl?.includes("dicebear.com") ? "dicebear" : "photorealistic",
+        generationParams: {
+          roleTitle: role.title,
+          industry: role.industry,
+          seniority: role.seniorityLevel,
+        },
+      },
+    };
+
     const [employee] = await db.insert(aiEmployees).values({
       orgId,
       roleId,
@@ -88,7 +104,8 @@ router.post("/employees", requireAuth, validate({ body: createEmployeeBody }), a
       team,
       personality: personality || role.personalityDefaults,
       customInstructions,
-      avatarUrl: avatarUrl || role.avatarUrl,
+      avatarUrl: resolvedAvatarUrl,
+      avatarConfig: aip,
       voiceId: voiceId || null,
     }).returning();
 
@@ -131,8 +148,23 @@ router.patch("/employees/:id", requireAuth, validate({ params: idParam, body: up
     if (status) updates.status = status;
     if (personality !== undefined) updates.personality = personality;
     if (customInstructions !== undefined) updates.customInstructions = customInstructions;
-    if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
-    if (voiceId !== undefined) updates.voiceId = voiceId;
+    if (avatarUrl !== undefined) {
+      updates.avatarUrl = avatarUrl;
+      const existingAip = (existing.avatarConfig || {}) as Record<string, unknown>;
+      updates.avatarConfig = {
+        ...existingAip,
+        avatarUrl,
+        renderConfig: {
+          ...((existingAip.renderConfig as Record<string, unknown>) || {}),
+          style: avatarUrl?.includes("dicebear.com") ? "dicebear" : "photorealistic",
+        },
+      };
+    }
+    if (voiceId !== undefined) {
+      updates.voiceId = voiceId;
+      const existingAip = (updates.avatarConfig || existing.avatarConfig || {}) as Record<string, unknown>;
+      updates.avatarConfig = { ...existingAip, voiceId };
+    }
 
     const [updated] = await db.update(aiEmployees).set(updates).where(eq(aiEmployees.id, id)).returning();
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, updated.roleId));

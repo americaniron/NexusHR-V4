@@ -1,8 +1,10 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import { z } from "zod/v4";
 import { generateAvatar, getDiceBearFallback, type AvatarIdentityPackage } from "../lib/avatars";
 import { AppError } from "../middlewares/errorHandler";
 import { requireAuth } from "../middlewares/requireAuth";
 import { rateLimit } from "../middlewares/rateLimit";
+import { validate, idParam } from "../middlewares/validate";
 import { getAuthContext } from "../lib/auth-helpers";
 import { db, aiEmployees, aiEmployeeRoles } from "@workspace/db";
 import { eq, and, isNotNull, ilike } from "drizzle-orm";
@@ -35,7 +37,40 @@ const ENTERPRISE_BRANDING_PRESETS: Record<string, { attireOptions: string[]; col
   },
 };
 
-router.get("/avatars/gallery", async (req: Request, res: Response, next: NextFunction) => {
+const galleryQuery = z.object({
+  roleTitle: z.string().max(200).optional(),
+  category: z.string().max(100).optional(),
+  industry: z.string().max(100).optional(),
+});
+
+const genderEnum = z.enum(["male", "female", "non-binary"]);
+const ageRangeEnum = z.enum(["20-30", "30-40", "40-50", "50-60", "60+"]);
+const attireEnum = z.enum(["formal", "business-casual", "casual", "creative"]);
+const safeStringPattern = /^[a-zA-Z0-9 \-_.,()&]+$/;
+
+const generateBody = z.object({
+  roleTitle: z.string().max(200).regex(safeStringPattern).optional(),
+  industry: z.string().max(100).regex(safeStringPattern).optional(),
+  seniority: z.string().max(50).regex(safeStringPattern).optional(),
+  gender: genderEnum.optional(),
+  ageRange: ageRangeEnum.optional(),
+  ethnicity: z.string().max(100).regex(safeStringPattern).optional(),
+  attireStyle: attireEnum.optional(),
+  seed: z.string().max(64).regex(/^[a-zA-Z0-9\-_]+$/).optional(),
+  brandingPreset: z.enum(["corporate", "startup", "creative", "professional"]).optional(),
+});
+
+const regenerateBody = z.object({
+  roleTitle: z.string().max(200).regex(safeStringPattern).optional(),
+  industry: z.string().max(100).regex(safeStringPattern).optional(),
+  seniority: z.string().max(50).regex(safeStringPattern).optional(),
+  gender: genderEnum.optional(),
+  ageRange: ageRangeEnum.optional(),
+  ethnicity: z.string().max(100).regex(safeStringPattern).optional(),
+  attireStyle: attireEnum.optional(),
+});
+
+router.get("/avatars/gallery", validate({ query: galleryQuery }), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const roleTitle = req.query.roleTitle as string | undefined;
     const category = req.query.category as string | undefined;
@@ -134,7 +169,7 @@ router.get("/avatars/branding-presets", async (_req: Request, res: Response, nex
   }
 });
 
-router.post("/avatars/generate", requireAuth, avatarGenerateLimit, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/avatars/generate", requireAuth, avatarGenerateLimit, validate({ body: generateBody }), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { roleTitle, industry, seniority, gender, ageRange, ethnicity, attireStyle, seed, brandingPreset } = req.body || {};
 
@@ -159,29 +194,13 @@ router.post("/avatars/generate", requireAuth, avatarGenerateLimit, async (req: R
 
     res.json(result);
   } catch (error) {
-    console.error("[Avatars] Generation failed:", error instanceof Error ? error.message : error);
-    const fallbackSeed = req.body?.seed || req.body?.roleTitle || "default";
-    res.status(500).json({
-      avatarUrl: getDiceBearFallback(fallbackSeed),
-      objectPath: "",
-      prompt: "Fallback to DiceBear avatar - generation failed",
-      avatarConfig: { style: "dicebear-fallback" },
-      identityPackage: {
-        avatarUrl: getDiceBearFallback(fallbackSeed),
-        renderConfig: { size: "512x512", style: "dicebear-fallback", generationParams: {} },
-      },
-      error: "Avatar generation failed",
-    });
+    next(error);
   }
 });
 
-router.post("/avatars/regenerate/:employeeId", requireAuth, avatarRegenerateLimit, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/avatars/regenerate/:employeeId", requireAuth, avatarRegenerateLimit, validate({ params: idParam, body: regenerateBody }), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const rawId = Array.isArray(req.params.employeeId) ? req.params.employeeId[0] : req.params.employeeId;
-    const employeeId = parseInt(rawId, 10);
-    if (isNaN(employeeId)) {
-      throw AppError.badRequest("Invalid employee ID");
-    }
+    const employeeId = parseInt(req.params.employeeId, 10);
 
     const { orgId } = await getAuthContext(req);
     if (!orgId) {

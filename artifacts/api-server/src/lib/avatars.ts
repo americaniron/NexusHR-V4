@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { randomUUID } from "crypto";
-import { objectStorageClient, ObjectStorageService } from "./objectStorage";
+import { objectStorageClient } from "./objectStorage";
 
 interface AvatarParams {
   roleTitle?: string;
@@ -164,7 +164,6 @@ export async function generateAvatar(params: AvatarParams): Promise<AvatarGenera
       const buffer = Buffer.from(imageData.b64_json, "base64");
       const objectPath = await uploadAvatarToStorage(buffer, params.seed);
 
-      const storageService = new ObjectStorageService();
       const baseUrl = process.env.REPLIT_DEV_DOMAIN
         ? `https://${process.env.REPLIT_DEV_DOMAIN}`
         : "";
@@ -195,8 +194,12 @@ export async function generateAvatar(params: AvatarParams): Promise<AvatarGenera
   throw lastError || new Error("Avatar generation failed after retries");
 }
 
+function sanitizeSeed(seed: string): string {
+  return seed.replace(/[^a-zA-Z0-9\-_]/g, "").slice(0, 64);
+}
+
 async function uploadAvatarToStorage(buffer: Buffer, seed?: string): Promise<string> {
-  const fileName = `${seed || randomUUID()}.png`;
+  const fileName = `${seed ? sanitizeSeed(seed) : randomUUID()}.png`;
   const publicPaths = (process.env.PUBLIC_OBJECT_SEARCH_PATHS || "").split(",").map(p => p.trim()).filter(Boolean);
 
   if (publicPaths.length === 0) {
@@ -238,7 +241,8 @@ export async function generateInterviewCandidateAvatars(
   ];
 
   const results: AvatarGenerateResult[] = [];
-  const selected = diverseParams.slice(0, count);
+  const shuffled = [...diverseParams].sort(() => Math.random() - 0.5);
+  const selected = shuffled.slice(0, count);
 
   for (const baseParams of selected) {
     try {
@@ -267,26 +271,6 @@ export async function generateInterviewCandidateAvatars(
   }
 
   return results;
-}
-
-export function getRoleGalleryAvatars(roleTitle: string, industry: string): { id: string; url: string; label: string; category: string; industry: string }[] {
-  const ROLE_STYLES = ["notionists", "personas", "avataaars", "lorelei", "micah", "bottts"];
-  const ROLE_VARIANTS = [
-    { label: "Professional", seed: `${roleTitle}-professional` },
-    { label: "Creative", seed: `${roleTitle}-creative` },
-    { label: "Executive", seed: `${roleTitle}-executive` },
-    { label: "Friendly", seed: `${roleTitle}-friendly` },
-    { label: "Modern", seed: `${roleTitle}-modern` },
-    { label: "Classic", seed: `${roleTitle}-classic` },
-  ];
-
-  return ROLE_VARIANTS.map((variant, index) => ({
-    id: `role-${roleTitle}-${index}`,
-    url: getDiceBearFallback(variant.seed, ROLE_STYLES[index % ROLE_STYLES.length]),
-    label: `${variant.label} ${roleTitle}`,
-    category: "role-specific",
-    industry,
-  }));
 }
 
 export function getDiceBearFallback(seed: string, style: string = "notionists"): string {
