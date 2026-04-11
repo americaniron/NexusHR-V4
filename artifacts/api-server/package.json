@@ -13,7 +13,8 @@
     "seed:education-manufacturing-hospitality-roles": "tsx src/scripts/seed-education-manufacturing-hospitality-roles.ts",
     "seed:retail-energy-transportation-roles": "tsx src/scripts/seed-retail-energy-transportation-roles.ts",
     "seed:creative-realestate-agriculture-roles": "tsx src/scripts/seed-creative-realestate-agriculture-roles.ts",
-    "seed:tech-publicsector-media-roles": "tsx src/scripts/seed-tech-publicsector-media-roles.ts"
+    "seed:tech-publicsector-media-roles": "tsx src/scripts/seed-tech-publicsector-media-roles.ts",
+    "seed:aerospace-hr-telecom-roles": "tsx src/scripts/seed-aerospace-hr-telecom-roles.ts"
   },
   "dependencies": {
     "@clerk/express": "^2.1.0",
