@@ -10,6 +10,7 @@ export const aiEmployees = pgTable("ai_employees", {
   roleId: integer("role_id").references(() => aiEmployeeRoles.id).notNull(),
   name: text("name").notNull(),
   avatarUrl: text("avatar_url"),
+  avatarConfig: jsonb("avatar_config"),
   voiceId: text("voice_id"),
   department: text("department"),
   team: text("team"),

@@ -5,9 +5,11 @@
  * NexusHR VX API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AvatarConfig } from "./avatarConfig";
 
 export interface AvatarResult {
   avatarUrl: string;
   objectPath?: string;
   prompt?: string;
+  avatarConfig?: AvatarConfig;
 }

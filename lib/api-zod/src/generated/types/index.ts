@@ -15,6 +15,7 @@ export * from "./analyticsOverviewTopPerformersItem";
 export * from "./analyticsOverviewUtilizationByDepartmentItem";
 export * from "./articleItem";
 export * from "./articleList";
+export * from "./avatarConfig";
 export * from "./avatarGallery";
 export * from "./avatarGalleryItem";
 export * from "./avatarGenerateRequest";

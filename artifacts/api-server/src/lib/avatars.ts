@@ -12,10 +12,18 @@ interface AvatarParams {
   seed?: string;
 }
 
+export interface AvatarConfig {
+  generationParams?: AvatarParams;
+  renderSize?: string;
+  style?: string;
+  voiceId?: string;
+}
+
 interface AvatarGenerateResult {
   avatarUrl: string;
   objectPath: string;
   prompt: string;
+  avatarConfig: AvatarConfig;
 }
 
 const MAX_RETRIES = 2;
@@ -32,6 +40,60 @@ function getOpenAI(): OpenAI {
   return _openai;
 }
 
+const INDUSTRY_ATTIRE: Record<string, Record<string, string>> = {
+  technology: {
+    formal: "wearing a tailored dark suit with a minimalist tech-company feel",
+    "business-casual": "wearing a smart blazer over a crew-neck shirt, Silicon Valley style",
+    casual: "wearing a clean hoodie or polo, startup-casual",
+    creative: "wearing stylish streetwear-meets-tech attire with modern accessories",
+  },
+  finance: {
+    formal: "wearing a classic Wall Street power suit with crisp white shirt",
+    "business-casual": "wearing slacks and a pressed dress shirt, no tie",
+    casual: "wearing chinos and a fine-knit sweater, relaxed finance look",
+    creative: "wearing a tailored blazer with an open collar, modern finance style",
+  },
+  healthcare: {
+    formal: "wearing a white lab coat over professional attire",
+    "business-casual": "wearing scrubs or business casual with a stethoscope",
+    casual: "wearing clean medical scrubs",
+    creative: "wearing a stylish lab coat with modern accessories",
+  },
+  legal: {
+    formal: "wearing a courtroom-ready dark suit with a power tie or blouse",
+    "business-casual": "wearing a blazer and dress pants, law-firm casual",
+    casual: "wearing slacks and a dress shirt, relaxed legal style",
+    creative: "wearing a tailored suit with a colorful pocket square or scarf",
+  },
+  education: {
+    formal: "wearing academic professional attire with subtle scholarly details",
+    "business-casual": "wearing a cardigan or blazer over a collared shirt, professorial style",
+    casual: "wearing comfortable smart-casual clothing, approachable educator look",
+    creative: "wearing artistic professional attire, creative teacher style",
+  },
+  marketing: {
+    formal: "wearing a sharp modern suit, agency-executive look",
+    "business-casual": "wearing trendy business casual, fashion-forward marketing style",
+    casual: "wearing a stylish casual outfit, creative agency vibes",
+    creative: "wearing bold, fashion-forward creative professional attire",
+  },
+};
+
+const SENIORITY_DESC: Record<string, string> = {
+  junior: "young, early-career",
+  mid: "mid-career, confident",
+  senior: "experienced, authoritative",
+  lead: "seasoned leader, commanding presence",
+  executive: "distinguished executive, powerful presence",
+};
+
+const DEFAULT_ATTIRE: Record<string, string> = {
+  formal: "wearing a formal business suit, tie or blazer",
+  "business-casual": "wearing smart business casual attire",
+  casual: "wearing clean casual professional clothing",
+  creative: "wearing creative, stylish professional attire",
+};
+
 function buildPrompt(params: AvatarParams): string {
   const gender = params.gender || "neutral";
   const ethnicity = params.ethnicity || "diverse";
@@ -40,22 +102,10 @@ function buildPrompt(params: AvatarParams): string {
   const industry = params.industry || "technology";
   const seniority = params.seniority || "mid";
 
-  const seniorityDesc: Record<string, string> = {
-    junior: "young, early-career",
-    mid: "mid-career, confident",
-    senior: "experienced, authoritative",
-    lead: "seasoned leader, commanding presence",
-    executive: "distinguished executive, powerful presence",
-  };
+  const industryAttire = INDUSTRY_ATTIRE[industry.toLowerCase()] || DEFAULT_ATTIRE;
+  const attireDesc = industryAttire[attire] || DEFAULT_ATTIRE[attire] || "wearing professional attire";
 
-  const attireDesc: Record<string, string> = {
-    formal: "wearing a formal business suit, tie or blazer",
-    "business-casual": "wearing smart business casual attire",
-    casual: "wearing clean casual professional clothing",
-    creative: "wearing creative, stylish professional attire",
-  };
-
-  return `Professional corporate headshot photograph of a ${seniorityDesc[seniority] || "professional"} ${gender} ${ethnicity} person working as a ${role} in the ${industry} industry. ${attireDesc[attire] || "wearing professional attire"}. Clean studio background with soft professional lighting. Sharp focus, high resolution, photorealistic. The person has a warm, approachable expression. Shot from shoulders up, centered composition. No text, no watermarks, no logos.`;
+  return `Professional corporate headshot photograph of a ${SENIORITY_DESC[seniority] || "professional"} ${gender} ${ethnicity} person working as a ${role} in the ${industry} industry. ${attireDesc}. Clean studio background with soft professional lighting. Sharp focus, high resolution, photorealistic. The person has a warm, approachable expression. Shot from shoulders up, centered composition. No text, no watermarks, no logos.`;
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -79,7 +129,7 @@ export async function generateAvatar(params: AvatarParams): Promise<AvatarGenera
         model: "gpt-image-1",
         prompt,
         n: 1,
-        size: "1024x1024",
+        size: "512x512",
         quality: "medium",
       });
 
@@ -97,7 +147,13 @@ export async function generateAvatar(params: AvatarParams): Promise<AvatarGenera
         : "";
       const avatarUrl = `${baseUrl}/api/storage/public-objects/avatars/${objectPath.split("/").pop()}`;
 
-      return { avatarUrl, objectPath, prompt };
+      const avatarConfig: AvatarConfig = {
+        generationParams: params,
+        renderSize: "512x512",
+        style: "photorealistic",
+      };
+
+      return { avatarUrl, objectPath, prompt, avatarConfig };
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       console.error(`[Avatars] Generation attempt ${attempt + 1} failed:`, lastError.message);
@@ -168,6 +224,7 @@ export async function generateInterviewCandidateAvatars(
         avatarUrl: getDiceBearFallback(`${roleTitle}-candidate-${results.length}`),
         objectPath: "",
         prompt: "DiceBear fallback",
+        avatarConfig: { style: "dicebear-fallback" },
       });
     }
   }

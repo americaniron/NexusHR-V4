@@ -24,6 +24,7 @@ export const aiEmployeeRoles = pgTable("ai_employee_roles", {
   skillsTags: jsonb("skills_tags"),
   priceMonthly: integer("price_monthly").notNull(),
   avatarUrl: text("avatar_url"),
+  avatarConfig: jsonb("avatar_config"),
   rating: real("rating").default(4.5),
   isActive: integer("is_active").default(1).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

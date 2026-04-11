@@ -1,7 +1,7 @@
 import { db } from "@workspace/db";
 import { aiEmployeeRoles } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { generateAvatar, getDiceBearFallback } from "../lib/avatars";
+import { generateAvatar, getDiceBearFallback, type AvatarConfig } from "../lib/avatars";
 
 const BATCH_SIZE = 5;
 const DELAY_BETWEEN_BATCHES_MS = 2000;
@@ -42,16 +42,17 @@ async function seedAvatars() {
 
         await db
           .update(aiEmployeeRoles)
-          .set({ avatarUrl: result.avatarUrl })
+          .set({ avatarUrl: result.avatarUrl, avatarConfig: result.avatarConfig })
           .where(eq(aiEmployeeRoles.id, role.id));
 
         console.log(`  Generated avatar for: ${role.title}`);
         generated++;
       } catch (error) {
         const fallbackUrl = getDiceBearFallback(role.title, "notionists");
+        const fallbackConfig: AvatarConfig = { style: "dicebear-fallback" };
         await db
           .update(aiEmployeeRoles)
-          .set({ avatarUrl: fallbackUrl })
+          .set({ avatarUrl: fallbackUrl, avatarConfig: fallbackConfig })
           .where(eq(aiEmployeeRoles.id, role.id));
 
         console.log(`  Fallback avatar for: ${role.title} (${error instanceof Error ? error.message : "unknown error"})`);

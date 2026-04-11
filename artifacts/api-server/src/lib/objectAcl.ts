@@ -2,20 +2,10 @@ import { File } from "@google-cloud/storage";
 
 const ACL_POLICY_METADATA_KEY = "custom:aclPolicy";
 
-// Can be flexibly defined according to the use case.
-//
-// Examples:
-// - USER_LIST: the users from a list stored in the database;
-// - EMAIL_DOMAIN: the users whose email is in a specific domain;
-// - GROUP_MEMBER: the users who are members of a specific group;
-// - SUBSCRIBER: the users who are subscribers of a specific service / content
-//   creator.
 export enum ObjectAccessGroupType {}
 
 export interface ObjectAccessGroup {
   type: ObjectAccessGroupType;
-  // The logic id that identifies qualified group members. Format depends on the
-  // ObjectAccessGroupType — e.g. a user-list DB id, an email domain, a group id.
   id: string;
 }
 
@@ -29,7 +19,6 @@ export interface ObjectAclRule {
   permission: ObjectPermission;
 }
 
-// Stored as object custom metadata under "custom:aclPolicy" (JSON string).
 export interface ObjectAclPolicy {
   owner: string;
   visibility: "public" | "private";
@@ -59,9 +48,6 @@ function createObjectAccessGroup(
   group: ObjectAccessGroup,
 ): BaseObjectAccessGroup {
   switch (group.type) {
-    // Implement per access group type, e.g.:
-    // case "USER_LIST":
-    //   return new UserListAccessGroup(group.id);
     default:
       throw new Error(`Unknown access group type: ${group.type}`);
   }

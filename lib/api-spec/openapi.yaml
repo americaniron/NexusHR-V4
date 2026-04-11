@@ -1997,6 +1997,18 @@ components:
         seed:
           type: string
 
+    AvatarConfig:
+      type: object
+      properties:
+        generationParams:
+          $ref: "#/components/schemas/AvatarGenerateRequest"
+        renderSize:
+          type: string
+        style:
+          type: string
+        voiceId:
+          type: string
+
     AvatarResult:
       type: object
       required: [avatarUrl]
@@ -2008,6 +2020,8 @@ components:
           type: string
         prompt:
           type: string
+        avatarConfig:
+          $ref: "#/components/schemas/AvatarConfig"
 
     AvatarGalleryItem:
       type: object

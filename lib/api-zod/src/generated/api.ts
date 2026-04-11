@@ -1323,6 +1323,28 @@ export const GenerateAvatarResponse = zod.object({
   avatarUrl: zod.string().url(),
   objectPath: zod.string().optional(),
   prompt: zod.string().optional(),
+  avatarConfig: zod
+    .object({
+      generationParams: zod
+        .object({
+          roleTitle: zod.string().optional(),
+          industry: zod.string().optional(),
+          seniority: zod
+            .enum(["junior", "mid", "senior", "lead", "executive"])
+            .optional(),
+          gender: zod.enum(["male", "female", "neutral"]).optional(),
+          ethnicity: zod.string().optional(),
+          attireStyle: zod
+            .enum(["formal", "business-casual", "casual", "creative"])
+            .optional(),
+          seed: zod.string().optional(),
+        })
+        .optional(),
+      renderSize: zod.string().optional(),
+      style: zod.string().optional(),
+      voiceId: zod.string().optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -1350,4 +1372,26 @@ export const RegenerateAvatarResponse = zod.object({
   avatarUrl: zod.string().url(),
   objectPath: zod.string().optional(),
   prompt: zod.string().optional(),
+  avatarConfig: zod
+    .object({
+      generationParams: zod
+        .object({
+          roleTitle: zod.string().optional(),
+          industry: zod.string().optional(),
+          seniority: zod
+            .enum(["junior", "mid", "senior", "lead", "executive"])
+            .optional(),
+          gender: zod.enum(["male", "female", "neutral"]).optional(),
+          ethnicity: zod.string().optional(),
+          attireStyle: zod
+            .enum(["formal", "business-casual", "casual", "creative"])
+            .optional(),
+          seed: zod.string().optional(),
+        })
+        .optional(),
+      renderSize: zod.string().optional(),
+      style: zod.string().optional(),
+      voiceId: zod.string().optional(),
+    })
+    .optional(),
 });

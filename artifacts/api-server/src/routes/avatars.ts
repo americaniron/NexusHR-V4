@@ -2,9 +2,13 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import { generateAvatar, getDiceBearFallback } from "../lib/avatars";
 import { AppError } from "../middlewares/errorHandler";
 import { requireAuth } from "../middlewares/requireAuth";
+import { rateLimit } from "../middlewares/rateLimit";
 import { getAuthContext } from "../lib/auth-helpers";
 import { db, aiEmployees } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+
+const avatarGenerateLimit = rateLimit({ windowMs: 60_000, max: 10, keyPrefix: "avatar-generate" });
+const avatarRegenerateLimit = rateLimit({ windowMs: 60_000, max: 5, keyPrefix: "avatar-regenerate" });
 
 const router: IRouter = Router();
 
@@ -40,7 +44,7 @@ router.get("/avatars/gallery", async (_req: Request, res: Response, next: NextFu
   }
 });
 
-router.post("/avatars/generate", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/avatars/generate", requireAuth, avatarGenerateLimit, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { roleTitle, industry, seniority, gender, ethnicity, attireStyle, seed } = req.body || {};
 
@@ -62,12 +66,13 @@ router.post("/avatars/generate", requireAuth, async (req: Request, res: Response
       avatarUrl: getDiceBearFallback(fallbackSeed),
       objectPath: "",
       prompt: "Fallback to DiceBear avatar - generation failed",
+      avatarConfig: { style: "dicebear-fallback" },
       error: "Avatar generation failed",
     });
   }
 });
 
-router.post("/avatars/regenerate/:employeeId", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/avatars/regenerate/:employeeId", requireAuth, avatarRegenerateLimit, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const rawId = Array.isArray(req.params.employeeId) ? req.params.employeeId[0] : req.params.employeeId;
     const employeeId = parseInt(rawId, 10);
@@ -83,7 +88,7 @@ router.post("/avatars/regenerate/:employeeId", requireAuth, async (req: Request,
     const [employee] = await db
       .select()
       .from(aiEmployees)
-      .where(and(eq(aiEmployees.id, employeeId), eq(aiEmployees.organizationId, orgId)))
+      .where(and(eq(aiEmployees.id, employeeId), eq(aiEmployees.orgId, orgId)))
       .limit(1);
 
     if (!employee) {
@@ -102,7 +107,10 @@ router.post("/avatars/regenerate/:employeeId", requireAuth, async (req: Request,
       seed: `employee-${employeeId}-${Date.now()}`,
     });
 
-    await db.update(aiEmployees).set({ avatarUrl: result.avatarUrl }).where(eq(aiEmployees.id, employeeId));
+    await db.update(aiEmployees).set({
+      avatarUrl: result.avatarUrl,
+      avatarConfig: result.avatarConfig,
+    }).where(eq(aiEmployees.id, employeeId));
 
     res.json(result);
   } catch (error) {

@@ -3,6 +3,8 @@ import { Readable } from "stream";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
 import { requireAuth } from "../middlewares/requireAuth";
+import { getAuthContext } from "../lib/auth-helpers";
+import { AppError } from "../middlewares/errorHandler";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -59,6 +61,17 @@ router.get("/storage/objects/*path", requireAuth, async (req: Request, res: Resp
     const objectPath = `/objects/${wildcardPath}`;
     const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
 
+    const { userId } = await getAuthContext(req);
+    const hasAccess = await objectStorageService.canAccessObjectEntity({
+      userId: userId ? String(userId) : undefined,
+      objectFile,
+      requestedPermission: ObjectPermission.READ,
+    });
+
+    if (!hasAccess) {
+      throw AppError.forbidden("You do not have permission to access this object");
+    }
+
     const response = await objectStorageService.downloadObject(objectFile);
 
     res.status(response.status);
@@ -73,6 +86,10 @@ router.get("/storage/objects/*path", requireAuth, async (req: Request, res: Resp
   } catch (error) {
     if (error instanceof ObjectNotFoundError) {
       res.status(404).json({ error: "Object not found" });
+      return;
+    }
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ error: error.message });
       return;
     }
     console.error("[Storage] Error serving object:", error);

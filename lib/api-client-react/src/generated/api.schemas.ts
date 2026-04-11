@@ -600,10 +600,18 @@ export interface AvatarGenerateRequest {
   seed?: string;
 }
 
+export interface AvatarConfig {
+  generationParams?: AvatarGenerateRequest;
+  renderSize?: string;
+  style?: string;
+  voiceId?: string;
+}
+
 export interface AvatarResult {
   avatarUrl: string;
   objectPath?: string;
   prompt?: string;
+  avatarConfig?: AvatarConfig;
 }
 
 export interface AvatarGalleryItem {
