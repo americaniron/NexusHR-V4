@@ -9,13 +9,23 @@ import { AIAvatar } from "@/components/ai-avatar";
 import { PersonalityConfig } from "@/components/personality-config";
 import { ArrowLeft, MessageSquare, Brain, Settings, Activity } from "lucide-react";
 
+interface PersonalityAxes {
+  warmth: number;
+  formality: number;
+  assertiveness: number;
+  energy: number;
+  empathy: number;
+  detailOrientation: number;
+  humor: number;
+}
+
 export default function EmployeeDetailPage() {
   const params = useParams<{ id: string }>();
   const employeeId = parseInt(params.id || "0", 10);
   const { data: employees, isLoading } = useListEmployees({ limit: 50 });
   const employee = employees?.data?.find((e) => e.id === employeeId);
 
-  const [personality, setPersonality] = useState<Record<string, number> | null>(null);
+  const [personality, setPersonality] = useState<PersonalityAxes | null>(null);
   const [loadingPersonality, setLoadingPersonality] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -35,7 +45,7 @@ export default function EmployeeDetailPage() {
       .finally(() => setLoadingPersonality(false));
   }, [employeeId, apiBase]);
 
-  const handleSavePersonality = useCallback(async (axes: Record<string, number>) => {
+  const handleSavePersonality = useCallback(async (axes: PersonalityAxes) => {
     setSaving(true);
     try {
       const res = await fetch(`${apiBase}/personality/employee/${employeeId}`, {
@@ -127,7 +137,7 @@ export default function EmployeeDetailPage() {
             <PersonalityConfig
               employeeId={employeeId}
               employeeName={employee.name}
-              initialPersonality={personality as any}
+              initialPersonality={personality}
               onSave={handleSavePersonality}
               saving={saving}
             />

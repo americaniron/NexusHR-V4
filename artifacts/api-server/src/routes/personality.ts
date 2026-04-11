@@ -325,6 +325,11 @@ const priorityBody = z.object({
     status: z.string(),
   })).optional(),
   orgPriorityMatrix: z.record(z.string(), z.number()).optional(),
+  slaDefinitions: z.array(z.object({
+    category: z.string(),
+    responseTimeMinutes: z.number(),
+    resolutionTimeMinutes: z.number(),
+  })).optional(),
 });
 
 router.post("/personality/assess-priority", requireAuth, validate({ body: priorityBody }), async (req: Request, res: Response, next: NextFunction) => {
