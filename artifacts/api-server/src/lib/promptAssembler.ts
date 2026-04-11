@@ -556,12 +556,12 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
 
   // ── Stage 5: Template Interpolation & Layer Merge ───────────────────
   // Apply template variables, merge DB templates over default layer content.
-  const templateVars: Record<string, string> = {
+  const templateVars: Record<string, string | null> = {
     ROLE_TITLE: roleData.title,
     DEPARTMENT: roleData.department,
-    CATEGORY: roleData.category || "",
-    INDUSTRY: roleData.industry || "",
-    SENIORITY: roleData.seniorityLevel || "",
+    CATEGORY: roleData.category,
+    INDUSTRY: roleData.industry,
+    SENIORITY: roleData.seniorityLevel,
     EMPLOYEE_NAME: employee.name,
     USER_NAME: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
     USER_ROLE: user.role,
