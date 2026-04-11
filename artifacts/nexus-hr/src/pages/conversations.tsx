@@ -109,12 +109,10 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
         if (messages && messages.length > 0) {
           const lastMsg = messages[messages.length - 1];
           if (lastMsg?.role === "assistant" && lastMsg?.content) {
-            setAiAvatarState("speaking");
             await voiceMode.synthesizeAndPlay(
               lastMsg.content,
               refreshed.data.aiEmployee?.voiceId || undefined,
             );
-            setAiAvatarState("idle");
           }
         }
       }

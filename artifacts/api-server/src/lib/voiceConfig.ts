@@ -54,8 +54,8 @@ export function personalityToVoiceSettings(personality?: PersonalityAxes): Voice
 
   const speed = 0.7 + (energy * 0.6);
   const stability = 0.3 + (formality * 0.5);
-  const similarity_boost = 0.5 + (warmth * 0.35);
-  const style = Math.max(0, Math.min(1, 0.3 + ((1 - formality) * 0.4)));
+  const style = 0.2 + (warmth * 0.6);
+  const similarity_boost = 0.6 + (warmth * 0.25);
 
   return {
     stability: clamp(stability, 0, 1),

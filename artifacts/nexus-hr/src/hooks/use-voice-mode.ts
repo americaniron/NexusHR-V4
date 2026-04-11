@@ -246,22 +246,26 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
       const supportsMediaSource = typeof MediaSource !== "undefined"
         && MediaSource.isTypeSupported("audio/mpeg");
 
-      if (supportsMediaSource) {
-        const mediaSource = new MediaSource();
-        const audioUrl = URL.createObjectURL(mediaSource);
-        const audio = new Audio(audioUrl);
-        audioPlayerRef.current = audio;
+      await new Promise<void>((resolvePlayback, rejectPlayback) => {
+        if (supportsMediaSource) {
+          const mediaSource = new MediaSource();
+          const audioUrl = URL.createObjectURL(mediaSource);
+          const audio = new Audio(audioUrl);
+          audioPlayerRef.current = audio;
 
-        const cleanup = () => {
-          setIsPlayingAudio(false);
-          URL.revokeObjectURL(audioUrl);
-          audioPlayerRef.current = null;
-        };
+          const cleanup = () => {
+            setIsPlayingAudio(false);
+            URL.revokeObjectURL(audioUrl);
+            audioPlayerRef.current = null;
+            resolvePlayback();
+          };
 
-        audio.onended = cleanup;
-        audio.onerror = cleanup;
+          audio.onended = cleanup;
+          audio.onerror = () => {
+            cleanup();
+            rejectPlayback(new Error("Audio playback error"));
+          };
 
-        await new Promise<void>((resolve, reject) => {
           mediaSource.addEventListener("sourceopen", async () => {
             try {
               const sourceBuffer = mediaSource.addSourceBuffer("audio/mpeg");
@@ -303,47 +307,54 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
               };
 
               await pump();
-              resolve();
             } catch (err) {
-              reject(err);
+              rejectPlayback(err instanceof Error ? err : new Error(String(err)));
             }
           }, { once: true });
-        });
-      } else {
-        const chunks: Uint8Array[] = [];
-        const reader = response.body.getReader();
-        let receivedFirstChunk = false;
+        } else {
+          (async () => {
+            try {
+              const chunks: Uint8Array[] = [];
+              const reader = response.body!.getReader();
+              let receivedFirstChunk = false;
 
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
-          if (!receivedFirstChunk) {
-            receivedFirstChunk = true;
-            setIsSynthesizing(false);
-            setIsPlayingAudio(true);
-          }
+              for (;;) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks.push(value);
+                if (!receivedFirstChunk) {
+                  receivedFirstChunk = true;
+                  setIsSynthesizing(false);
+                  setIsPlayingAudio(true);
+                }
+              }
+
+              const blob = new Blob(chunks, { type: "audio/mpeg" });
+              const audioUrl = URL.createObjectURL(blob);
+              const audio = new Audio(audioUrl);
+              audioPlayerRef.current = audio;
+
+              audio.onended = () => {
+                setIsPlayingAudio(false);
+                URL.revokeObjectURL(audioUrl);
+                audioPlayerRef.current = null;
+                resolvePlayback();
+              };
+
+              audio.onerror = () => {
+                setIsPlayingAudio(false);
+                URL.revokeObjectURL(audioUrl);
+                audioPlayerRef.current = null;
+                rejectPlayback(new Error("Audio playback error"));
+              };
+
+              await audio.play();
+            } catch (err) {
+              rejectPlayback(err instanceof Error ? err : new Error(String(err)));
+            }
+          })();
         }
-
-        const blob = new Blob(chunks, { type: "audio/mpeg" });
-        const audioUrl = URL.createObjectURL(blob);
-        const audio = new Audio(audioUrl);
-        audioPlayerRef.current = audio;
-
-        audio.onended = () => {
-          setIsPlayingAudio(false);
-          URL.revokeObjectURL(audioUrl);
-          audioPlayerRef.current = null;
-        };
-
-        audio.onerror = () => {
-          setIsPlayingAudio(false);
-          URL.revokeObjectURL(audioUrl);
-          audioPlayerRef.current = null;
-        };
-
-        await audio.play();
-      }
+      });
     } catch {
       setIsSynthesizing(false);
       setIsPlayingAudio(false);
