@@ -246,6 +246,7 @@ router.post("/prompts/preview", requireAuth, validate({ body: assembleBody }), a
       activeTask: req.body.activeTask,
       tokenBudget: req.body.tokenBudget,
       contextOverrides: req.body.contextOverrides,
+      skipAudit: true,
     });
 
     res.json({

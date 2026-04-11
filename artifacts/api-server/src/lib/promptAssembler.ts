@@ -36,6 +36,7 @@ export interface AssemblyInput {
   };
   contextOverrides?: Partial<Record<string, string>>;
   tokenBudget?: number;
+  skipAudit?: boolean;
 }
 
 export interface AssembledPrompt {
@@ -650,7 +651,12 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
   function resolveLayerTemplate(layerKey: string, fallback: string): string {
     const tpl = templateMap[layerKey];
     if (!tpl) return fallback;
-    return resolveTemplate(tpl.content, templateVars);
+    const vars: Record<string, string | null> = { ...templateVars, LAYER_CONTENT: fallback };
+    const resolved = resolveTemplate(tpl.content, vars);
+    if (!tpl.content.includes("{LAYER_CONTENT}") && fallback.trim()) {
+      return resolved + "\n\n" + fallback;
+    }
+    return resolved;
   }
 
   const layerContents: Record<string, string> = {
@@ -784,7 +790,9 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
   const validation = validatePrompt(result);
   result.validation = validation;
 
-  await logPromptAudit(input.orgId, input.userId, result, validation);
+  if (!input.skipAudit) {
+    await logPromptAudit(input.orgId, input.userId, result, validation);
+  }
 
   return result;
 }
