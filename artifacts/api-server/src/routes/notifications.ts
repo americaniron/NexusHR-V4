@@ -4,10 +4,11 @@ import { notifications } from "@workspace/db";
 import { eq, and, sql, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
+import { validate, paginationQuery, idParam } from "../middlewares/validate";
 
 const router = Router();
 
-router.get("/notifications", requireAuth, async (req, res) => {
+router.get("/notifications", requireAuth, validate({ query: paginationQuery }), async (req, res) => {
   try {
     const { userId } = await getAuthContext(req);
     if (!userId) return res.json({ ...emptyPagination(), unreadCount: 0 });
@@ -28,23 +29,23 @@ router.get("/notifications", requireAuth, async (req, res) => {
       unreadCount: Number(unread),
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to list notifications" });
+    res.status(500).json({ error: "Failed to list notifications", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
-router.post("/notifications/:id/read", requireAuth, async (req, res) => {
+router.post("/notifications/:id/read", requireAuth, validate({ params: idParam }), async (req, res) => {
   try {
     const { userId } = await getAuthContext(req);
-    if (!userId) return res.status(403).json({ error: "Forbidden" });
+    if (!userId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
 
     const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(notifications).where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
-    if (!existing) return res.status(404).json({ error: "Notification not found" });
+    if (!existing) return res.status(404).json({ error: "Notification not found", code: "NOT_FOUND", statusCode: 404 });
 
     const [updated] = await db.update(notifications).set({ isRead: 1 }).where(eq(notifications.id, id)).returning();
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: "Failed to mark notification" });
+    res.status(500).json({ error: "Failed to mark notification", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
@@ -56,7 +57,7 @@ router.post("/notifications/read-all", requireAuth, async (req, res) => {
     await db.update(notifications).set({ isRead: 1 }).where(eq(notifications.userId, userId));
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: "Failed to mark all notifications" });
+    res.status(500).json({ error: "Failed to mark all notifications", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 

@@ -4,10 +4,36 @@ import { tasks, aiEmployees, aiEmployeeRoles } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
+import { z } from "zod/v4";
+import { validate, paginationQuery, idParam } from "../middlewares/validate";
 
 const router = Router();
 
-router.get("/tasks", requireAuth, async (req, res) => {
+const listTasksQuery = paginationQuery.extend({
+  status: z.enum(["pending", "in_progress", "completed", "failed", "cancelled"]).optional(),
+  assigneeId: z.coerce.number().int().optional(),
+  priority: z.enum(["low", "medium", "high", "critical"]).optional(),
+});
+
+const createTaskBody = z.object({
+  title: z.string().min(1).max(500),
+  description: z.string().optional(),
+  assigneeId: z.number().int().optional(),
+  priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
+  category: z.string().optional(),
+  dueDate: z.string().optional(),
+});
+
+const updateTaskBody = z.object({
+  title: z.string().min(1).max(500).optional(),
+  description: z.string().optional(),
+  assigneeId: z.number().int().nullable().optional(),
+  status: z.enum(["pending", "in_progress", "completed", "failed", "cancelled"]).optional(),
+  priority: z.enum(["low", "medium", "high", "critical"]).optional(),
+  deliverable: z.string().optional(),
+});
+
+router.get("/tasks", requireAuth, validate({ query: listTasksQuery }), async (req, res) => {
   try {
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.json(emptyPagination());
@@ -44,17 +70,16 @@ router.get("/tasks", requireAuth, async (req, res) => {
       pagination: { page, limit, total: Number(count), totalPages: Math.ceil(Number(count) / limit) },
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to list tasks" });
+    res.status(500).json({ error: "Failed to list tasks", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
-router.post("/tasks", requireAuth, async (req, res) => {
+router.post("/tasks", requireAuth, validate({ body: createTaskBody }), async (req, res) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(400).json({ error: "No organization" });
+    if (!orgId) return res.status(400).json({ error: "No organization", code: "BAD_REQUEST", statusCode: 400 });
 
     const { title, description, assigneeId, priority, category, dueDate } = req.body;
-    if (!title) return res.status(400).json({ error: "title is required" });
 
     const [task] = await db.insert(tasks).values({
       orgId,
@@ -68,32 +93,32 @@ router.post("/tasks", requireAuth, async (req, res) => {
 
     res.status(201).json(task);
   } catch (error) {
-    res.status(500).json({ error: "Failed to create task" });
+    res.status(500).json({ error: "Failed to create task", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
-router.get("/tasks/:id", requireAuth, async (req, res) => {
+router.get("/tasks/:id", requireAuth, validate({ params: idParam }), async (req, res) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+    if (!orgId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
 
     const id = parseInt(String(req.params.id));
     const [task] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
-    if (!task) return res.status(404).json({ error: "Task not found" });
+    if (!task) return res.status(404).json({ error: "Task not found", code: "NOT_FOUND", statusCode: 404 });
     res.json(task);
   } catch (error) {
-    res.status(500).json({ error: "Failed to get task" });
+    res.status(500).json({ error: "Failed to get task", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
-router.patch("/tasks/:id", requireAuth, async (req, res) => {
+router.patch("/tasks/:id", requireAuth, validate({ params: idParam, body: updateTaskBody }), async (req, res) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+    if (!orgId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
 
     const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
-    if (!existing) return res.status(404).json({ error: "Task not found" });
+    if (!existing) return res.status(404).json({ error: "Task not found", code: "NOT_FOUND", statusCode: 404 });
 
     const { title, description, assigneeId, status, priority, deliverable } = req.body;
     const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -111,23 +136,23 @@ router.patch("/tasks/:id", requireAuth, async (req, res) => {
     const [updated] = await db.update(tasks).set(updates).where(eq(tasks.id, id)).returning();
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: "Failed to update task" });
+    res.status(500).json({ error: "Failed to update task", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
-router.delete("/tasks/:id", requireAuth, async (req, res) => {
+router.delete("/tasks/:id", requireAuth, validate({ params: idParam }), async (req, res) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(403).json({ error: "Forbidden" });
+    if (!orgId) return res.status(403).json({ error: "Forbidden", code: "FORBIDDEN", statusCode: 403 });
 
     const id = parseInt(String(req.params.id));
     const [existing] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
-    if (!existing) return res.status(404).json({ error: "Task not found" });
+    if (!existing) return res.status(404).json({ error: "Task not found", code: "NOT_FOUND", statusCode: 404 });
 
     await db.delete(tasks).where(eq(tasks.id, id));
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: "Failed to delete task" });
+    res.status(500).json({ error: "Failed to delete task", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 

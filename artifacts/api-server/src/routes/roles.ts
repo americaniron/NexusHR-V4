@@ -3,10 +3,19 @@ import { db } from "@workspace/db";
 import { aiEmployeeRoles } from "@workspace/db";
 import { eq, sql, ilike, and, asc, desc } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import { z } from "zod/v4";
+import { validate, paginationQuery, idParam } from "../middlewares/validate";
 
 const router = Router();
 
-router.get("/roles", async (req, res) => {
+const listRolesQuery = paginationQuery.extend({
+  category: z.string().optional(),
+  industry: z.string().optional(),
+  search: z.string().optional(),
+  sortBy: z.enum(["relevance", "price_asc", "price_desc", "newest"]).optional(),
+});
+
+router.get("/roles", validate({ query: listRolesQuery }), async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 12));
@@ -33,7 +42,7 @@ router.get("/roles", async (req, res) => {
       pagination: { page, limit, total: Number(count), totalPages: Math.ceil(Number(count) / limit) },
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to list roles" });
+    res.status(500).json({ error: "Failed to list roles", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
@@ -46,21 +55,21 @@ router.get("/roles/categories", async (_req, res) => {
 
     res.json({ data });
   } catch (error) {
-    res.status(500).json({ error: "Failed to get categories" });
+    res.status(500).json({ error: "Failed to get categories", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
-router.get("/roles/:id", async (req, res) => {
+router.get("/roles/:id", validate({ params: idParam }), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, id));
     if (!role) {
-      res.status(404).json({ error: "Role not found" });
+      res.status(404).json({ error: "Role not found", code: "NOT_FOUND", statusCode: 404 });
       return;
     }
     res.json(role);
   } catch (error) {
-    res.status(500).json({ error: "Failed to get role" });
+    res.status(500).json({ error: "Failed to get role", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 

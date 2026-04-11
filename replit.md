@@ -50,6 +50,13 @@ NexusHR VX is a production-grade AI workforce management platform. Businesses hi
 - `support` — support tickets and knowledge base articles
 - `notifications` — user notifications
 
+## Production Hardening
+
+- **CORS**: Secure host-based allowlist (parses `new URL()`, exact host match) for `REPLIT_DEV_DOMAIN` and `REPLIT_DEPLOYMENT_URL`; open in development
+- **Validation**: Zod schemas on all route inputs (params, query, body) via `validate()` middleware factory in `middlewares/validate.ts`
+- **Error handling**: Structured JSON errors `{ error, code, statusCode }` with codes `NOT_FOUND`, `FORBIDDEN`, `BAD_REQUEST`, `INTERNAL_ERROR`, `VALIDATION_ERROR`; global `errorHandler` + `notFoundHandler` middleware
+- **User identity**: `/api/users/me` pulls real email/name from Clerk `sessionClaims` (never hardcodes placeholder emails)
+
 ## API Routes (all under `/api`)
 
 - `/api/health` — health check

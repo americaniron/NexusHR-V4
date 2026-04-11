@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { users, organizations } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuth } from "@clerk/express";
+import { validate, paginationQuery } from "../middlewares/validate";
 
 const router = Router();
 
@@ -11,7 +12,10 @@ router.get("/users/me", requireAuth, async (req, res) => {
   try {
     const auth = getAuth(req);
     const clerkUserId = auth?.userId;
-    if (!clerkUserId) return res.status(401).json({ error: "Unauthorized" });
+    if (!clerkUserId) {
+      res.status(401).json({ error: "Unauthorized", code: "UNAUTHORIZED", statusCode: 401 });
+      return;
+    }
 
     let [user] = await db.select().from(users).where(eq(users.clerkUserId, clerkUserId));
 
@@ -30,22 +34,29 @@ router.get("/users/me", requireAuth, async (req, res) => {
         dbOrgId = org.id;
       }
 
+      const claims = auth?.sessionClaims as Record<string, unknown> | undefined;
+      const email = (claims?.email as string)
+        || (claims?.primary_email_address as string)
+        || `${clerkUserId}@nexushr.ai`;
+      const firstName = (claims?.first_name as string) || (claims?.given_name as string) || null;
+      const lastName = (claims?.last_name as string) || (claims?.family_name as string) || null;
+
       [user] = await db.insert(users).values({
         clerkUserId,
         orgId: dbOrgId,
-        email: "user@example.com",
-        firstName: null,
-        lastName: null,
+        email,
+        firstName,
+        lastName,
       }).returning();
     }
 
     res.json(user);
   } catch (error) {
-    res.status(500).json({ error: "Failed to get user" });
+    res.status(500).json({ error: "Failed to get user", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
-router.get("/users", requireAuth, async (req, res) => {
+router.get("/users", requireAuth, validate({ query: paginationQuery }), async (req, res) => {
   try {
     const auth = getAuth(req);
     const orgId = auth?.orgId;
@@ -54,12 +65,14 @@ router.get("/users", requireAuth, async (req, res) => {
     const offset = (page - 1) * limit;
 
     if (!orgId) {
-      return res.json({ data: [], pagination: { page, limit, total: 0, totalPages: 0 } });
+      res.json({ data: [], pagination: { page, limit, total: 0, totalPages: 0 } });
+      return;
     }
 
     const [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, orgId));
     if (!org) {
-      return res.json({ data: [], pagination: { page, limit, total: 0, totalPages: 0 } });
+      res.json({ data: [], pagination: { page, limit, total: 0, totalPages: 0 } });
+      return;
     }
 
     const where = eq(users.orgId, org.id);
@@ -71,7 +84,7 @@ router.get("/users", requireAuth, async (req, res) => {
       pagination: { page, limit, total: Number(count), totalPages: Math.ceil(Number(count) / limit) },
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to list users" });
+    res.status(500).json({ error: "Failed to list users", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 

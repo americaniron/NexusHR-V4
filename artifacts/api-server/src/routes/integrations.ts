@@ -4,8 +4,14 @@ import { toolRegistry, integrations } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext } from "../lib/auth-helpers";
+import { z } from "zod/v4";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
+
+const toolIdParam = z.object({
+  toolId: z.coerce.number().int().min(1),
+});
 
 router.get("/integrations", requireAuth, async (req, res) => {
   try {
@@ -37,14 +43,14 @@ router.get("/integrations", requireAuth, async (req, res) => {
 
     res.json({ data });
   } catch (error) {
-    res.status(500).json({ error: "Failed to list integrations" });
+    res.status(500).json({ error: "Failed to list integrations", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
-router.post("/integrations/:toolId/connect", requireAuth, async (req, res) => {
+router.post("/integrations/:toolId/connect", requireAuth, validate({ params: toolIdParam }), async (req, res) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(400).json({ error: "No organization" });
+    if (!orgId) return res.status(400).json({ error: "No organization", code: "BAD_REQUEST", statusCode: 400 });
 
     const toolId = parseInt(String(req.params.toolId));
     const [existing] = await db.select().from(integrations)
@@ -64,14 +70,14 @@ router.post("/integrations/:toolId/connect", requireAuth, async (req, res) => {
 
     res.json(created);
   } catch (error) {
-    res.status(500).json({ error: "Failed to connect integration" });
+    res.status(500).json({ error: "Failed to connect integration", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
-router.post("/integrations/:toolId/disconnect", requireAuth, async (req, res) => {
+router.post("/integrations/:toolId/disconnect", requireAuth, validate({ params: toolIdParam }), async (req, res) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(400).json({ error: "No organization" });
+    if (!orgId) return res.status(400).json({ error: "No organization", code: "BAD_REQUEST", statusCode: 400 });
 
     const toolId = parseInt(String(req.params.toolId));
     const [updated] = await db.update(integrations)
@@ -79,10 +85,10 @@ router.post("/integrations/:toolId/disconnect", requireAuth, async (req, res) =>
       .where(and(eq(integrations.orgId, orgId), eq(integrations.toolId, toolId)))
       .returning();
 
-    if (!updated) return res.status(404).json({ error: "Integration not found" });
+    if (!updated) return res.status(404).json({ error: "Integration not found", code: "NOT_FOUND", statusCode: 404 });
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: "Failed to disconnect integration" });
+    res.status(500).json({ error: "Failed to disconnect integration", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 

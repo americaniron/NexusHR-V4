@@ -4,8 +4,14 @@ import { aiEmployees, tasks } from "@workspace/db";
 import { eq, and, sql, gte, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext } from "../lib/auth-helpers";
+import { z } from "zod/v4";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
+
+const activityQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(50).default(10).optional(),
+});
 
 router.get("/dashboard/summary", requireAuth, async (req, res) => {
   try {
@@ -52,11 +58,11 @@ router.get("/dashboard/summary", requireAuth, async (req, res) => {
       tasksByStatus: tasksByStatus.map(t => ({ status: t.status, count: Number(t.count) })),
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to get dashboard summary" });
+    res.status(500).json({ error: "Failed to get dashboard summary", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
-router.get("/dashboard/activity", requireAuth, async (req, res) => {
+router.get("/dashboard/activity", requireAuth, validate({ query: activityQuery }), async (req, res) => {
   try {
     const { orgId } = await getAuthContext(req);
     const limit = Math.min(20, parseInt(req.query.limit as string) || 10);
@@ -78,7 +84,7 @@ router.get("/dashboard/activity", requireAuth, async (req, res) => {
 
     res.json({ data });
   } catch (error) {
-    res.status(500).json({ error: "Failed to get activity" });
+    res.status(500).json({ error: "Failed to get activity", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
@@ -200,7 +206,7 @@ router.get("/analytics/overview", requireAuth, async (req, res) => {
       topPerformers: topPerformers.filter(Boolean),
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to get analytics" });
+    res.status(500).json({ error: "Failed to get analytics", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 

@@ -4,15 +4,24 @@ import { organizations } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuth } from "@clerk/express";
+import { z } from "zod/v4";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
+
+const updateOrgBody = z.object({
+  name: z.string().min(1).max(200).optional(),
+  logoUrl: z.string().url().nullable().optional(),
+  industry: z.string().optional(),
+  timezone: z.string().optional(),
+});
 
 router.get("/organizations/current", requireAuth, async (req, res) => {
   try {
     const auth = getAuth(req);
     const orgId = auth?.orgId;
     if (!orgId) {
-      return res.status(404).json({ error: "No organization found" });
+      return res.status(404).json({ error: "No organization found", code: "NOT_FOUND", statusCode: 404 });
     }
 
     let [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, orgId));
@@ -27,16 +36,16 @@ router.get("/organizations/current", requireAuth, async (req, res) => {
 
     res.json(org);
   } catch (error) {
-    res.status(500).json({ error: "Failed to get organization" });
+    res.status(500).json({ error: "Failed to get organization", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
-router.patch("/organizations/current", requireAuth, async (req, res) => {
+router.patch("/organizations/current", requireAuth, validate({ body: updateOrgBody }), async (req, res) => {
   try {
     const auth = getAuth(req);
     const orgId = auth?.orgId;
     if (!orgId) {
-      return res.status(404).json({ error: "No organization found" });
+      return res.status(404).json({ error: "No organization found", code: "NOT_FOUND", statusCode: 404 });
     }
 
     const { name, logoUrl, industry, timezone } = req.body;
@@ -53,7 +62,7 @@ router.patch("/organizations/current", requireAuth, async (req, res) => {
 
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: "Failed to update organization" });
+    res.status(500).json({ error: "Failed to update organization", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 

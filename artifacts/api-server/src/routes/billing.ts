@@ -4,8 +4,14 @@ import { billingSubscriptions, usageEvents } from "@workspace/db";
 import { eq, and, sql, gte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext } from "../lib/auth-helpers";
+import { z } from "zod/v4";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
+
+const changePlanBody = z.object({
+  plan: z.enum(["starter", "growth", "business", "enterprise"]),
+});
 
 const PLAN_LIMITS: Record<string, Record<string, number>> = {
   trial: { ai_employees: 2, voice_hours: 40, messages: 5000, workflows: 10, tasks: 2000, integrations: 3, storage_gb: 10, users: 3 },
@@ -18,7 +24,7 @@ const PLAN_LIMITS: Record<string, Record<string, number>> = {
 router.get("/billing/subscription", requireAuth, async (req, res) => {
   try {
     const { orgId } = await getAuthContext(req);
-    if (!orgId) return res.status(404).json({ error: "No organization" });
+    if (!orgId) return res.status(404).json({ error: "No organization", code: "NOT_FOUND", statusCode: 404 });
 
     let [sub] = await db.select().from(billingSubscriptions).where(eq(billingSubscriptions.orgId, orgId));
 
@@ -36,7 +42,7 @@ router.get("/billing/subscription", requireAuth, async (req, res) => {
 
     res.json(sub);
   } catch (error) {
-    res.status(500).json({ error: "Failed to get subscription" });
+    res.status(500).json({ error: "Failed to get subscription", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
@@ -66,7 +72,7 @@ router.get("/billing/usage", requireAuth, async (req, res) => {
 
     res.json({ dimensions });
   } catch (error) {
-    res.status(500).json({ error: "Failed to get usage" });
+    res.status(500).json({ error: "Failed to get usage", code: "INTERNAL_ERROR", statusCode: 500 });
   }
 });
 
