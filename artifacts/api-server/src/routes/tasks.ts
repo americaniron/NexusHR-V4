@@ -81,6 +81,11 @@ router.post("/tasks", requireAuth, validate({ body: createTaskBody }), async (re
 
     const { title, description, assigneeId, priority, category, dueDate } = req.body;
 
+    if (assigneeId) {
+      const [emp] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, assigneeId), eq(aiEmployees.orgId, orgId)));
+      if (!emp) return res.status(400).json({ error: "Assignee not found in your organization", code: "BAD_REQUEST", statusCode: 400 });
+    }
+
     const [task] = await db.insert(tasks).values({
       orgId,
       title,
@@ -121,6 +126,12 @@ router.patch("/tasks/:id", requireAuth, validate({ params: idParam, body: update
     if (!existing) return res.status(404).json({ error: "Task not found", code: "NOT_FOUND", statusCode: 404 });
 
     const { title, description, assigneeId, status, priority, deliverable } = req.body;
+
+    if (assigneeId !== undefined && assigneeId !== null) {
+      const [emp] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, assigneeId), eq(aiEmployees.orgId, orgId)));
+      if (!emp) return res.status(400).json({ error: "Assignee not found in your organization", code: "BAD_REQUEST", statusCode: 400 });
+    }
+
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (title) updates.title = title;
     if (description !== undefined) updates.description = description;
