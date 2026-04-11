@@ -47,7 +47,7 @@ export function resolveVoiceProfile(roleTitle?: string, department?: string): Ro
   return ROLE_VOICE_PROFILES.default;
 }
 
-export function personalityToVoiceSettings(personality?: PersonalityAxes): VoiceSettings {
+export function personalityToVoiceSettings(personality?: PersonalityAxes): VoiceSettings & { warmthVoiceId?: string } {
   const energy = personality?.energy ?? 0.5;
   const formality = personality?.formality ?? 0.5;
   const warmth = personality?.warmth ?? 0.5;
@@ -57,11 +57,19 @@ export function personalityToVoiceSettings(personality?: PersonalityAxes): Voice
   const style = 0.2 + (warmth * 0.6);
   const similarity_boost = 0.6 + (warmth * 0.25);
 
+  let warmthVoiceId: string | undefined;
+  if (warmth >= 0.8) {
+    warmthVoiceId = "EXAVITQu4vr4xnSDxMaL";
+  } else if (warmth <= 0.2) {
+    warmthVoiceId = "pNInz6obpgDQGcFmaJgB";
+  }
+
   return {
     stability: clamp(stability, 0, 1),
     similarity_boost: clamp(similarity_boost, 0, 1),
     style: clamp(style, 0, 1),
     speed: clamp(speed, 0.5, 2.0),
+    warmthVoiceId,
   };
 }
 

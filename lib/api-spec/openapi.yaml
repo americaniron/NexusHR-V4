@@ -789,7 +789,7 @@ paths:
               properties:
                 audio:
                   type: string
-                  description: Base64-encoded audio data
+                  description: Base64-encoded audio data (max 10MB)
               required:
                 - audio
       responses:

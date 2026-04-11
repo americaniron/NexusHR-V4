@@ -793,7 +793,7 @@ export type CreateBillingPortal200 = {
 };
 
 export type TranscribeAudioBody = {
-  /** Base64-encoded audio data */
+  /** Base64-encoded audio data (max 10MB) */
   audio: string;
 };
 

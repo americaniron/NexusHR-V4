@@ -1159,7 +1159,7 @@ export const SynthesizeVoiceBody = zod.object({
  * @summary Transcribe audio to text via Whisper
  */
 export const TranscribeAudioBody = zod.object({
-  audio: zod.string().describe("Base64-encoded audio data"),
+  audio: zod.string().describe("Base64-encoded audio data (max 10MB)"),
 });
 
 export const TranscribeAudioResponse = zod.object({

@@ -39,9 +39,9 @@ router.post("/voice/synthesize", requireAuth, synthesizeLimit, validate({ body: 
     const { text, voiceId, roleTitle, department, personality, stability, similarityBoost, speed } = req.body;
 
     const profile = resolveVoiceProfile(roleTitle, department);
-    const resolvedVoiceId = voiceId || profile.voiceId;
-
     const personalitySettings = personalityToVoiceSettings(personality as PersonalityAxes | undefined);
+
+    const resolvedVoiceId = voiceId || personalitySettings.warmthVoiceId || profile.voiceId;
 
     const finalStability = stability ?? personalitySettings.stability;
     const finalSimilarityBoost = similarityBoost ?? personalitySettings.similarity_boost;
@@ -94,6 +94,26 @@ router.post("/voice/transcribe", requireAuth, transcribeLimit, transcribeJsonPar
   try {
     const { audio } = req.body;
 
+    let mimeType = "audio/webm";
+    let extension = "webm";
+    const dataUrlMatch = audio.match(/^data:(audio\/[^;]+);base64,/);
+    if (dataUrlMatch) {
+      mimeType = dataUrlMatch[1];
+      const mimeToExt: Record<string, string> = {
+        "audio/webm": "webm",
+        "audio/wav": "wav",
+        "audio/wave": "wav",
+        "audio/x-wav": "wav",
+        "audio/mp3": "mp3",
+        "audio/mpeg": "mp3",
+        "audio/ogg": "ogg",
+        "audio/mp4": "m4a",
+        "audio/x-m4a": "m4a",
+        "audio/flac": "flac",
+      };
+      extension = mimeToExt[mimeType] || "webm";
+    }
+
     const base64Data = audio.replace(/^data:audio\/[^;]+;base64,/, "");
     const audioBuffer = Buffer.from(base64Data, "base64");
 
@@ -101,8 +121,9 @@ router.post("/voice/transcribe", requireAuth, transcribeLimit, transcribeJsonPar
       throw AppError.badRequest("No audio data provided");
     }
 
-    if (audioBuffer.length > 25 * 1024 * 1024) {
-      throw AppError.badRequest("Audio file too large (max 25MB)");
+    const MAX_AUDIO_SIZE = 10 * 1024 * 1024;
+    if (audioBuffer.length > MAX_AUDIO_SIZE) {
+      throw AppError.badRequest("Audio file too large (max 10MB)");
     }
 
     const OpenAI = (await import("openai")).default;
@@ -111,7 +132,7 @@ router.post("/voice/transcribe", requireAuth, transcribeLimit, transcribeJsonPar
       apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "placeholder",
     });
 
-    const audioFile = new File([new Uint8Array(audioBuffer)], "audio.webm", { type: "audio/webm" });
+    const audioFile = new File([new Uint8Array(audioBuffer)], `audio.${extension}`, { type: mimeType });
 
     const transcription = await openai.audio.transcriptions.create({
       model: "whisper-1",
