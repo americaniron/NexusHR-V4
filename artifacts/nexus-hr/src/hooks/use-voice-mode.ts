@@ -9,7 +9,7 @@ interface UseVoiceModeOptions {
 
 interface UseVoiceModeReturn {
   isVoiceMode: boolean;
-  toggleVoiceMode: () => void;
+  toggleVoiceMode: () => Promise<void>;
   isRecording: boolean;
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<string | null>;
@@ -65,38 +65,39 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
     }
   }, [onError]);
 
-  const toggleVoiceMode = useCallback(() => {
-    setIsVoiceMode(prev => {
-      if (prev) {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-          mediaRecorderRef.current.stop();
-        }
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(t => t.stop());
-          streamRef.current = null;
-        }
-        if (audioContextRef.current) {
-          audioContextRef.current.close().catch(() => {});
-          audioContextRef.current = null;
-        }
-        if (audioPlayerRef.current) {
-          audioPlayerRef.current.pause();
-          audioPlayerRef.current = null;
-        }
-        if (levelIntervalRef.current) {
-          clearInterval(levelIntervalRef.current);
-        }
-        setIsRecording(false);
-        setIsTranscribing(false);
-        setIsSynthesizing(false);
-        setIsPlayingAudio(false);
-        setAudioLevel(0);
-      } else {
-        requestMicPermission();
+  const toggleVoiceMode = useCallback(async () => {
+    if (isVoiceMode) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
       }
-      return !prev;
-    });
-  }, [requestMicPermission]);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current = null;
+      }
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current = null;
+      }
+      if (levelIntervalRef.current) {
+        clearInterval(levelIntervalRef.current);
+      }
+      setIsRecording(false);
+      setIsTranscribing(false);
+      setIsSynthesizing(false);
+      setIsPlayingAudio(false);
+      setAudioLevel(0);
+      setIsVoiceMode(false);
+    } else {
+      const granted = await requestMicPermission();
+      if (granted) {
+        setIsVoiceMode(true);
+      }
+    }
+  }, [isVoiceMode, requestMicPermission]);
 
   const startRecording = useCallback(async () => {
     try {

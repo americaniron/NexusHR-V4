@@ -6,7 +6,7 @@ import { requireAuth } from "../middlewares/requireAuth";
 import { rateLimit } from "../middlewares/rateLimit";
 import { validate } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
-import { Readable } from "stream";
+import { Readable } from "node:stream";
 
 const router = Router();
 
@@ -62,17 +62,7 @@ router.post("/voice/synthesize", requireAuth, synthesizeLimit, validate({ body: 
     res.setHeader("X-Voice-Profile", profile.label);
     res.setHeader("Cache-Control", "no-cache");
 
-    const reader = audioStream.getReader();
-    const nodeStream = new Readable({
-      async read() {
-        const { done, value } = await reader.read();
-        if (done) {
-          this.push(null);
-        } else {
-          this.push(Buffer.from(value));
-        }
-      },
-    });
+    const nodeStream = Readable.fromWeb(audioStream as import("node:stream/web").ReadableStream);
 
     nodeStream.pipe(res);
 
