@@ -30,8 +30,8 @@ const DEFAULT_BUDGET = 128000;
 
 const DEFAULT_PRIORITIES: Record<string, LayerPriority> = {
   system: { priority: "critical", minTokens: 500, maxTokens: 2000, truncationStrategy: "none" },
-  role_definition: { priority: "critical", minTokens: 300, maxTokens: 1500, truncationStrategy: "none" },
   compliance: { priority: "critical", minTokens: 200, maxTokens: 1000, truncationStrategy: "none" },
+  role_definition: { priority: "high", minTokens: 200, maxTokens: 1500, truncationStrategy: "trim_end" },
   job_instructions: { priority: "high", minTokens: 200, maxTokens: 3000, truncationStrategy: "trim_end" },
   task_instructions: { priority: "high", minTokens: 100, maxTokens: 2000, truncationStrategy: "trim_end" },
   tool_access: { priority: "medium", minTokens: 100, maxTokens: 1000, truncationStrategy: "trim_end" },

@@ -382,6 +382,9 @@ function assembleLayer9Compliance(role: {
 export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPrompt> {
   const startTime = Date.now();
 
+  // ── Stage 1: Entity Resolution ──────────────────────────────────────
+  // Load employee, role, and user records. Validates ownership.
+
   const [employee] = await db
     .select()
     .from(aiEmployees)
@@ -428,19 +431,32 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
     throw new Error(`User ${input.userId} not found`);
   }
 
+  // ── Stage 2: Template Resolution ─────────────────────────────────────
+  // Load org + role-scoped templates. Role-specific templates take precedence.
   const orgTemplates = await db
     .select()
     .from(promptTemplates)
     .where(and(eq(promptTemplates.orgId, input.orgId), eq(promptTemplates.isActive, 1)))
     .orderBy(desc(promptTemplates.version));
 
-  const templateMap: Record<string, { content: string; version: number }> = {};
+  const templateMap: Record<string, { content: string; version: number; variables: unknown }> = {};
   for (const t of orgTemplates) {
     if (!templateMap[t.layer]) {
-      templateMap[t.layer] = { content: t.content, version: t.version };
+      const isRoleMatch = t.roleId && employee.roleId && t.roleId === employee.roleId;
+      const isGeneric = !t.roleId;
+
+      if (isRoleMatch) {
+        templateMap[t.layer] = { content: t.content, version: t.version, variables: t.variables };
+      } else if (isGeneric && !templateMap[t.layer]) {
+        templateMap[t.layer] = { content: t.content, version: t.version, variables: t.variables };
+      }
+    } else if (t.roleId && employee.roleId && t.roleId === employee.roleId) {
+      templateMap[t.layer] = { content: t.content, version: t.version, variables: t.variables };
     }
   }
 
+  // ── Stage 3: Layer Content Assembly ──────────────────────────────────
+  // Build each of the 9 layers from role data, memory, context, and tools.
   const [
     layer1,
     layer2,
@@ -462,6 +478,8 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
   const layer4 = assembleLayer4TaskInstructions(input.activeTask);
   const layer9 = assembleLayer9Compliance(roleData);
 
+  // ── Stage 4: Personality & Tone Overlay ─────────────────────────────
+  // Apply personality axes and conversation-aware tone adjustments.
   const personalityAxes = validatePersonalityAxes(employee.personality);
   const personalitySection = generatePersonalityPrompt(personalityAxes);
 
@@ -488,18 +506,40 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
     }
   }
 
-  const layerContents: Record<string, string> = {
-    system: (templateMap.system?.content || layer1) + (personalitySection ? "\n\n" + personalitySection : "") + (toneSection ? "\n\n" + toneSection : ""),
-    role_definition: templateMap.role_definition?.content || layer2,
-    job_instructions: templateMap.job_instructions?.content || layer3,
-    task_instructions: templateMap.task_instructions?.content || layer4,
-    memory_context: templateMap.memory_context?.content || layer5,
-    user_context: templateMap.user_context?.content || layer6,
-    company_context: templateMap.company_context?.content || layer7,
-    tool_access: templateMap.tool_access?.content || layer8,
-    compliance: templateMap.compliance?.content || layer9,
+  // ── Stage 5: Template Interpolation & Layer Merge ───────────────────
+  // Apply template variables, merge DB templates over default layer content.
+  const templateVars: Record<string, string> = {
+    ROLE_TITLE: roleData.title,
+    DEPARTMENT: roleData.department,
+    CATEGORY: roleData.category || "",
+    INDUSTRY: roleData.industry || "",
+    SENIORITY: roleData.seniorityLevel || "",
+    EMPLOYEE_NAME: employee.name,
+    USER_NAME: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
+    USER_ROLE: user.role,
+    USER_EMAIL: user.email,
   };
 
+  function resolveLayerTemplate(layerKey: string, fallback: string): string {
+    const tpl = templateMap[layerKey];
+    if (!tpl) return fallback;
+    return resolveTemplate(tpl.content, templateVars);
+  }
+
+  const layerContents: Record<string, string> = {
+    system: resolveLayerTemplate("system", layer1) + (personalitySection ? "\n\n" + personalitySection : "") + (toneSection ? "\n\n" + toneSection : ""),
+    role_definition: resolveLayerTemplate("role_definition", layer2),
+    job_instructions: resolveLayerTemplate("job_instructions", layer3),
+    task_instructions: resolveLayerTemplate("task_instructions", layer4),
+    memory_context: resolveLayerTemplate("memory_context", layer5),
+    user_context: resolveLayerTemplate("user_context", layer6),
+    company_context: resolveLayerTemplate("company_context", layer7),
+    tool_access: resolveLayerTemplate("tool_access", layer8),
+    compliance: resolveLayerTemplate("compliance", layer9),
+  };
+
+  // ── Stage 6: Context Overrides ──────────────────────────────────────
+  // Apply per-request overrides from the caller (e.g., task-specific context).
   if (input.contextOverrides) {
     for (const [key, value] of Object.entries(input.contextOverrides)) {
       if (value !== undefined && layerContents[key] !== undefined) {
@@ -512,6 +552,10 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
     (max, t) => Math.max(max, t.version), 0,
   );
 
+  // ── Stage 7: Token Budget & Truncation ──────────────────────────────
+  // Allocate token budget across layers by priority, truncate as needed.
+  // Priority: system/compliance (critical, never cut) > role/job (high, trim_end)
+  //           > company/user/tool (medium, summarize/trim) > memory (low, trim_old)
   const budget = allocateTokenBudget(layerContents, {
     totalBudget: input.tokenBudget || 128000,
   });
