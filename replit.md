@@ -131,12 +131,18 @@ Dark theme by default (charcoal). CSS variables in `artifacts/nexus-hr/src/index
 
 ## Phase 1 Status (Complete)
 
-All 6 Phase 1 gaps closed:
-1. 20 integration tools seeded in tool_registry
-2. ElevenLabs TTS wired into conversations and interviews with audio playback UI
-3. Avatar customization (DiceBear API, 12 styles) + voice selection in hiring flow
-4. Self-serve onboarding wizard at /onboarding (4-step flow with localStorage tracking)
-5. Stripe billing checkout flows (checkout, portal, webhook, plans endpoints)
-6. Plan pricing display on billing page ($299/$799/$1,999/Custom with annual toggle)
+All Phase 1 requirements verified complete:
+1. 105 AI roles seeded across 12 categories, 22 industries, 16 departments
+2. 20 integration tools seeded in tool_registry
+3. ElevenLabs TTS wired into conversations and interviews with audio playback UI
+4. Avatar customization (DiceBear API, 12 styles) + voice selection in hiring flow
+5. Self-serve onboarding wizard at /onboarding (4-step flow with localStorage tracking)
+6. Stripe billing checkout flows (checkout, portal, webhook, plans endpoints)
+7. Plan pricing display on billing page ($299/$799/$1,999/Custom with annual toggle)
+8. Real LLM conversations via Claude Sonnet (Anthropic proxy), GPT-4o fallback
+9. Clerk authentication with protected routes, sign-in/sign-up
+10. PostgreSQL with 22 tables, Drizzle ORM, full schema
+11. Pre-hire interview room with 3 AI candidates per session
+12. OpenAPI spec with 46 generated hooks, TypeScript declarations
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
