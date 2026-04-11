@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "seed:healthcare-roles": "tsx src/scripts/seed-healthcare-roles.ts",
     "seed:finance-legal-insurance-roles": "tsx src/scripts/seed-finance-legal-insurance-roles.ts",
-    "seed:education-manufacturing-hospitality-roles": "tsx src/scripts/seed-education-manufacturing-hospitality-roles.ts"
+    "seed:education-manufacturing-hospitality-roles": "tsx src/scripts/seed-education-manufacturing-hospitality-roles.ts",
+    "seed:retail-energy-transportation-roles": "tsx src/scripts/seed-retail-energy-transportation-roles.ts"
   },
   "dependencies": {
     "@clerk/express": "^2.1.0",
