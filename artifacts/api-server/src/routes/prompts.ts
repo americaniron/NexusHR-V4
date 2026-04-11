@@ -8,7 +8,7 @@ import { validate } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
 import { getAuthContext } from "../lib/auth-helpers";
 import { assemblePrompt } from "../lib/promptAssembler";
-import { validatePrompt, logPromptAudit, redactPII } from "../lib/promptValidator";
+import { redactPII } from "../lib/promptValidator";
 
 const router = Router();
 
@@ -68,12 +68,16 @@ const createTemplateBody = z.object({
   variables: z.record(z.string(), z.string()).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   roleId: z.number().optional(),
+  variant: z.string().min(1).max(100).optional(),
+  trafficWeight: z.number().min(0).max(100).optional(),
 });
 
 router.post("/prompts/templates", requireAuth, validate({ body: createTemplateBody }), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.forbidden("Organization required");
+
+    const variant = req.body.variant || "default";
 
     const existing = await db
       .select()
@@ -82,6 +86,7 @@ router.post("/prompts/templates", requireAuth, validate({ body: createTemplateBo
         eq(promptTemplates.orgId, orgId),
         eq(promptTemplates.name, req.body.name),
         eq(promptTemplates.layer, req.body.layer),
+        eq(promptTemplates.variant, variant),
       ))
       .orderBy(desc(promptTemplates.version))
       .limit(1);
@@ -106,6 +111,8 @@ router.post("/prompts/templates", requireAuth, validate({ body: createTemplateBo
         variables: req.body.variables || null,
         metadata: req.body.metadata || null,
         roleId: req.body.roleId || null,
+        variant,
+        trafficWeight: req.body.trafficWeight ?? 100,
       })
       .returning();
 
@@ -120,6 +127,8 @@ const updateTemplateBody = z.object({
   variables: z.record(z.string(), z.string()).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   isActive: z.number().min(0).max(1).optional(),
+  variant: z.string().min(1).max(100).optional(),
+  trafficWeight: z.number().min(0).max(100).optional(),
 });
 
 router.put("/prompts/templates/:id", requireAuth, validate({ body: updateTemplateBody }), async (req: Request, res: Response, next: NextFunction) => {
@@ -143,6 +152,8 @@ router.put("/prompts/templates/:id", requireAuth, validate({ body: updateTemplat
     if (req.body.variables !== undefined) updateData.variables = req.body.variables;
     if (req.body.metadata !== undefined) updateData.metadata = req.body.metadata;
     if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive;
+    if (req.body.variant !== undefined) updateData.variant = req.body.variant;
+    if (req.body.trafficWeight !== undefined) updateData.trafficWeight = req.body.trafficWeight;
 
     const [updated] = await db
       .update(promptTemplates)
@@ -188,16 +199,12 @@ router.post("/prompts/assemble", requireAuth, validate({ body: assembleBody }), 
       contextOverrides: req.body.contextOverrides,
     });
 
-    const validation = validatePrompt(assembled);
-
-    await logPromptAudit(orgId, userId, assembled, validation);
-
     res.json({
       systemPrompt: assembled.systemPrompt,
       tokenCount: assembled.tokenCount,
       tokenBudget: assembled.tokenBudget,
       truncations: assembled.truncations,
-      validation,
+      validation: assembled.validation,
       metadata: assembled.metadata,
     });
   } catch (error) {
@@ -220,8 +227,6 @@ router.post("/prompts/preview", requireAuth, validate({ body: assembleBody }), a
       contextOverrides: req.body.contextOverrides,
     });
 
-    const validation = validatePrompt(assembled);
-
     res.json({
       layers: Object.fromEntries(
         Object.entries(assembled.layers).map(([k, v]) => [k, {
@@ -232,7 +237,7 @@ router.post("/prompts/preview", requireAuth, validate({ body: assembleBody }), a
       ),
       totalTokens: assembled.tokenCount,
       tokenBudget: assembled.tokenBudget,
-      validation,
+      validation: assembled.validation,
       metadata: assembled.metadata,
     });
   } catch (error) {

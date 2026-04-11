@@ -17,6 +17,7 @@ import { computeToneAdjustment, type ConversationContext } from "./toneControlle
 import { generateCulturePrompt, validateCultureProfile } from "./cultureAlignment";
 import { retrieveMemories, formatMemoriesForPrompt } from "./relationalMemory";
 import { estimateTokens, allocateTokenBudget, applyTruncation } from "./tokenBudget";
+import { validatePrompt, redactPII, logPromptAudit } from "./promptValidator";
 
 export interface AssemblyInput {
   aiEmployeeId: number;
@@ -50,6 +51,11 @@ export interface AssembledPrompt {
     assemblyDurationMs: number;
     templateVersion: number;
     selectedVariants: Record<string, string>;
+  };
+  validation: {
+    valid: boolean;
+    errors: string[];
+    warnings: string[];
   };
 }
 
@@ -647,7 +653,7 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
   const systemPrompt = assembledParts.join("\n\n---\n\n");
   const tokenCount = estimateTokens(systemPrompt);
 
-  return {
+  const result: AssembledPrompt = {
     systemPrompt,
     layers: truncatedLayers,
     tokenCount,
@@ -661,5 +667,15 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
       templateVersion: maxTemplateVersion || 1,
       selectedVariants,
     },
+    validation: { valid: true, errors: [], warnings: [] },
   };
+
+  // ── Stage 8: Validation & Audit ───────────────────────────────────
+  // Validate assembled prompt, redact PII, and log audit trail.
+  const validation = validatePrompt(result);
+  result.validation = validation;
+
+  await logPromptAudit(input.orgId, input.userId, result, validation);
+
+  return result;
 }
