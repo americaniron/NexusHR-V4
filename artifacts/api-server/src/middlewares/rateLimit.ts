@@ -21,7 +21,7 @@ export function rateLimit(opts: { windowMs: number; max: number; keyPrefix: stri
   }, opts.windowMs);
 
   return (req: Request, res: Response, next: NextFunction) => {
-    const userId = (req as Record<string, unknown>).userId as string || req.ip || "anonymous";
+    const userId = ((req as unknown as { userId?: string }).userId) || req.ip || "anonymous";
     const key = `${opts.keyPrefix}:${userId}`;
     const now = Date.now();
 

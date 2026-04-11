@@ -198,9 +198,13 @@ router.post("/avatars/generate", requireAuth, avatarGenerateLimit, validate({ bo
   }
 });
 
-router.post("/avatars/regenerate/:employeeId", requireAuth, avatarRegenerateLimit, validate({ params: idParam, body: regenerateBody }), async (req: Request, res: Response, next: NextFunction) => {
+const employeeIdParam = z.object({
+  employeeId: z.coerce.number().int().min(1),
+});
+
+router.post("/avatars/regenerate/:employeeId", requireAuth, avatarRegenerateLimit, validate({ params: employeeIdParam, body: regenerateBody }), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const employeeId = parseInt(req.params.employeeId, 10);
+    const employeeId = Number(req.params.employeeId);
 
     const { orgId } = await getAuthContext(req);
     if (!orgId) {
