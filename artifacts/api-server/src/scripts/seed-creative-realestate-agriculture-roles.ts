@@ -39,6 +39,7 @@ async function seedCreativeRealEstateAgricultureRoles() {
           complianceMetadata: role.complianceMetadata,
           skillsTags: role.skillsTags,
           priceMonthly: role.priceMonthly,
+          isActive: role.isActive,
           updatedAt: new Date(),
         })
         .where(eq(aiEmployeeRoles.id, existing.id));
