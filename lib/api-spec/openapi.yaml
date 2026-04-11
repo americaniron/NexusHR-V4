@@ -910,6 +910,11 @@ paths:
       operationId: getAvatarGallery
       summary: Get pre-generated avatar gallery for Quick Select
       parameters:
+        - name: roleTitle
+          in: query
+          schema:
+            type: string
+          description: Filter gallery by role title (returns matching pre-generated role avatars)
         - name: category
           in: query
           schema:
@@ -918,6 +923,7 @@ paths:
           in: query
           schema:
             type: string
+          description: Filter gallery by industry
       responses:
         "200":
           description: Avatar gallery
@@ -925,6 +931,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AvatarGallery"
+
+  /avatars/branding-presets:
+    get:
+      tags: [Avatars]
+      operationId: getAvatarBrandingPresets
+      summary: Get enterprise branding presets for avatar generation
+      responses:
+        "200":
+          description: Branding presets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    additionalProperties:
+                      $ref: "#/components/schemas/BrandingPreset"
 
   /avatars/generate:
     post:
@@ -1976,6 +2000,19 @@ components:
         metadata:
           $ref: "#/components/schemas/UploadUrlRequest"
 
+    BrandingPreset:
+      type: object
+      required: [attireOptions, colorPalette, description]
+      properties:
+        attireOptions:
+          type: array
+          items:
+            type: string
+        colorPalette:
+          type: string
+        description:
+          type: string
+
     AvatarGenerateRequest:
       type: object
       properties:
@@ -1997,6 +2034,10 @@ components:
         attireStyle:
           type: string
           enum: [formal, business-casual, casual, creative]
+        brandingPreset:
+          type: string
+          enum: [corporate, startup, creative, professional]
+          description: Enterprise branding preset to auto-select attire style
         seed:
           type: string
 

@@ -7,6 +7,13 @@
  */
 
 export type GetAvatarGalleryParams = {
+  /**
+   * Filter gallery by role title (returns matching pre-generated role avatars)
+   */
+  roleTitle?: string;
   category?: string;
+  /**
+   * Filter gallery by industry
+   */
   industry?: string;
 };

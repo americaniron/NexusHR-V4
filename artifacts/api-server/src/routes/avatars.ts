@@ -1,26 +1,39 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { generateAvatar, getDiceBearFallback, getRoleGalleryAvatars } from "../lib/avatars";
+import { generateAvatar, getDiceBearFallback, type AvatarIdentityPackage } from "../lib/avatars";
 import { AppError } from "../middlewares/errorHandler";
 import { requireAuth } from "../middlewares/requireAuth";
 import { rateLimit } from "../middlewares/rateLimit";
 import { getAuthContext } from "../lib/auth-helpers";
-import { db, aiEmployees } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, aiEmployees, aiEmployeeRoles } from "@workspace/db";
+import { eq, and, isNotNull, ilike } from "drizzle-orm";
 
 const avatarGenerateLimit = rateLimit({ windowMs: 60_000, max: 10, keyPrefix: "avatar-generate" });
 const avatarRegenerateLimit = rateLimit({ windowMs: 60_000, max: 5, keyPrefix: "avatar-regenerate" });
 
 const router: IRouter = Router();
 
-const GALLERY_STYLES = ["notionists", "avataaars", "bottts", "lorelei", "micah", "thumbs", "fun-emoji", "personas"];
-const GALLERY_SEEDS = [
-  "executive-ceo", "tech-lead", "data-scientist", "marketing-director",
-  "finance-analyst", "hr-manager", "sales-rep", "designer-creative",
-  "ops-manager", "legal-counsel", "customer-success", "product-manager",
-  "dev-ops-engineer", "content-writer", "research-analyst", "qa-engineer",
-  "security-specialist", "project-manager", "business-analyst", "ux-researcher",
-  "cloud-architect", "ai-engineer", "growth-hacker", "compliance-officer",
-];
+const ENTERPRISE_BRANDING_PRESETS: Record<string, { attireOptions: string[]; colorPalette: string; description: string }> = {
+  corporate: {
+    attireOptions: ["formal", "business-casual"],
+    colorPalette: "navy, charcoal, white",
+    description: "Classic corporate branding — suits, blazers, neutral tones",
+  },
+  startup: {
+    attireOptions: ["casual", "creative", "business-casual"],
+    colorPalette: "bright, modern, vibrant",
+    description: "Startup culture — hoodies, smart casual, modern vibes",
+  },
+  creative: {
+    attireOptions: ["creative", "casual"],
+    colorPalette: "bold, artistic, expressive",
+    description: "Creative agency — fashion-forward, artistic, bold",
+  },
+  professional: {
+    attireOptions: ["formal", "business-casual"],
+    colorPalette: "classic, muted, professional",
+    description: "Professional services — polished, refined, trustworthy",
+  },
+};
 
 router.get("/avatars/gallery", async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -28,24 +41,84 @@ router.get("/avatars/gallery", async (req: Request, res: Response, next: NextFun
     const category = req.query.category as string | undefined;
     const industry = req.query.industry as string | undefined;
 
-    let gallery: { id: string; url: string; label: string; category: string; industry: string }[] = [];
+    const gallery: { id: string; url: string; label: string; category: string; industry: string }[] = [];
 
     if (roleTitle) {
-      gallery = getRoleGalleryAvatars(roleTitle, industry || "technology");
+      const matchingRoles = await db
+        .select({ id: aiEmployeeRoles.id, title: aiEmployeeRoles.title, avatarUrl: aiEmployeeRoles.avatarUrl, industry: aiEmployeeRoles.industry })
+        .from(aiEmployeeRoles)
+        .where(and(isNotNull(aiEmployeeRoles.avatarUrl), ilike(aiEmployeeRoles.title, `%${roleTitle}%`)))
+        .limit(12);
+
+      for (const role of matchingRoles) {
+        if (role.avatarUrl) {
+          gallery.push({
+            id: `role-${role.id}`,
+            url: role.avatarUrl,
+            label: role.title,
+            category: "role-match",
+            industry: role.industry,
+          });
+        }
+      }
     }
 
-    const generalGallery = GALLERY_SEEDS.map((seed, index) => {
-      const style = GALLERY_STYLES[index % GALLERY_STYLES.length];
-      return {
-        id: `dicebear-${seed}`,
-        url: getDiceBearFallback(seed, style),
-        label: seed.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
-        category: category || "general",
-        industry: industry || "technology",
-      };
-    });
+    if (industry) {
+      const industryRoles = await db
+        .select({ id: aiEmployeeRoles.id, title: aiEmployeeRoles.title, avatarUrl: aiEmployeeRoles.avatarUrl, industry: aiEmployeeRoles.industry })
+        .from(aiEmployeeRoles)
+        .where(and(isNotNull(aiEmployeeRoles.avatarUrl), ilike(aiEmployeeRoles.industry, `%${industry}%`)))
+        .limit(12);
 
-    gallery = [...gallery, ...generalGallery];
+      for (const role of industryRoles) {
+        if (role.avatarUrl && !gallery.some(g => g.id === `role-${role.id}`)) {
+          gallery.push({
+            id: `role-${role.id}`,
+            url: role.avatarUrl,
+            label: role.title,
+            category: "industry-match",
+            industry: role.industry,
+          });
+        }
+      }
+    }
+
+    if (gallery.length === 0) {
+      const allRoles = await db
+        .select({ id: aiEmployeeRoles.id, title: aiEmployeeRoles.title, avatarUrl: aiEmployeeRoles.avatarUrl, industry: aiEmployeeRoles.industry })
+        .from(aiEmployeeRoles)
+        .where(isNotNull(aiEmployeeRoles.avatarUrl))
+        .limit(24);
+
+      for (const role of allRoles) {
+        if (role.avatarUrl) {
+          gallery.push({
+            id: `role-${role.id}`,
+            url: role.avatarUrl,
+            label: role.title,
+            category: category || "general",
+            industry: role.industry,
+          });
+        }
+      }
+    }
+
+    if (gallery.length === 0) {
+      const FALLBACK_STYLES = ["notionists", "avataaars", "bottts", "lorelei", "micah", "personas"];
+      const FALLBACK_SEEDS = [
+        "executive-ceo", "tech-lead", "data-scientist", "marketing-director",
+        "finance-analyst", "hr-manager", "sales-rep", "designer-creative",
+      ];
+      for (let i = 0; i < FALLBACK_SEEDS.length; i++) {
+        gallery.push({
+          id: `fallback-${FALLBACK_SEEDS[i]}`,
+          url: getDiceBearFallback(FALLBACK_SEEDS[i], FALLBACK_STYLES[i % FALLBACK_STYLES.length]),
+          label: FALLBACK_SEEDS[i].split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
+          category: "fallback",
+          industry: industry || "technology",
+        });
+      }
+    }
 
     res.json({ data: gallery, total: gallery.length });
   } catch (error) {
@@ -53,9 +126,25 @@ router.get("/avatars/gallery", async (req: Request, res: Response, next: NextFun
   }
 });
 
+router.get("/avatars/branding-presets", async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json({ data: ENTERPRISE_BRANDING_PRESETS });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post("/avatars/generate", requireAuth, avatarGenerateLimit, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { roleTitle, industry, seniority, gender, ageRange, ethnicity, attireStyle, seed } = req.body || {};
+    const { roleTitle, industry, seniority, gender, ageRange, ethnicity, attireStyle, seed, brandingPreset } = req.body || {};
+
+    let resolvedAttire = attireStyle;
+    if (brandingPreset && ENTERPRISE_BRANDING_PRESETS[brandingPreset]) {
+      const preset = ENTERPRISE_BRANDING_PRESETS[brandingPreset];
+      if (!resolvedAttire) {
+        resolvedAttire = preset.attireOptions[0];
+      }
+    }
 
     const result = await generateAvatar({
       roleTitle,
@@ -64,7 +153,7 @@ router.post("/avatars/generate", requireAuth, avatarGenerateLimit, async (req: R
       gender,
       ageRange,
       ethnicity,
-      attireStyle,
+      attireStyle: resolvedAttire,
       seed,
     });
 
@@ -122,9 +211,14 @@ router.post("/avatars/regenerate/:employeeId", requireAuth, avatarRegenerateLimi
       seed: `employee-${employeeId}-${Date.now()}`,
     });
 
+    const aip: AvatarIdentityPackage = {
+      ...result.identityPackage,
+      voiceId: employee.voiceId || undefined,
+    };
+
     await db.update(aiEmployees).set({
       avatarUrl: result.avatarUrl,
-      avatarConfig: result.avatarConfig,
+      avatarConfig: aip,
     }).where(eq(aiEmployees.id, employeeId));
 
     res.json(result);

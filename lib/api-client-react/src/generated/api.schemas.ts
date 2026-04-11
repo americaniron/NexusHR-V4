@@ -560,6 +560,12 @@ export interface UploadUrlResponse {
   metadata?: UploadUrlRequest;
 }
 
+export interface BrandingPreset {
+  attireOptions: string[];
+  colorPalette: string;
+  description: string;
+}
+
 export type AvatarGenerateRequestSeniority =
   (typeof AvatarGenerateRequestSeniority)[keyof typeof AvatarGenerateRequestSeniority];
 
@@ -601,6 +607,19 @@ export const AvatarGenerateRequestAttireStyle = {
   creative: "creative",
 } as const;
 
+/**
+ * Enterprise branding preset to auto-select attire style
+ */
+export type AvatarGenerateRequestBrandingPreset =
+  (typeof AvatarGenerateRequestBrandingPreset)[keyof typeof AvatarGenerateRequestBrandingPreset];
+
+export const AvatarGenerateRequestBrandingPreset = {
+  corporate: "corporate",
+  startup: "startup",
+  creative: "creative",
+  professional: "professional",
+} as const;
+
 export interface AvatarGenerateRequest {
   roleTitle?: string;
   industry?: string;
@@ -609,6 +628,8 @@ export interface AvatarGenerateRequest {
   ageRange?: AvatarGenerateRequestAgeRange;
   ethnicity?: string;
   attireStyle?: AvatarGenerateRequestAttireStyle;
+  /** Enterprise branding preset to auto-select attire style */
+  brandingPreset?: AvatarGenerateRequestBrandingPreset;
   seed?: string;
 }
 
@@ -749,6 +770,19 @@ export const GetAnalyticsOverviewPeriod = {
 } as const;
 
 export type GetAvatarGalleryParams = {
+  /**
+   * Filter gallery by role title (returns matching pre-generated role avatars)
+   */
+  roleTitle?: string;
   category?: string;
+  /**
+   * Filter gallery by industry
+   */
   industry?: string;
+};
+
+export type GetAvatarBrandingPresets200Data = { [key: string]: BrandingPreset };
+
+export type GetAvatarBrandingPresets200 = {
+  data?: GetAvatarBrandingPresets200Data;
 };

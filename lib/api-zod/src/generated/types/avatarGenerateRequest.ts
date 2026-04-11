@@ -7,6 +7,7 @@
  */
 import type { AvatarGenerateRequestAgeRange } from "./avatarGenerateRequestAgeRange";
 import type { AvatarGenerateRequestAttireStyle } from "./avatarGenerateRequestAttireStyle";
+import type { AvatarGenerateRequestBrandingPreset } from "./avatarGenerateRequestBrandingPreset";
 import type { AvatarGenerateRequestGender } from "./avatarGenerateRequestGender";
 import type { AvatarGenerateRequestSeniority } from "./avatarGenerateRequestSeniority";
 
@@ -18,5 +19,7 @@ export interface AvatarGenerateRequest {
   ageRange?: AvatarGenerateRequestAgeRange;
   ethnicity?: string;
   attireStyle?: AvatarGenerateRequestAttireStyle;
+  /** Enterprise branding preset to auto-select attire style */
+  brandingPreset?: AvatarGenerateRequestBrandingPreset;
   seed?: string;
 }

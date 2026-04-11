@@ -1,7 +1,7 @@
 import { db } from "@workspace/db";
 import { aiEmployeeRoles } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { generateAvatar, getDiceBearFallback, type AvatarConfig } from "../lib/avatars";
+import { generateAvatar, getDiceBearFallback, type AvatarIdentityPackage } from "../lib/avatars";
 
 const BATCH_SIZE = 5;
 const DELAY_BETWEEN_BATCHES_MS = 2000;
@@ -40,19 +40,33 @@ async function seedAvatars() {
           seed: `role-${role.id}-${role.title.replace(/\s+/g, "-").toLowerCase()}`,
         });
 
+        const aip: AvatarIdentityPackage = result.identityPackage;
+
         await db
           .update(aiEmployeeRoles)
-          .set({ avatarUrl: result.avatarUrl, avatarConfig: result.avatarConfig })
+          .set({ avatarUrl: result.avatarUrl, avatarConfig: aip })
           .where(eq(aiEmployeeRoles.id, role.id));
 
         console.log(`  Generated avatar for: ${role.title}`);
         generated++;
       } catch (error) {
         const fallbackUrl = getDiceBearFallback(role.title, "notionists");
-        const fallbackConfig: AvatarConfig = { style: "dicebear-fallback" };
+        const fallbackAip: AvatarIdentityPackage = {
+          avatarUrl: fallbackUrl,
+          renderConfig: {
+            size: "512x512",
+            style: "dicebear-fallback",
+            generationParams: {
+              roleTitle: role.title,
+              industry: role.industry,
+              seniority: role.seniorityLevel,
+              attireStyle: "business-casual",
+            },
+          },
+        };
         await db
           .update(aiEmployeeRoles)
-          .set({ avatarUrl: fallbackUrl, avatarConfig: fallbackConfig })
+          .set({ avatarUrl: fallbackUrl, avatarConfig: fallbackAip })
           .where(eq(aiEmployeeRoles.id, role.id));
 
         console.log(`  Fallback avatar for: ${role.title} (${error instanceof Error ? error.message : "unknown error"})`);

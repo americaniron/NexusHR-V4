@@ -1285,8 +1285,17 @@ export const RequestUploadUrlResponse = zod.object({
  * @summary Get pre-generated avatar gallery for Quick Select
  */
 export const GetAvatarGalleryQueryParams = zod.object({
+  roleTitle: zod.coerce
+    .string()
+    .optional()
+    .describe(
+      "Filter gallery by role title (returns matching pre-generated role avatars)",
+    ),
   category: zod.coerce.string().optional(),
-  industry: zod.coerce.string().optional(),
+  industry: zod.coerce
+    .string()
+    .optional()
+    .describe("Filter gallery by industry"),
 });
 
 export const GetAvatarGalleryResponse = zod.object({
@@ -1300,6 +1309,22 @@ export const GetAvatarGalleryResponse = zod.object({
     }),
   ),
   total: zod.number().optional(),
+});
+
+/**
+ * @summary Get enterprise branding presets for avatar generation
+ */
+export const GetAvatarBrandingPresetsResponse = zod.object({
+  data: zod
+    .record(
+      zod.string(),
+      zod.object({
+        attireOptions: zod.array(zod.string()),
+        colorPalette: zod.string(),
+        description: zod.string(),
+      }),
+    )
+    .optional(),
 });
 
 /**
@@ -1317,6 +1342,10 @@ export const GenerateAvatarBody = zod.object({
   attireStyle: zod
     .enum(["formal", "business-casual", "casual", "creative"])
     .optional(),
+  brandingPreset: zod
+    .enum(["corporate", "startup", "creative", "professional"])
+    .optional()
+    .describe("Enterprise branding preset to auto-select attire style"),
   seed: zod.string().optional(),
 });
 
@@ -1341,6 +1370,10 @@ export const GenerateAvatarResponse = zod.object({
           attireStyle: zod
             .enum(["formal", "business-casual", "casual", "creative"])
             .optional(),
+          brandingPreset: zod
+            .enum(["corporate", "startup", "creative", "professional"])
+            .optional()
+            .describe("Enterprise branding preset to auto-select attire style"),
           seed: zod.string().optional(),
         })
         .optional(),
@@ -1370,6 +1403,10 @@ export const GenerateAvatarResponse = zod.object({
           attireStyle: zod
             .enum(["formal", "business-casual", "casual", "creative"])
             .optional(),
+          brandingPreset: zod
+            .enum(["corporate", "startup", "creative", "professional"])
+            .optional()
+            .describe("Enterprise branding preset to auto-select attire style"),
           seed: zod.string().optional(),
         }),
       }),
@@ -1396,6 +1433,10 @@ export const RegenerateAvatarBody = zod.object({
   attireStyle: zod
     .enum(["formal", "business-casual", "casual", "creative"])
     .optional(),
+  brandingPreset: zod
+    .enum(["corporate", "startup", "creative", "professional"])
+    .optional()
+    .describe("Enterprise branding preset to auto-select attire style"),
   seed: zod.string().optional(),
 });
 
@@ -1420,6 +1461,10 @@ export const RegenerateAvatarResponse = zod.object({
           attireStyle: zod
             .enum(["formal", "business-casual", "casual", "creative"])
             .optional(),
+          brandingPreset: zod
+            .enum(["corporate", "startup", "creative", "professional"])
+            .optional()
+            .describe("Enterprise branding preset to auto-select attire style"),
           seed: zod.string().optional(),
         })
         .optional(),
@@ -1449,6 +1494,10 @@ export const RegenerateAvatarResponse = zod.object({
           attireStyle: zod
             .enum(["formal", "business-casual", "casual", "creative"])
             .optional(),
+          brandingPreset: zod
+            .enum(["corporate", "startup", "creative", "professional"])
+            .optional()
+            .describe("Enterprise branding preset to auto-select attire style"),
           seed: zod.string().optional(),
         }),
       }),

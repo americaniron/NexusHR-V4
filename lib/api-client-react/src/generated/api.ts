@@ -40,6 +40,7 @@ import type {
   Employee,
   EmployeeList,
   GetAnalyticsOverviewParams,
+  GetAvatarBrandingPresets200,
   GetAvatarGalleryParams,
   GetRecentActivityParams,
   HealthStatus,
@@ -4191,6 +4192,85 @@ export function useGetAvatarGallery<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetAvatarGalleryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get enterprise branding presets for avatar generation
+ */
+export const getGetAvatarBrandingPresetsUrl = () => {
+  return `/api/avatars/branding-presets`;
+};
+
+export const getAvatarBrandingPresets = async (
+  options?: RequestInit,
+): Promise<GetAvatarBrandingPresets200> => {
+  return customFetch<GetAvatarBrandingPresets200>(
+    getGetAvatarBrandingPresetsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAvatarBrandingPresetsQueryKey = () => {
+  return [`/api/avatars/branding-presets`] as const;
+};
+
+export const getGetAvatarBrandingPresetsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAvatarBrandingPresets>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAvatarBrandingPresets>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAvatarBrandingPresetsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAvatarBrandingPresets>>
+  > = ({ signal }) => getAvatarBrandingPresets({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAvatarBrandingPresets>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAvatarBrandingPresetsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAvatarBrandingPresets>>
+>;
+export type GetAvatarBrandingPresetsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get enterprise branding presets for avatar generation
+ */
+
+export function useGetAvatarBrandingPresets<
+  TData = Awaited<ReturnType<typeof getAvatarBrandingPresets>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAvatarBrandingPresets>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAvatarBrandingPresetsQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
