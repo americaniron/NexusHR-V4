@@ -272,16 +272,24 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
               const reader = response.body!.getReader();
               let firstChunk = true;
 
-              const pump = async (): Promise<void> => {
-                const { done, value } = await reader.read();
-                if (done) {
-                  if (mediaSource.readyState === "open") {
+              const endStream = () => {
+                if (mediaSource.readyState === "open") {
+                  if (sourceBuffer.updating) {
                     sourceBuffer.addEventListener("updateend", () => {
                       if (mediaSource.readyState === "open") {
                         mediaSource.endOfStream();
                       }
                     }, { once: true });
+                  } else {
+                    mediaSource.endOfStream();
                   }
+                }
+              };
+
+              const pump = async (): Promise<void> => {
+                const { done, value } = await reader.read();
+                if (done) {
+                  endStream();
                   return;
                 }
 
@@ -305,6 +313,14 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
 
                 await pump();
               };
+
+              const playbackTimeout = setTimeout(() => {
+                if (audioPlayerRef.current === audio) {
+                  cleanup();
+                }
+              }, 120_000);
+
+              audio.addEventListener("ended", () => clearTimeout(playbackTimeout), { once: true });
 
               await pump();
             } catch (err) {
