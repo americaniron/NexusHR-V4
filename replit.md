@@ -16,7 +16,8 @@ NexusHR VX is a production-grade AI workforce management platform. Businesses hi
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec → React Query hooks + Zod schemas)
 - **Auth**: Clerk (ClerkProvider + requireAuth middleware)
-- **AI**: OpenAI via Replit AI Integrations proxy
+- **AI (Primary)**: Anthropic Claude (Opus 4.6 + Sonnet 4.6) via Replit AI Integrations proxy
+- **AI (Fallback)**: OpenAI GPT-4o via Replit AI Integrations proxy
 - **Voice**: ElevenLabs (via Replit integration connector)
 - **Build**: esbuild (CJS bundle for API server), Vite for frontend
 
@@ -62,10 +63,10 @@ NexusHR VX is a production-grade AI workforce management platform. Businesses hi
 - `/api/roles/categories` — role categories with counts
 - `/api/roles/:id` — role detail
 - `/api/employees` — CRUD AI employees (hire, update, deactivate)
-- `/api/interviews` — create interview sessions, send messages (OpenAI-powered)
+- `/api/interviews` — create interview sessions, send messages (Claude-powered, OpenAI fallback)
 - `/api/tasks` — CRUD tasks with assignment
 - `/api/workflows` — CRUD workflows
-- `/api/conversations` — CRUD conversations with AI chat (OpenAI-powered)
+- `/api/conversations` — CRUD conversations with AI chat (Claude-powered, OpenAI fallback)
 - `/api/integrations` — list tools, connect/disconnect
 - `/api/billing/subscription` — subscription info
 - `/api/billing/usage` — usage dimensions
@@ -104,7 +105,9 @@ Dark theme by default (deep navy). CSS variables in `artifacts/nexus-hr/src/inde
 - `DATABASE_URL` — PostgreSQL connection
 - `VITE_CLERK_PUBLISHABLE_KEY` — Clerk frontend key
 - `CLERK_SECRET_KEY` — Clerk backend key
-- `AI_INTEGRATIONS_OPENAI_BASE_URL` — OpenAI proxy URL
-- `AI_INTEGRATIONS_OPENAI_API_KEY` — OpenAI proxy API key
+- `AI_INTEGRATIONS_ANTHROPIC_BASE_URL` — Anthropic proxy URL (primary AI)
+- `AI_INTEGRATIONS_ANTHROPIC_API_KEY` — Anthropic proxy API key (primary AI)
+- `AI_INTEGRATIONS_OPENAI_BASE_URL` — OpenAI proxy URL (fallback)
+- `AI_INTEGRATIONS_OPENAI_API_KEY` — OpenAI proxy API key (fallback)
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

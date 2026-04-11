@@ -4,7 +4,7 @@ import { conversations, messages, aiEmployees, aiEmployeeRoles } from "@workspac
 import { eq, and, sql, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
-import { chatCompletion } from "../lib/openai";
+import { chatCompletion } from "../lib/ai";
 
 const router = Router();
 

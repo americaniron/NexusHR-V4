@@ -4,7 +4,7 @@ import { interviewSessions, interviewCandidates, interviewMessages, aiEmployeeRo
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext } from "../lib/auth-helpers";
-import { chatCompletion } from "../lib/openai";
+import { chatCompletion } from "../lib/ai";
 
 const router = Router();
 

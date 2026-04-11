@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { aiEmployees, tasks } from "@workspace/db";
-import { eq, and, sql, gte, desc } from "drizzle-orm";
+import { eq, and, sql, gte, desc, lte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext } from "../lib/auth-helpers";
 
@@ -89,39 +89,115 @@ router.get("/analytics/overview", requireAuth, async (req, res) => {
       return res.json({ tasksOverTime: [], utilizationByDepartment: [], taskDistribution: [], topPerformers: [] });
     }
 
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const completedByDay = await db.select({
+      date: sql<string>`to_char(${tasks.completedAt}, 'YYYY-MM-DD')`,
+      count: sql<number>`count(*)`,
+    }).from(tasks)
+      .where(and(
+        eq(tasks.orgId, orgId),
+        eq(tasks.status, "completed"),
+        gte(tasks.completedAt, thirtyDaysAgo)
+      ))
+      .groupBy(sql`to_char(${tasks.completedAt}, 'YYYY-MM-DD')`);
+
+    const createdByDay = await db.select({
+      date: sql<string>`to_char(${tasks.createdAt}, 'YYYY-MM-DD')`,
+      count: sql<number>`count(*)`,
+    }).from(tasks)
+      .where(and(
+        eq(tasks.orgId, orgId),
+        gte(tasks.createdAt, thirtyDaysAgo)
+      ))
+      .groupBy(sql`to_char(${tasks.createdAt}, 'YYYY-MM-DD')`);
+
+    const completedMap = new Map(completedByDay.map(r => [r.date, Number(r.count)]));
+    const createdMap = new Map(createdByDay.map(r => [r.date, Number(r.count)]));
+
     const tasksOverTime: Array<{ date: string; completed: number; created: number }> = [];
     for (let i = 29; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split("T")[0];
-      tasksOverTime.push({ date: dateStr, completed: Math.floor(Math.random() * 5), created: Math.floor(Math.random() * 8) });
+      tasksOverTime.push({
+        date: dateStr,
+        completed: completedMap.get(dateStr) || 0,
+        created: createdMap.get(dateStr) || 0,
+      });
     }
 
     const employeesByDepartment = await db.select({
       department: aiEmployees.department,
-      count: sql<number>`count(*)`,
+      total: sql<number>`count(*)`,
     }).from(aiEmployees)
       .where(and(eq(aiEmployees.orgId, orgId), eq(aiEmployees.status, "active")))
       .groupBy(aiEmployees.department);
 
-    const utilizationByDepartment = employeesByDepartment.map(d => ({
-      department: d.department || "Unassigned",
-      utilization: 50 + Math.floor(Math.random() * 40),
+    const tasksByAssignee = await db.select({
+      assigneeId: tasks.assignedToId,
+      activeCount: sql<number>`count(*)`,
+    }).from(tasks)
+      .where(and(eq(tasks.orgId, orgId), eq(tasks.status, "in_progress")))
+      .groupBy(tasks.assignedToId);
+
+    const activeByEmployee = new Map(
+      tasksByAssignee.filter(t => t.assigneeId != null).map(t => [t.assigneeId, Number(t.activeCount)])
+    );
+
+    const utilizationByDepartment = await Promise.all(
+      employeesByDepartment.map(async (d) => {
+        const deptEmployees = await db.select({ id: aiEmployees.id }).from(aiEmployees)
+          .where(and(
+            eq(aiEmployees.orgId, orgId),
+            eq(aiEmployees.status, "active"),
+            eq(aiEmployees.department, d.department!)
+          ));
+
+        const busyCount = deptEmployees.filter(e => activeByEmployee.has(e.id)).length;
+        const total = Number(d.total);
+        return {
+          department: d.department || "Unassigned",
+          utilization: total > 0 ? Math.round((busyCount / total) * 100) : 0,
+        };
+      })
+    );
+
+    const taskDistributionRows = await db.select({
+      category: aiEmployees.department,
+      count: sql<number>`count(*)`,
+    }).from(tasks)
+      .innerJoin(aiEmployees, eq(tasks.assignedToId, aiEmployees.id))
+      .where(eq(tasks.orgId, orgId))
+      .groupBy(aiEmployees.department);
+
+    const taskDistribution = taskDistributionRows.map(r => ({
+      category: r.category || "Unassigned",
+      count: Number(r.count),
     }));
 
-    const taskDistribution = [
-      { category: "Data Analysis", count: 45 },
-      { category: "Content Creation", count: 32 },
-      { category: "Customer Support", count: 28 },
-      { category: "Research", count: 22 },
-      { category: "Administration", count: 18 },
-    ];
+    const topPerformerRows = await db.select({
+      employeeId: tasks.assignedToId,
+      completed: sql<number>`count(*)`,
+    }).from(tasks)
+      .where(and(eq(tasks.orgId, orgId), eq(tasks.status, "completed")))
+      .groupBy(tasks.assignedToId)
+      .orderBy(desc(sql`count(*)`))
+      .limit(5);
+
+    const topPerformers = await Promise.all(
+      topPerformerRows.filter(r => r.employeeId != null).map(async (r) => {
+        const [emp] = await db.select().from(aiEmployees).where(eq(aiEmployees.id, r.employeeId!));
+        return emp ? { id: emp.id, name: emp.name, department: emp.department, completedTasks: Number(r.completed) } : null;
+      })
+    );
 
     res.json({
       tasksOverTime,
       utilizationByDepartment,
       taskDistribution,
-      topPerformers: [],
+      topPerformers: topPerformers.filter(Boolean),
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to get analytics" });
