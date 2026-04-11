@@ -87,6 +87,8 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
           clearInterval(levelIntervalRef.current);
         }
         setIsRecording(false);
+        setIsTranscribing(false);
+        setIsSynthesizing(false);
         setIsPlayingAudio(false);
         setAudioLevel(0);
       } else {
@@ -237,28 +239,111 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
         throw new Error("Voice synthesis failed");
       }
 
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
+      if (!response.body) {
+        throw new Error("No stream body in response");
+      }
 
-      setIsSynthesizing(false);
-      setIsPlayingAudio(true);
+      const supportsMediaSource = typeof MediaSource !== "undefined"
+        && MediaSource.isTypeSupported("audio/mpeg");
 
-      const audio = new Audio(audioUrl);
-      audioPlayerRef.current = audio;
+      if (supportsMediaSource) {
+        const mediaSource = new MediaSource();
+        const audioUrl = URL.createObjectURL(mediaSource);
+        const audio = new Audio(audioUrl);
+        audioPlayerRef.current = audio;
 
-      audio.onended = () => {
-        setIsPlayingAudio(false);
-        URL.revokeObjectURL(audioUrl);
-        audioPlayerRef.current = null;
-      };
+        const cleanup = () => {
+          setIsPlayingAudio(false);
+          URL.revokeObjectURL(audioUrl);
+          audioPlayerRef.current = null;
+        };
 
-      audio.onerror = () => {
-        setIsPlayingAudio(false);
-        URL.revokeObjectURL(audioUrl);
-        audioPlayerRef.current = null;
-      };
+        audio.onended = cleanup;
+        audio.onerror = cleanup;
 
-      await audio.play();
+        await new Promise<void>((resolve, reject) => {
+          mediaSource.addEventListener("sourceopen", async () => {
+            try {
+              const sourceBuffer = mediaSource.addSourceBuffer("audio/mpeg");
+              const reader = response.body!.getReader();
+              let firstChunk = true;
+
+              const pump = async (): Promise<void> => {
+                const { done, value } = await reader.read();
+                if (done) {
+                  if (mediaSource.readyState === "open") {
+                    sourceBuffer.addEventListener("updateend", () => {
+                      if (mediaSource.readyState === "open") {
+                        mediaSource.endOfStream();
+                      }
+                    }, { once: true });
+                  }
+                  return;
+                }
+
+                if (sourceBuffer.updating) {
+                  await new Promise<void>(r => {
+                    sourceBuffer.addEventListener("updateend", () => r(), { once: true });
+                  });
+                }
+
+                sourceBuffer.appendBuffer(value);
+                await new Promise<void>(r => {
+                  sourceBuffer.addEventListener("updateend", () => r(), { once: true });
+                });
+
+                if (firstChunk) {
+                  firstChunk = false;
+                  setIsSynthesizing(false);
+                  setIsPlayingAudio(true);
+                  audio.play().catch(() => {});
+                }
+
+                await pump();
+              };
+
+              await pump();
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          }, { once: true });
+        });
+      } else {
+        const chunks: Uint8Array[] = [];
+        const reader = response.body.getReader();
+        let receivedFirstChunk = false;
+
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          if (!receivedFirstChunk) {
+            receivedFirstChunk = true;
+            setIsSynthesizing(false);
+            setIsPlayingAudio(true);
+          }
+        }
+
+        const blob = new Blob(chunks, { type: "audio/mpeg" });
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        audioPlayerRef.current = audio;
+
+        audio.onended = () => {
+          setIsPlayingAudio(false);
+          URL.revokeObjectURL(audioUrl);
+          audioPlayerRef.current = null;
+        };
+
+        audio.onerror = () => {
+          setIsPlayingAudio(false);
+          URL.revokeObjectURL(audioUrl);
+          audioPlayerRef.current = null;
+        };
+
+        await audio.play();
+      }
     } catch {
       setIsSynthesizing(false);
       setIsPlayingAudio(false);

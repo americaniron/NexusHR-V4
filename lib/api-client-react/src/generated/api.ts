@@ -3383,7 +3383,7 @@ export function useListVoices<
 }
 
 /**
- * @summary Synthesize text to speech
+ * @summary Synthesize text to speech (streamed chunked audio)
  */
 export const getSynthesizeVoiceUrl = () => {
   return `/api/voice/synthesize`;
@@ -3446,7 +3446,7 @@ export type SynthesizeVoiceMutationBody = BodyType<VoiceSynthesizeRequest>;
 export type SynthesizeVoiceMutationError = ErrorType<unknown>;
 
 /**
- * @summary Synthesize text to speech
+ * @summary Synthesize text to speech (streamed chunked audio)
  */
 export const useSynthesizeVoice = <
   TError = ErrorType<unknown>,

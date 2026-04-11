@@ -1092,7 +1092,7 @@ export const ListVoicesResponse = zod.object({
 });
 
 /**
- * @summary Synthesize text to speech
+ * @summary Synthesize text to speech (streamed chunked audio)
  */
 export const synthesizeVoiceBodyTextMax = 5000;
 

@@ -1,16 +1,19 @@
-import { Router, type Request, type Response, type NextFunction } from "express";
+import express, { Router, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod/v4";
-import { textToSpeech } from "../lib/elevenlabs";
+import { textToSpeechStream } from "../lib/elevenlabs";
 import { personalityToVoiceSettings, resolveVoiceProfile, type PersonalityAxes } from "../lib/voiceConfig";
 import { requireAuth } from "../middlewares/requireAuth";
 import { rateLimit } from "../middlewares/rateLimit";
 import { validate } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
+import { Readable } from "stream";
 
 const router = Router();
 
 const synthesizeLimit = rateLimit({ windowMs: 60_000, max: 20, keyPrefix: "voice-synthesize" });
 const transcribeLimit = rateLimit({ windowMs: 60_000, max: 15, keyPrefix: "voice-transcribe" });
+
+const transcribeJsonParser = express.json({ limit: "10mb" });
 
 const synthesizeBody = z.object({
   text: z.string().min(1).max(5000),
@@ -45,7 +48,7 @@ router.post("/voice/synthesize", requireAuth, synthesizeLimit, validate({ body: 
     const finalSpeed = speed ?? personalitySettings.speed;
     const finalStyle = personalitySettings.style;
 
-    const audioBuffer = await textToSpeech(text, {
+    const { body: audioStream, contentType } = await textToSpeechStream(text, {
       voiceId: resolvedVoiceId,
       stability: finalStability,
       similarityBoost: finalSimilarityBoost,
@@ -53,11 +56,31 @@ router.post("/voice/synthesize", requireAuth, synthesizeLimit, validate({ body: 
       style: finalStyle,
     });
 
-    res.setHeader("Content-Type", "audio/mpeg");
-    res.setHeader("Content-Length", String(audioBuffer.length));
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Transfer-Encoding", "chunked");
     res.setHeader("X-Voice-Id", resolvedVoiceId);
     res.setHeader("X-Voice-Profile", profile.label);
-    res.send(audioBuffer);
+    res.setHeader("Cache-Control", "no-cache");
+
+    const reader = audioStream.getReader();
+    const nodeStream = new Readable({
+      async read() {
+        const { done, value } = await reader.read();
+        if (done) {
+          this.push(null);
+        } else {
+          this.push(Buffer.from(value));
+        }
+      },
+    });
+
+    nodeStream.pipe(res);
+
+    nodeStream.on("error", () => {
+      if (!res.headersSent) {
+        next(AppError.badRequest("Stream interrupted"));
+      }
+    });
   } catch (error) {
     if (error instanceof Error && error.message.includes("ElevenLabs")) {
       next(AppError.badRequest(error.message));
@@ -67,7 +90,7 @@ router.post("/voice/synthesize", requireAuth, synthesizeLimit, validate({ body: 
   }
 });
 
-router.post("/voice/transcribe", requireAuth, transcribeLimit, validate({ body: transcribeBody }), async (req: Request, res: Response, next: NextFunction) => {
+router.post("/voice/transcribe", requireAuth, transcribeLimit, transcribeJsonParser, validate({ body: transcribeBody }), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { audio } = req.body;
 

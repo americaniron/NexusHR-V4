@@ -759,9 +759,7 @@ paths:
     post:
       operationId: synthesizeVoice
       tags: [voice]
-      summary: Synthesize text to speech
-      security:
-        - bearerAuth: []
+      summary: Synthesize text to speech (streamed chunked audio)
       requestBody:
         required: true
         content:
@@ -782,8 +780,6 @@ paths:
       operationId: transcribeAudio
       tags: [voice]
       summary: Transcribe audio to text via Whisper
-      security:
-        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -809,8 +805,6 @@ paths:
       operationId: getVoiceProfiles
       tags: [voice]
       summary: Get role-based voice profiles
-      security:
-        - bearerAuth: []
       responses:
         "200":
           description: Voice profiles
