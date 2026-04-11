@@ -2,7 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import { z } from "zod/v4";
 import { db } from "@workspace/db";
 import { promptTemplates, promptAuditLogs } from "@workspace/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, isNull } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { validate } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
@@ -85,10 +85,8 @@ router.post("/prompts/templates", requireAuth, validate({ body: createTemplateBo
       eq(promptTemplates.name, req.body.name),
       eq(promptTemplates.layer, req.body.layer),
       eq(promptTemplates.variant, variant),
+      roleId ? eq(promptTemplates.roleId, roleId) : isNull(promptTemplates.roleId),
     ];
-    if (roleId) {
-      conditions.push(eq(promptTemplates.roleId, roleId));
-    }
 
     const existing = await db
       .select()

@@ -603,11 +603,41 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
     }
   }
 
+  // ── Stage 7: Policy Overlay ─────────────────────────────────────────
+  // Enforce org-level policies, data access constraints, and safety boundaries.
+  // System and compliance layers are immutable after this stage.
+  const org = await db
+    .select()
+    .from(organizations)
+    .where(eq(organizations.id, input.orgId))
+    .limit(1);
+
+  if (org.length > 0 && org[0].settings) {
+    const orgSettings = org[0].settings as Record<string, unknown>;
+    if (orgSettings.dataAccessPolicy) {
+      layerContents.compliance += `\n\n## Organization Data Access Policy\n${String(orgSettings.dataAccessPolicy)}`;
+    }
+    if (orgSettings.aiUsagePolicy) {
+      layerContents.compliance += `\n\n## AI Usage Policy\n${String(orgSettings.aiUsagePolicy)}`;
+    }
+  }
+
+  if (roleData.dataAccessPermissions) {
+    const dap = roleData.dataAccessPermissions as Record<string, unknown>;
+    const policyLines: string[] = [];
+    for (const [resource, level] of Object.entries(dap)) {
+      policyLines.push(`- ${resource}: ${String(level)}`);
+    }
+    if (policyLines.length > 0) {
+      layerContents.compliance += `\n\n## Role Data Access Permissions\n${policyLines.join("\n")}`;
+    }
+  }
+
   const maxTemplateVersion = Object.values(templateMap).reduce(
     (max, t) => Math.max(max, t.version), 0,
   );
 
-  // ── Stage 7: Token Budget & Truncation ──────────────────────────────
+  // ── Stage 8: Token Budget & Truncation ──────────────────────────────
   // Allocate token budget across layers by priority, truncate as needed.
   // Priority: system/compliance (critical, never cut) > role/job (high, trim_end)
   //           > company/user/tool (medium, summarize/trim) > memory (low, trim_old)
@@ -670,7 +700,7 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
     validation: { valid: true, errors: [], warnings: [] },
   };
 
-  // ── Stage 8: Validation & Audit ───────────────────────────────────
+  // ── Stage 9: Validation & Audit ───────────────────────────────────
   // Validate assembled prompt, redact PII, and log audit trail.
   const validation = validatePrompt(result);
   result.validation = validation;
