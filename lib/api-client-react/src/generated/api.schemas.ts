@@ -545,6 +545,80 @@ export interface VoiceList {
   source: string;
 }
 
+export interface UploadUrlRequest {
+  /** @minLength 1 */
+  name: string;
+  /** @minimum 1 */
+  size: number;
+  /** @minLength 1 */
+  contentType: string;
+}
+
+export interface UploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
+  metadata?: UploadUrlRequest;
+}
+
+export type AvatarGenerateRequestSeniority =
+  (typeof AvatarGenerateRequestSeniority)[keyof typeof AvatarGenerateRequestSeniority];
+
+export const AvatarGenerateRequestSeniority = {
+  junior: "junior",
+  mid: "mid",
+  senior: "senior",
+  lead: "lead",
+  executive: "executive",
+} as const;
+
+export type AvatarGenerateRequestGender =
+  (typeof AvatarGenerateRequestGender)[keyof typeof AvatarGenerateRequestGender];
+
+export const AvatarGenerateRequestGender = {
+  male: "male",
+  female: "female",
+  neutral: "neutral",
+} as const;
+
+export type AvatarGenerateRequestAttireStyle =
+  (typeof AvatarGenerateRequestAttireStyle)[keyof typeof AvatarGenerateRequestAttireStyle];
+
+export const AvatarGenerateRequestAttireStyle = {
+  formal: "formal",
+  "business-casual": "business-casual",
+  casual: "casual",
+  creative: "creative",
+} as const;
+
+export interface AvatarGenerateRequest {
+  roleTitle?: string;
+  industry?: string;
+  seniority?: AvatarGenerateRequestSeniority;
+  gender?: AvatarGenerateRequestGender;
+  ethnicity?: string;
+  attireStyle?: AvatarGenerateRequestAttireStyle;
+  seed?: string;
+}
+
+export interface AvatarResult {
+  avatarUrl: string;
+  objectPath?: string;
+  prompt?: string;
+}
+
+export interface AvatarGalleryItem {
+  id: string;
+  url: string;
+  label: string;
+  category?: string;
+  industry?: string;
+}
+
+export interface AvatarGallery {
+  data: AvatarGalleryItem[];
+  total?: number;
+}
+
 export type PageParamParameter = number;
 
 export type LimitParamParameter = number;
@@ -640,3 +714,8 @@ export const GetAnalyticsOverviewPeriod = {
   "30d": "30d",
   "90d": "90d",
 } as const;
+
+export type GetAvatarGalleryParams = {
+  category?: string;
+  industry?: string;
+};

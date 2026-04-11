@@ -8,7 +8,7 @@ import { Search, Filter, Star, Briefcase, Zap } from "lucide-react";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AIAvatar } from "@/components/ai-avatar";
 
 export default function MarketplacePage() {
   const [search, setSearch] = useState("");
@@ -123,12 +123,7 @@ export default function MarketplacePage() {
               {rolesData?.data?.map((role) => (
                 <Card key={role.id} className="bg-card border-border flex flex-col hover:border-primary/50 transition-colors">
                   <CardHeader className="flex flex-row items-start gap-4 pb-2">
-                    <Avatar className="h-12 w-12 border border-border">
-                      <AvatarImage src={role.avatarUrl || undefined} />
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        <Zap className="h-6 w-6" />
-                      </AvatarFallback>
-                    </Avatar>
+                    <AIAvatar src={role.avatarUrl} name={role.title} size="md" />
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-base truncate" title={role.title}>{role.title}</CardTitle>
                       <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">

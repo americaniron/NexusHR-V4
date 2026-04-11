@@ -145,4 +145,19 @@ All Phase 1 requirements verified complete:
 11. Pre-hire interview room with 3 AI candidates per session
 12. OpenAPI spec with 46 generated hooks, TypeScript declarations
 
+## Phase 2: AI Avatar System (Complete)
+
+- **Object Storage**: GCS-backed via Replit Object Storage (provisioned bucket, `@google-cloud/storage`)
+- **Avatar Generation**: OpenAI `gpt-image-1` for photorealistic professional headshots
+  - Params: role title, industry, seniority, gender, ethnicity, attire style
+  - Generated images stored in GCS bucket, served via `/api/storage/public-objects/avatars/`
+  - DiceBear fallback when OpenAI is unavailable
+- **Avatar Gallery**: `GET /api/avatars/gallery` — 24 DiceBear quick-select avatars
+- **Avatar Generate**: `POST /api/avatars/generate` — real AI-generated headshot
+- **Avatar Regenerate**: `POST /api/avatars/regenerate/:employeeId` — regenerate for existing employee
+- **Storage Routes**: Upload URL generation, public asset serving, private object serving
+- **Reusable AIAvatar Component**: `artifacts/nexus-hr/src/components/ai-avatar.tsx` — responsive sizes (sm/md/lg/xl)
+- **Frontend Integration**: Marketplace detail page has "Style Picker" + "AI Generate" avatar modes; team, conversations, and marketplace pages use AIAvatar component
+- **Environment Variables**: `DEFAULT_OBJECT_STORAGE_BUCKET_ID`, `PUBLIC_OBJECT_SEARCH_PATHS`, `PRIVATE_OBJECT_DIR`
+
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

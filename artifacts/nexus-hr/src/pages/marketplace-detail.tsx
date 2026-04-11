@@ -1,11 +1,11 @@
-import { useGetRole, useHireEmployee, useListVoices } from "@workspace/api-client-react";
+import { useGetRole, useHireEmployee, useListVoices, useGenerateAvatar } from "@workspace/api-client-react";
 import { useParams, Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CheckCircle2, Zap, Briefcase, Star, Cpu, DollarSign, User, Volume2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Zap, Briefcase, Star, Cpu, DollarSign, User, Volume2, Sparkles, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AIAvatar } from "@/components/ai-avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ export default function MarketplaceDetailPage() {
   const { data: role, isLoading } = useGetRole(id);
   const { data: voicesData } = useListVoices();
   const hireMutation = useHireEmployee();
+  const generateAvatarMutation = useGenerateAvatar();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [isHiring, setIsHiring] = useState(false);
@@ -35,15 +36,45 @@ export default function MarketplaceDetailPage() {
   const [selectedStyle, setSelectedStyle] = useState("avataaars");
   const [avatarSeed, setAvatarSeed] = useState("");
   const [selectedVoiceId, setSelectedVoiceId] = useState("");
+  const [generatedAvatarUrl, setGeneratedAvatarUrl] = useState("");
+  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
+  const [avatarMode, setAvatarMode] = useState<"style" | "ai">("style");
+
+  const handleGenerateAIAvatar = async () => {
+    if (!role) return;
+    setIsGeneratingAvatar(true);
+    try {
+      const result = await generateAvatarMutation.mutateAsync({
+        data: {
+          roleTitle: role.title,
+          industry: role.industry,
+          seniority: role.seniorityLevel as any,
+          attireStyle: "business-casual",
+        },
+      });
+      if (result.avatarUrl) {
+        setGeneratedAvatarUrl(result.avatarUrl);
+        setAvatarMode("ai");
+        toast({ title: "AI Avatar Generated", description: "Your custom avatar is ready." });
+      }
+    } catch {
+      toast({ title: "Avatar generation failed", description: "Using DiceBear style instead.", variant: "destructive" });
+    } finally {
+      setIsGeneratingAvatar(false);
+    }
+  };
 
   const handleHire = async () => {
     if (!role) return;
     setIsHiring(true);
     try {
       const name = employeeName.trim() || `${role.title} Alpha`;
-      const avatarUrl = avatarSeed
-        ? generateAvatarUrl(avatarSeed || name, selectedStyle)
-        : undefined;
+      let avatarUrl: string | undefined;
+      if (avatarMode === "ai" && generatedAvatarUrl) {
+        avatarUrl = generatedAvatarUrl;
+      } else if (avatarSeed) {
+        avatarUrl = generateAvatarUrl(avatarSeed || name, selectedStyle);
+      }
 
       await hireMutation.mutateAsync({
         data: {
@@ -91,9 +122,11 @@ export default function MarketplaceDetailPage() {
     return <div>Role not found</div>;
   }
 
-  const previewAvatarUrl = avatarSeed
-    ? generateAvatarUrl(avatarSeed || employeeName || role.title, selectedStyle)
-    : role.avatarUrl;
+  const previewAvatarUrl = avatarMode === "ai" && generatedAvatarUrl
+    ? generatedAvatarUrl
+    : avatarSeed
+      ? generateAvatarUrl(avatarSeed || employeeName || role.title, selectedStyle)
+      : role.avatarUrl;
 
   return (
     <div className="space-y-6 pb-12">
@@ -105,12 +138,7 @@ export default function MarketplaceDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <div className="flex flex-col md:flex-row gap-6 items-start md:items-center bg-card p-6 rounded-xl border border-border shadow-sm">
-            <Avatar className="h-24 w-24 border-2 border-primary/20 shadow-md">
-              <AvatarImage src={previewAvatarUrl || undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                <Zap className="h-10 w-10" />
-              </AvatarFallback>
-            </Avatar>
+            <AIAvatar src={previewAvatarUrl} name={role.title} size="lg" />
             <div className="flex-1 space-y-2">
               <div className="flex flex-wrap gap-2 items-center">
                 <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none">{role.category}</Badge>
@@ -230,22 +258,67 @@ export default function MarketplaceDetailPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Avatar Style</Label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {AVATAR_STYLES.map((style) => (
-                        <button
-                          key={style}
-                          onClick={() => { setSelectedStyle(style); if (!avatarSeed) setAvatarSeed(employeeName || role.title); }}
-                          className={`rounded-lg border p-1 transition-all ${selectedStyle === style ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground"}`}
-                        >
-                          <img
-                            src={generateAvatarUrl(employeeName || role.title, style)}
-                            alt={style}
-                            className="w-full h-auto rounded"
-                          />
-                        </button>
-                      ))}
+                    <Label className="text-xs text-muted-foreground">Avatar</Label>
+                    <div className="flex gap-2 mb-2">
+                      <Button
+                        variant={avatarMode === "style" ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1 h-8 text-xs"
+                        onClick={() => setAvatarMode("style")}
+                      >
+                        Style Picker
+                      </Button>
+                      <Button
+                        variant={avatarMode === "ai" ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1 h-8 text-xs"
+                        onClick={() => {
+                          setAvatarMode("ai");
+                          if (!generatedAvatarUrl) handleGenerateAIAvatar();
+                        }}
+                        disabled={isGeneratingAvatar}
+                      >
+                        {isGeneratingAvatar ? (
+                          <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Generating...</>
+                        ) : (
+                          <><Sparkles className="h-3 w-3 mr-1" /> AI Generate</>
+                        )}
+                      </Button>
                     </div>
+
+                    {avatarMode === "ai" && generatedAvatarUrl && (
+                      <div className="flex flex-col items-center gap-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
+                        <AIAvatar src={generatedAvatarUrl} name={role.title} size="lg" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs"
+                          onClick={handleGenerateAIAvatar}
+                          disabled={isGeneratingAvatar}
+                        >
+                          {isGeneratingAvatar ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                          Regenerate
+                        </Button>
+                      </div>
+                    )}
+
+                    {avatarMode === "style" && (
+                      <div className="grid grid-cols-4 gap-2">
+                        {AVATAR_STYLES.map((style) => (
+                          <button
+                            key={style}
+                            onClick={() => { setSelectedStyle(style); if (!avatarSeed) setAvatarSeed(employeeName || role.title); }}
+                            className={`rounded-lg border p-1 transition-all ${selectedStyle === style ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground"}`}
+                          >
+                            <img
+                              src={generateAvatarUrl(employeeName || role.title, style)}
+                              alt={style}
+                              className="w-full h-auto rounded"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {voicesData?.data && voicesData.data.length > 0 && (

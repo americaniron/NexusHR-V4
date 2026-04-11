@@ -38,6 +38,10 @@ tags:
     description: Dashboard summaries
   - name: voices
     description: AI voice catalog
+  - name: Storage
+    description: Object storage upload and serving endpoints
+  - name: Avatars
+    description: AI avatar generation and management
 
 paths:
   /healthz:
@@ -880,6 +884,90 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AnalyticsOverview"
+
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+
+  /avatars/gallery:
+    get:
+      tags: [Avatars]
+      operationId: getAvatarGallery
+      summary: Get pre-generated avatar gallery for Quick Select
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: industry
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Avatar gallery
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvatarGallery"
+
+  /avatars/generate:
+    post:
+      tags: [Avatars]
+      operationId: generateAvatar
+      summary: Generate a custom avatar from parameters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvatarGenerateRequest"
+      responses:
+        "200":
+          description: Generated avatar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvatarResult"
+
+  /avatars/regenerate/{employeeId}:
+    post:
+      tags: [Avatars]
+      operationId: regenerateAvatar
+      summary: Regenerate avatar for an existing employee
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvatarGenerateRequest"
+      responses:
+        "200":
+          description: Regenerated avatar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvatarResult"
 
 components:
   parameters:
@@ -1861,3 +1949,89 @@ components:
         source:
           type: string
       required: [data, source]
+
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"
+
+    AvatarGenerateRequest:
+      type: object
+      properties:
+        roleTitle:
+          type: string
+        industry:
+          type: string
+        seniority:
+          type: string
+          enum: [junior, mid, senior, lead, executive]
+        gender:
+          type: string
+          enum: [male, female, neutral]
+        ethnicity:
+          type: string
+        attireStyle:
+          type: string
+          enum: [formal, business-casual, casual, creative]
+        seed:
+          type: string
+
+    AvatarResult:
+      type: object
+      required: [avatarUrl]
+      properties:
+        avatarUrl:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        prompt:
+          type: string
+
+    AvatarGalleryItem:
+      type: object
+      required: [id, url, label]
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+          format: uri
+        label:
+          type: string
+        category:
+          type: string
+        industry:
+          type: string
+
+    AvatarGallery:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AvatarGalleryItem"
+        total:
+          type: integer

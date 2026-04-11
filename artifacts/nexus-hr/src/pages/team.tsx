@@ -1,7 +1,7 @@
 import { useListEmployees } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AIAvatar } from "@/components/ai-avatar";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, MessageSquare, Settings, Activity } from "lucide-react";
@@ -34,12 +34,7 @@ export default function TeamPage() {
           {team?.data?.map((employee) => (
             <Card key={employee.id} className="bg-card border-border flex flex-col">
               <CardHeader className="flex flex-row justify-between items-start pb-2">
-                <Avatar className="h-12 w-12 border border-border">
-                  <AvatarImage src={employee.avatarUrl || undefined} />
-                  <AvatarFallback className="bg-primary/10 text-primary font-mono">
-                    {employee.name.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
+                <AIAvatar src={employee.avatarUrl} name={employee.name} size="md" />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="h-8 w-8 p-0">

@@ -1,6 +1,7 @@
 import { useListConversations, useGetConversation, useSendMessage } from "@workspace/api-client-react";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AIAvatar } from "@/components/ai-avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -32,10 +33,7 @@ export default function ConversationsPage() {
                   activeId === conv.id ? 'bg-primary/10 hover:bg-primary/15' : 'hover:bg-muted/50'
                 }`}
               >
-                <Avatar className="h-10 w-10 border border-border/50">
-                  <AvatarImage src={conv.aiEmployee?.avatarUrl || undefined} />
-                  <AvatarFallback className="bg-primary/20 text-primary"><Bot className="h-5 w-5" /></AvatarFallback>
-                </Avatar>
+                <AIAvatar src={conv.aiEmployee?.avatarUrl} name={conv.aiEmployee?.name} size="sm" />
                 <div className="flex-1 overflow-hidden">
                   <div className="font-medium text-sm text-foreground truncate">
                     {conv.aiEmployee?.name || "Agent"}
@@ -140,10 +138,7 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
     <>
       <div className="p-4 border-b border-border bg-card flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={conv.aiEmployee?.avatarUrl || undefined} />
-            <AvatarFallback className="bg-primary/20 text-primary"><Bot className="h-4 w-4" /></AvatarFallback>
-          </Avatar>
+          <AIAvatar src={conv.aiEmployee?.avatarUrl} name={conv.aiEmployee?.name} size="sm" />
           <span className="font-medium text-foreground">{conv.aiEmployee?.name}</span>
         </div>
       </div>

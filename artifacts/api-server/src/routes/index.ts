@@ -14,6 +14,8 @@ import notificationsRouter from "./notifications";
 import supportRouter from "./support";
 import dashboardRouter from "./dashboard";
 import voicesRouter from "./voices";
+import storageRouter from "./storage";
+import avatarsRouter from "./avatars";
 
 const router: IRouter = Router();
 
@@ -32,5 +34,7 @@ router.use(notificationsRouter);
 router.use(supportRouter);
 router.use(dashboardRouter);
 router.use(voicesRouter);
+router.use(storageRouter);
+router.use(avatarsRouter);
 
 export default router;

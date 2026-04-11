@@ -1258,3 +1258,96 @@ export const GetAnalyticsOverviewResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * @summary Request a presigned URL for file upload
+ */
+
+export const RequestUploadUrlBody = zod.object({
+  name: zod.string().min(1),
+  size: zod.number().min(1),
+  contentType: zod.string().min(1),
+});
+
+export const RequestUploadUrlResponse = zod.object({
+  uploadURL: zod.string().url(),
+  objectPath: zod.string(),
+  metadata: zod
+    .object({
+      name: zod.string().min(1),
+      size: zod.number().min(1),
+      contentType: zod.string().min(1),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Get pre-generated avatar gallery for Quick Select
+ */
+export const GetAvatarGalleryQueryParams = zod.object({
+  category: zod.coerce.string().optional(),
+  industry: zod.coerce.string().optional(),
+});
+
+export const GetAvatarGalleryResponse = zod.object({
+  data: zod.array(
+    zod.object({
+      id: zod.string(),
+      url: zod.string().url(),
+      label: zod.string(),
+      category: zod.string().optional(),
+      industry: zod.string().optional(),
+    }),
+  ),
+  total: zod.number().optional(),
+});
+
+/**
+ * @summary Generate a custom avatar from parameters
+ */
+export const GenerateAvatarBody = zod.object({
+  roleTitle: zod.string().optional(),
+  industry: zod.string().optional(),
+  seniority: zod
+    .enum(["junior", "mid", "senior", "lead", "executive"])
+    .optional(),
+  gender: zod.enum(["male", "female", "neutral"]).optional(),
+  ethnicity: zod.string().optional(),
+  attireStyle: zod
+    .enum(["formal", "business-casual", "casual", "creative"])
+    .optional(),
+  seed: zod.string().optional(),
+});
+
+export const GenerateAvatarResponse = zod.object({
+  avatarUrl: zod.string().url(),
+  objectPath: zod.string().optional(),
+  prompt: zod.string().optional(),
+});
+
+/**
+ * @summary Regenerate avatar for an existing employee
+ */
+export const RegenerateAvatarParams = zod.object({
+  employeeId: zod.coerce.number(),
+});
+
+export const RegenerateAvatarBody = zod.object({
+  roleTitle: zod.string().optional(),
+  industry: zod.string().optional(),
+  seniority: zod
+    .enum(["junior", "mid", "senior", "lead", "executive"])
+    .optional(),
+  gender: zod.enum(["male", "female", "neutral"]).optional(),
+  ethnicity: zod.string().optional(),
+  attireStyle: zod
+    .enum(["formal", "business-casual", "casual", "creative"])
+    .optional(),
+  seed: zod.string().optional(),
+});
+
+export const RegenerateAvatarResponse = zod.object({
+  avatarUrl: zod.string().url(),
+  objectPath: zod.string().optional(),
+  prompt: zod.string().optional(),
+});

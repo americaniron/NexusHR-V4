@@ -20,6 +20,9 @@ import type {
   ActivityList,
   AnalyticsOverview,
   ArticleList,
+  AvatarGallery,
+  AvatarGenerateRequest,
+  AvatarResult,
   BillingPlanList,
   CategoryList,
   CheckoutRequest,
@@ -37,6 +40,7 @@ import type {
   Employee,
   EmployeeList,
   GetAnalyticsOverviewParams,
+  GetAvatarGalleryParams,
   GetRecentActivityParams,
   HealthStatus,
   HireEmployee,
@@ -71,6 +75,8 @@ import type {
   UpdateOrganization,
   UpdateTask,
   UpdateWorkflow,
+  UploadUrlRequest,
+  UploadUrlResponse,
   UsageSummary,
   User,
   UserList,
@@ -4009,3 +4015,359 @@ export function useGetAnalyticsOverview<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Request a presigned URL for file upload
+ */
+export const getRequestUploadUrlUrl = () => {
+  return `/api/storage/uploads/request-url`;
+};
+
+export const requestUploadUrl = async (
+  uploadUrlRequest: UploadUrlRequest,
+  options?: RequestInit,
+): Promise<UploadUrlResponse> => {
+  return customFetch<UploadUrlResponse>(getRequestUploadUrlUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(uploadUrlRequest),
+  });
+};
+
+export const getRequestUploadUrlMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestUploadUrl>>,
+    TError,
+    { data: BodyType<UploadUrlRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof requestUploadUrl>>,
+  TError,
+  { data: BodyType<UploadUrlRequest> },
+  TContext
+> => {
+  const mutationKey = ["requestUploadUrl"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof requestUploadUrl>>,
+    { data: BodyType<UploadUrlRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return requestUploadUrl(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RequestUploadUrlMutationResult = NonNullable<
+  Awaited<ReturnType<typeof requestUploadUrl>>
+>;
+export type RequestUploadUrlMutationBody = BodyType<UploadUrlRequest>;
+export type RequestUploadUrlMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Request a presigned URL for file upload
+ */
+export const useRequestUploadUrl = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestUploadUrl>>,
+    TError,
+    { data: BodyType<UploadUrlRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof requestUploadUrl>>,
+  TError,
+  { data: BodyType<UploadUrlRequest> },
+  TContext
+> => {
+  return useMutation(getRequestUploadUrlMutationOptions(options));
+};
+
+/**
+ * @summary Get pre-generated avatar gallery for Quick Select
+ */
+export const getGetAvatarGalleryUrl = (params?: GetAvatarGalleryParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/avatars/gallery?${stringifiedParams}`
+    : `/api/avatars/gallery`;
+};
+
+export const getAvatarGallery = async (
+  params?: GetAvatarGalleryParams,
+  options?: RequestInit,
+): Promise<AvatarGallery> => {
+  return customFetch<AvatarGallery>(getGetAvatarGalleryUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAvatarGalleryQueryKey = (
+  params?: GetAvatarGalleryParams,
+) => {
+  return [`/api/avatars/gallery`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetAvatarGalleryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAvatarGallery>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetAvatarGalleryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAvatarGallery>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAvatarGalleryQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAvatarGallery>>
+  > = ({ signal }) => getAvatarGallery(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAvatarGallery>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAvatarGalleryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAvatarGallery>>
+>;
+export type GetAvatarGalleryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get pre-generated avatar gallery for Quick Select
+ */
+
+export function useGetAvatarGallery<
+  TData = Awaited<ReturnType<typeof getAvatarGallery>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetAvatarGalleryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAvatarGallery>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAvatarGalleryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Generate a custom avatar from parameters
+ */
+export const getGenerateAvatarUrl = () => {
+  return `/api/avatars/generate`;
+};
+
+export const generateAvatar = async (
+  avatarGenerateRequest: AvatarGenerateRequest,
+  options?: RequestInit,
+): Promise<AvatarResult> => {
+  return customFetch<AvatarResult>(getGenerateAvatarUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(avatarGenerateRequest),
+  });
+};
+
+export const getGenerateAvatarMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateAvatar>>,
+    TError,
+    { data: BodyType<AvatarGenerateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateAvatar>>,
+  TError,
+  { data: BodyType<AvatarGenerateRequest> },
+  TContext
+> => {
+  const mutationKey = ["generateAvatar"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateAvatar>>,
+    { data: BodyType<AvatarGenerateRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateAvatar(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateAvatarMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateAvatar>>
+>;
+export type GenerateAvatarMutationBody = BodyType<AvatarGenerateRequest>;
+export type GenerateAvatarMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate a custom avatar from parameters
+ */
+export const useGenerateAvatar = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateAvatar>>,
+    TError,
+    { data: BodyType<AvatarGenerateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateAvatar>>,
+  TError,
+  { data: BodyType<AvatarGenerateRequest> },
+  TContext
+> => {
+  return useMutation(getGenerateAvatarMutationOptions(options));
+};
+
+/**
+ * @summary Regenerate avatar for an existing employee
+ */
+export const getRegenerateAvatarUrl = (employeeId: number) => {
+  return `/api/avatars/regenerate/${employeeId}`;
+};
+
+export const regenerateAvatar = async (
+  employeeId: number,
+  avatarGenerateRequest: AvatarGenerateRequest,
+  options?: RequestInit,
+): Promise<AvatarResult> => {
+  return customFetch<AvatarResult>(getRegenerateAvatarUrl(employeeId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(avatarGenerateRequest),
+  });
+};
+
+export const getRegenerateAvatarMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof regenerateAvatar>>,
+    TError,
+    { employeeId: number; data: BodyType<AvatarGenerateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof regenerateAvatar>>,
+  TError,
+  { employeeId: number; data: BodyType<AvatarGenerateRequest> },
+  TContext
+> => {
+  const mutationKey = ["regenerateAvatar"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof regenerateAvatar>>,
+    { employeeId: number; data: BodyType<AvatarGenerateRequest> }
+  > = (props) => {
+    const { employeeId, data } = props ?? {};
+
+    return regenerateAvatar(employeeId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegenerateAvatarMutationResult = NonNullable<
+  Awaited<ReturnType<typeof regenerateAvatar>>
+>;
+export type RegenerateAvatarMutationBody = BodyType<AvatarGenerateRequest>;
+export type RegenerateAvatarMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Regenerate avatar for an existing employee
+ */
+export const useRegenerateAvatar = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof regenerateAvatar>>,
+    TError,
+    { employeeId: number; data: BodyType<AvatarGenerateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof regenerateAvatar>>,
+  TError,
+  { employeeId: number; data: BodyType<AvatarGenerateRequest> },
+  TContext
+> => {
+  return useMutation(getRegenerateAvatarMutationOptions(options));
+};
