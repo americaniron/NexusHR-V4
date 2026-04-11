@@ -12,5 +12,5 @@ export type AvatarGenerateRequestGender =
 export const AvatarGenerateRequestGender = {
   male: "male",
   female: "female",
-  neutral: "neutral",
+  "non-binary": "non-binary",
 } as const;

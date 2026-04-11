@@ -6,10 +6,21 @@ interface AvatarParams {
   roleTitle?: string;
   industry?: string;
   seniority?: string;
-  gender?: string;
+  gender?: "male" | "female" | "non-binary";
+  ageRange?: "20-30" | "30-40" | "40-50" | "50-60" | "60+";
   ethnicity?: string;
-  attireStyle?: string;
+  attireStyle?: "formal" | "business-casual" | "casual" | "creative";
   seed?: string;
+}
+
+export interface AvatarIdentityPackage {
+  avatarUrl: string;
+  voiceId?: string;
+  renderConfig: {
+    size: string;
+    style: string;
+    generationParams: AvatarParams;
+  };
 }
 
 export interface AvatarConfig {
@@ -24,6 +35,7 @@ interface AvatarGenerateResult {
   objectPath: string;
   prompt: string;
   avatarConfig: AvatarConfig;
+  identityPackage: AvatarIdentityPackage;
 }
 
 const MAX_RETRIES = 2;
@@ -87,6 +99,14 @@ const SENIORITY_DESC: Record<string, string> = {
   executive: "distinguished executive, powerful presence",
 };
 
+const AGE_RANGE_DESC: Record<string, string> = {
+  "20-30": "in their twenties, youthful and energetic",
+  "30-40": "in their thirties, established and confident",
+  "40-50": "in their forties, seasoned and experienced",
+  "50-60": "in their fifties, distinguished and authoritative",
+  "60+": "in their sixties or older, wise and commanding",
+};
+
 const DEFAULT_ATTIRE: Record<string, string> = {
   formal: "wearing a formal business suit, tie or blazer",
   "business-casual": "wearing smart business casual attire",
@@ -95,17 +115,20 @@ const DEFAULT_ATTIRE: Record<string, string> = {
 };
 
 function buildPrompt(params: AvatarParams): string {
-  const gender = params.gender || "neutral";
+  const gender = params.gender || "non-binary";
+  const ageRange = params.ageRange || "30-40";
   const ethnicity = params.ethnicity || "diverse";
   const attire = params.attireStyle || "business-casual";
   const role = params.roleTitle || "professional";
   const industry = params.industry || "technology";
   const seniority = params.seniority || "mid";
 
+  const genderDesc = gender === "non-binary" ? "person with androgynous features" : `${gender} person`;
+  const ageDesc = AGE_RANGE_DESC[ageRange] || "mid-career";
   const industryAttire = INDUSTRY_ATTIRE[industry.toLowerCase()] || DEFAULT_ATTIRE;
   const attireDesc = industryAttire[attire] || DEFAULT_ATTIRE[attire] || "wearing professional attire";
 
-  return `Professional corporate headshot photograph of a ${SENIORITY_DESC[seniority] || "professional"} ${gender} ${ethnicity} person working as a ${role} in the ${industry} industry. ${attireDesc}. Clean studio background with soft professional lighting. Sharp focus, high resolution, photorealistic. The person has a warm, approachable expression. Shot from shoulders up, centered composition. No text, no watermarks, no logos.`;
+  return `Professional corporate headshot photograph of a ${SENIORITY_DESC[seniority] || "professional"} ${genderDesc}, ${ageDesc}, ${ethnicity} ethnicity, working as a ${role} in the ${industry} industry. ${attireDesc}. Clean studio background with soft professional lighting. Sharp focus, high resolution, photorealistic. The person has a warm, approachable expression. Shot from shoulders up, centered composition. No text, no watermarks, no logos.`;
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -153,7 +176,16 @@ export async function generateAvatar(params: AvatarParams): Promise<AvatarGenera
         style: "photorealistic",
       };
 
-      return { avatarUrl, objectPath, prompt, avatarConfig };
+      const identityPackage: AvatarIdentityPackage = {
+        avatarUrl,
+        renderConfig: {
+          size: "512x512",
+          style: "photorealistic",
+          generationParams: params,
+        },
+      };
+
+      return { avatarUrl, objectPath, prompt, avatarConfig, identityPackage };
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       console.error(`[Avatars] Generation attempt ${attempt + 1} failed:`, lastError.message);
@@ -196,13 +228,13 @@ export async function generateInterviewCandidateAvatars(
   industry: string,
   count: number = 3
 ): Promise<AvatarGenerateResult[]> {
-  const diverseParams: AvatarParams[] = [
-    { gender: "female", ethnicity: "East Asian", attireStyle: "business-casual" },
-    { gender: "male", ethnicity: "African", attireStyle: "formal" },
-    { gender: "female", ethnicity: "European", attireStyle: "creative" },
-    { gender: "male", ethnicity: "South Asian", attireStyle: "business-casual" },
-    { gender: "female", ethnicity: "Latin American", attireStyle: "formal" },
-    { gender: "male", ethnicity: "Middle Eastern", attireStyle: "business-casual" },
+  const diverseParams: Omit<AvatarParams, "roleTitle" | "industry" | "seniority" | "seed">[] = [
+    { gender: "female", ageRange: "30-40", ethnicity: "East Asian", attireStyle: "business-casual" },
+    { gender: "male", ageRange: "40-50", ethnicity: "African", attireStyle: "formal" },
+    { gender: "non-binary", ageRange: "20-30", ethnicity: "European", attireStyle: "creative" },
+    { gender: "female", ageRange: "50-60", ethnicity: "South Asian", attireStyle: "business-casual" },
+    { gender: "male", ageRange: "30-40", ethnicity: "Latin American", attireStyle: "formal" },
+    { gender: "non-binary", ageRange: "40-50", ethnicity: "Middle Eastern", attireStyle: "business-casual" },
   ];
 
   const results: AvatarGenerateResult[] = [];
@@ -220,16 +252,41 @@ export async function generateInterviewCandidateAvatars(
       results.push(result);
     } catch (error) {
       console.error("[Avatars] Interview candidate avatar failed, using fallback:", error instanceof Error ? error.message : error);
+      const fallbackParams: AvatarParams = { ...baseParams, roleTitle, industry, seniority: "mid" };
       results.push({
         avatarUrl: getDiceBearFallback(`${roleTitle}-candidate-${results.length}`),
         objectPath: "",
         prompt: "DiceBear fallback",
-        avatarConfig: { style: "dicebear-fallback" },
+        avatarConfig: { style: "dicebear-fallback", generationParams: fallbackParams },
+        identityPackage: {
+          avatarUrl: getDiceBearFallback(`${roleTitle}-candidate-${results.length}`),
+          renderConfig: { size: "512x512", style: "dicebear-fallback", generationParams: fallbackParams },
+        },
       });
     }
   }
 
   return results;
+}
+
+export function getRoleGalleryAvatars(roleTitle: string, industry: string): { id: string; url: string; label: string; category: string; industry: string }[] {
+  const ROLE_STYLES = ["notionists", "personas", "avataaars", "lorelei", "micah", "bottts"];
+  const ROLE_VARIANTS = [
+    { label: "Professional", seed: `${roleTitle}-professional` },
+    { label: "Creative", seed: `${roleTitle}-creative` },
+    { label: "Executive", seed: `${roleTitle}-executive` },
+    { label: "Friendly", seed: `${roleTitle}-friendly` },
+    { label: "Modern", seed: `${roleTitle}-modern` },
+    { label: "Classic", seed: `${roleTitle}-classic` },
+  ];
+
+  return ROLE_VARIANTS.map((variant, index) => ({
+    id: `role-${roleTitle}-${index}`,
+    url: getDiceBearFallback(variant.seed, ROLE_STYLES[index % ROLE_STYLES.length]),
+    label: `${variant.label} ${roleTitle}`,
+    category: "role-specific",
+    industry,
+  }));
 }
 
 export function getDiceBearFallback(seed: string, style: string = "notionists"): string {

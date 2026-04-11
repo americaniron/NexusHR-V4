@@ -5,7 +5,9 @@ import { cn } from "@/lib/utils";
 interface AIAvatarProps {
   src?: string | null;
   name?: string;
+  roleTitle?: string;
   size?: "sm" | "md" | "lg" | "xl";
+  showLabel?: boolean;
   className?: string;
 }
 
@@ -30,17 +32,53 @@ const textSizes = {
   xl: "text-2xl",
 };
 
-export function AIAvatar({ src, name, size = "md", className }: AIAvatarProps) {
+const labelTextSizes = {
+  sm: "text-xs",
+  md: "text-sm",
+  lg: "text-base",
+  xl: "text-lg",
+};
+
+const roleLabelSizes = {
+  sm: "text-[10px]",
+  md: "text-xs",
+  lg: "text-sm",
+  xl: "text-base",
+};
+
+export function AIAvatar({ src, name, roleTitle, size = "md", showLabel = false, className }: AIAvatarProps) {
   const initials = name
     ? name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
     : "";
 
-  return (
-    <Avatar className={cn(sizeClasses[size], "border-2 border-primary/20 shadow-md", className)}>
+  const avatar = (
+    <Avatar className={cn(sizeClasses[size], "border-2 border-primary/20 shadow-md", !showLabel && className)}>
       {src && <AvatarImage src={src} alt={name || "AI Avatar"} />}
       <AvatarFallback className={cn("bg-primary/10 text-primary", textSizes[size])}>
         {initials || <Zap className={iconSizes[size]} />}
       </AvatarFallback>
     </Avatar>
+  );
+
+  if (!showLabel || (!name && !roleTitle)) {
+    return avatar;
+  }
+
+  return (
+    <div className={cn("flex items-center gap-2", className)}>
+      {avatar}
+      <div className="flex flex-col min-w-0">
+        {name && (
+          <span className={cn("font-medium text-foreground truncate", labelTextSizes[size])}>
+            {name}
+          </span>
+        )}
+        {roleTitle && (
+          <span className={cn("text-muted-foreground truncate", roleLabelSizes[size])}>
+            {roleTitle}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }

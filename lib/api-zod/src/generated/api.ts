@@ -1311,7 +1311,8 @@ export const GenerateAvatarBody = zod.object({
   seniority: zod
     .enum(["junior", "mid", "senior", "lead", "executive"])
     .optional(),
-  gender: zod.enum(["male", "female", "neutral"]).optional(),
+  gender: zod.enum(["male", "female", "non-binary"]).optional(),
+  ageRange: zod.enum(["20-30", "30-40", "40-50", "50-60", "60+"]).optional(),
   ethnicity: zod.string().optional(),
   attireStyle: zod
     .enum(["formal", "business-casual", "casual", "creative"])
@@ -1332,7 +1333,10 @@ export const GenerateAvatarResponse = zod.object({
           seniority: zod
             .enum(["junior", "mid", "senior", "lead", "executive"])
             .optional(),
-          gender: zod.enum(["male", "female", "neutral"]).optional(),
+          gender: zod.enum(["male", "female", "non-binary"]).optional(),
+          ageRange: zod
+            .enum(["20-30", "30-40", "40-50", "50-60", "60+"])
+            .optional(),
           ethnicity: zod.string().optional(),
           attireStyle: zod
             .enum(["formal", "business-casual", "casual", "creative"])
@@ -1343,6 +1347,32 @@ export const GenerateAvatarResponse = zod.object({
       renderSize: zod.string().optional(),
       style: zod.string().optional(),
       voiceId: zod.string().optional(),
+    })
+    .optional(),
+  identityPackage: zod
+    .object({
+      avatarUrl: zod.string().url(),
+      voiceId: zod.string().optional(),
+      renderConfig: zod.object({
+        size: zod.string(),
+        style: zod.string(),
+        generationParams: zod.object({
+          roleTitle: zod.string().optional(),
+          industry: zod.string().optional(),
+          seniority: zod
+            .enum(["junior", "mid", "senior", "lead", "executive"])
+            .optional(),
+          gender: zod.enum(["male", "female", "non-binary"]).optional(),
+          ageRange: zod
+            .enum(["20-30", "30-40", "40-50", "50-60", "60+"])
+            .optional(),
+          ethnicity: zod.string().optional(),
+          attireStyle: zod
+            .enum(["formal", "business-casual", "casual", "creative"])
+            .optional(),
+          seed: zod.string().optional(),
+        }),
+      }),
     })
     .optional(),
 });
@@ -1360,7 +1390,8 @@ export const RegenerateAvatarBody = zod.object({
   seniority: zod
     .enum(["junior", "mid", "senior", "lead", "executive"])
     .optional(),
-  gender: zod.enum(["male", "female", "neutral"]).optional(),
+  gender: zod.enum(["male", "female", "non-binary"]).optional(),
+  ageRange: zod.enum(["20-30", "30-40", "40-50", "50-60", "60+"]).optional(),
   ethnicity: zod.string().optional(),
   attireStyle: zod
     .enum(["formal", "business-casual", "casual", "creative"])
@@ -1381,7 +1412,10 @@ export const RegenerateAvatarResponse = zod.object({
           seniority: zod
             .enum(["junior", "mid", "senior", "lead", "executive"])
             .optional(),
-          gender: zod.enum(["male", "female", "neutral"]).optional(),
+          gender: zod.enum(["male", "female", "non-binary"]).optional(),
+          ageRange: zod
+            .enum(["20-30", "30-40", "40-50", "50-60", "60+"])
+            .optional(),
           ethnicity: zod.string().optional(),
           attireStyle: zod
             .enum(["formal", "business-casual", "casual", "creative"])
@@ -1392,6 +1426,32 @@ export const RegenerateAvatarResponse = zod.object({
       renderSize: zod.string().optional(),
       style: zod.string().optional(),
       voiceId: zod.string().optional(),
+    })
+    .optional(),
+  identityPackage: zod
+    .object({
+      avatarUrl: zod.string().url(),
+      voiceId: zod.string().optional(),
+      renderConfig: zod.object({
+        size: zod.string(),
+        style: zod.string(),
+        generationParams: zod.object({
+          roleTitle: zod.string().optional(),
+          industry: zod.string().optional(),
+          seniority: zod
+            .enum(["junior", "mid", "senior", "lead", "executive"])
+            .optional(),
+          gender: zod.enum(["male", "female", "non-binary"]).optional(),
+          ageRange: zod
+            .enum(["20-30", "30-40", "40-50", "50-60", "60+"])
+            .optional(),
+          ethnicity: zod.string().optional(),
+          attireStyle: zod
+            .enum(["formal", "business-casual", "casual", "creative"])
+            .optional(),
+          seed: zod.string().optional(),
+        }),
+      }),
     })
     .optional(),
 });

@@ -6,10 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AvatarConfig } from "./avatarConfig";
+import type { AvatarIdentityPackage } from "./avatarIdentityPackage";
 
 export interface AvatarResult {
   avatarUrl: string;
   objectPath?: string;
   prompt?: string;
   avatarConfig?: AvatarConfig;
+  identityPackage?: AvatarIdentityPackage;
 }

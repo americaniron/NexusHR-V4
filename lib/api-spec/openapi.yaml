@@ -1988,7 +1988,10 @@ components:
           enum: [junior, mid, senior, lead, executive]
         gender:
           type: string
-          enum: [male, female, neutral]
+          enum: [male, female, non-binary]
+        ageRange:
+          type: string
+          enum: ["20-30", "30-40", "40-50", "50-60", "60+"]
         ethnicity:
           type: string
         attireStyle:
@@ -2009,6 +2012,29 @@ components:
         voiceId:
           type: string
 
+    AvatarRenderConfig:
+      type: object
+      required: [size, style, generationParams]
+      properties:
+        size:
+          type: string
+        style:
+          type: string
+        generationParams:
+          $ref: "#/components/schemas/AvatarGenerateRequest"
+
+    AvatarIdentityPackage:
+      type: object
+      required: [avatarUrl, renderConfig]
+      properties:
+        avatarUrl:
+          type: string
+          format: uri
+        voiceId:
+          type: string
+        renderConfig:
+          $ref: "#/components/schemas/AvatarRenderConfig"
+
     AvatarResult:
       type: object
       required: [avatarUrl]
@@ -2022,6 +2048,8 @@ components:
           type: string
         avatarConfig:
           $ref: "#/components/schemas/AvatarConfig"
+        identityPackage:
+          $ref: "#/components/schemas/AvatarIdentityPackage"
 
     AvatarGalleryItem:
       type: object

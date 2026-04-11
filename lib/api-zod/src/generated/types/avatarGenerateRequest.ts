@@ -5,6 +5,7 @@
  * NexusHR VX API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AvatarGenerateRequestAgeRange } from "./avatarGenerateRequestAgeRange";
 import type { AvatarGenerateRequestAttireStyle } from "./avatarGenerateRequestAttireStyle";
 import type { AvatarGenerateRequestGender } from "./avatarGenerateRequestGender";
 import type { AvatarGenerateRequestSeniority } from "./avatarGenerateRequestSeniority";
@@ -14,6 +15,7 @@ export interface AvatarGenerateRequest {
   industry?: string;
   seniority?: AvatarGenerateRequestSeniority;
   gender?: AvatarGenerateRequestGender;
+  ageRange?: AvatarGenerateRequestAgeRange;
   ethnicity?: string;
   attireStyle?: AvatarGenerateRequestAttireStyle;
   seed?: string;

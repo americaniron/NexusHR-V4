@@ -2,7 +2,10 @@ import { File } from "@google-cloud/storage";
 
 const ACL_POLICY_METADATA_KEY = "custom:aclPolicy";
 
-export enum ObjectAccessGroupType {}
+export enum ObjectAccessGroupType {
+  ORG_MEMBER = "ORG_MEMBER",
+  OWNER = "OWNER",
+}
 
 export interface ObjectAccessGroup {
   type: ObjectAccessGroupType;
@@ -44,10 +47,34 @@ abstract class BaseObjectAccessGroup implements ObjectAccessGroup {
   public abstract hasMember(userId: string): Promise<boolean>;
 }
 
+class OrgMemberAccessGroup extends BaseObjectAccessGroup {
+  constructor(orgId: string) {
+    super(ObjectAccessGroupType.ORG_MEMBER, orgId);
+  }
+
+  public async hasMember(userId: string): Promise<boolean> {
+    return userId.startsWith(`org:${this.id}:`) || userId === this.id;
+  }
+}
+
+class OwnerAccessGroup extends BaseObjectAccessGroup {
+  constructor(ownerId: string) {
+    super(ObjectAccessGroupType.OWNER, ownerId);
+  }
+
+  public async hasMember(userId: string): Promise<boolean> {
+    return userId === this.id;
+  }
+}
+
 function createObjectAccessGroup(
   group: ObjectAccessGroup,
 ): BaseObjectAccessGroup {
   switch (group.type) {
+    case ObjectAccessGroupType.ORG_MEMBER:
+      return new OrgMemberAccessGroup(group.id);
+    case ObjectAccessGroupType.OWNER:
+      return new OwnerAccessGroup(group.id);
     default:
       throw new Error(`Unknown access group type: ${group.type}`);
   }

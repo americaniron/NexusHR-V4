@@ -577,7 +577,18 @@ export type AvatarGenerateRequestGender =
 export const AvatarGenerateRequestGender = {
   male: "male",
   female: "female",
-  neutral: "neutral",
+  "non-binary": "non-binary",
+} as const;
+
+export type AvatarGenerateRequestAgeRange =
+  (typeof AvatarGenerateRequestAgeRange)[keyof typeof AvatarGenerateRequestAgeRange];
+
+export const AvatarGenerateRequestAgeRange = {
+  "20-30": "20-30",
+  "30-40": "30-40",
+  "40-50": "40-50",
+  "50-60": "50-60",
+  "60+": "60+",
 } as const;
 
 export type AvatarGenerateRequestAttireStyle =
@@ -595,6 +606,7 @@ export interface AvatarGenerateRequest {
   industry?: string;
   seniority?: AvatarGenerateRequestSeniority;
   gender?: AvatarGenerateRequestGender;
+  ageRange?: AvatarGenerateRequestAgeRange;
   ethnicity?: string;
   attireStyle?: AvatarGenerateRequestAttireStyle;
   seed?: string;
@@ -607,11 +619,24 @@ export interface AvatarConfig {
   voiceId?: string;
 }
 
+export interface AvatarRenderConfig {
+  size: string;
+  style: string;
+  generationParams: AvatarGenerateRequest;
+}
+
+export interface AvatarIdentityPackage {
+  avatarUrl: string;
+  voiceId?: string;
+  renderConfig: AvatarRenderConfig;
+}
+
 export interface AvatarResult {
   avatarUrl: string;
   objectPath?: string;
   prompt?: string;
   avatarConfig?: AvatarConfig;
+  identityPackage?: AvatarIdentityPackage;
 }
 
 export interface AvatarGalleryItem {

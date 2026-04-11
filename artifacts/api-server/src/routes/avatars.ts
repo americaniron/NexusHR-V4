@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { generateAvatar, getDiceBearFallback } from "../lib/avatars";
+import { generateAvatar, getDiceBearFallback, getRoleGalleryAvatars } from "../lib/avatars";
 import { AppError } from "../middlewares/errorHandler";
 import { requireAuth } from "../middlewares/requireAuth";
 import { rateLimit } from "../middlewares/rateLimit";
@@ -22,12 +22,19 @@ const GALLERY_SEEDS = [
   "cloud-architect", "ai-engineer", "growth-hacker", "compliance-officer",
 ];
 
-router.get("/avatars/gallery", async (_req: Request, res: Response, next: NextFunction) => {
+router.get("/avatars/gallery", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const category = _req.query.category as string | undefined;
-    const industry = _req.query.industry as string | undefined;
+    const roleTitle = req.query.roleTitle as string | undefined;
+    const category = req.query.category as string | undefined;
+    const industry = req.query.industry as string | undefined;
 
-    const gallery = GALLERY_SEEDS.map((seed, index) => {
+    let gallery: { id: string; url: string; label: string; category: string; industry: string }[] = [];
+
+    if (roleTitle) {
+      gallery = getRoleGalleryAvatars(roleTitle, industry || "technology");
+    }
+
+    const generalGallery = GALLERY_SEEDS.map((seed, index) => {
       const style = GALLERY_STYLES[index % GALLERY_STYLES.length];
       return {
         id: `dicebear-${seed}`,
@@ -38,6 +45,8 @@ router.get("/avatars/gallery", async (_req: Request, res: Response, next: NextFu
       };
     });
 
+    gallery = [...gallery, ...generalGallery];
+
     res.json({ data: gallery, total: gallery.length });
   } catch (error) {
     next(error);
@@ -46,13 +55,14 @@ router.get("/avatars/gallery", async (_req: Request, res: Response, next: NextFu
 
 router.post("/avatars/generate", requireAuth, avatarGenerateLimit, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { roleTitle, industry, seniority, gender, ethnicity, attireStyle, seed } = req.body || {};
+    const { roleTitle, industry, seniority, gender, ageRange, ethnicity, attireStyle, seed } = req.body || {};
 
     const result = await generateAvatar({
       roleTitle,
       industry,
       seniority,
       gender,
+      ageRange,
       ethnicity,
       attireStyle,
       seed,
@@ -67,6 +77,10 @@ router.post("/avatars/generate", requireAuth, avatarGenerateLimit, async (req: R
       objectPath: "",
       prompt: "Fallback to DiceBear avatar - generation failed",
       avatarConfig: { style: "dicebear-fallback" },
+      identityPackage: {
+        avatarUrl: getDiceBearFallback(fallbackSeed),
+        renderConfig: { size: "512x512", style: "dicebear-fallback", generationParams: {} },
+      },
       error: "Avatar generation failed",
     });
   }
@@ -95,13 +109,14 @@ router.post("/avatars/regenerate/:employeeId", requireAuth, avatarRegenerateLimi
       throw AppError.notFound("Employee not found");
     }
 
-    const { roleTitle, industry, seniority, gender, ethnicity, attireStyle } = req.body || {};
+    const { roleTitle, industry, seniority, gender, ageRange, ethnicity, attireStyle } = req.body || {};
 
     const result = await generateAvatar({
       roleTitle: roleTitle || employee.name,
       industry,
       seniority,
       gender,
+      ageRange,
       ethnicity,
       attireStyle,
       seed: `employee-${employeeId}-${Date.now()}`,
