@@ -11,3 +11,5 @@ export * from "./billing";
 export * from "./support";
 export * from "./notifications";
 export * from "./relational-memory";
+export * from "./prompt-templates";
+export * from "./prompt-audit-logs";

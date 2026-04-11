@@ -50,6 +50,8 @@ NexsusHR is a production-grade AI workforce management platform. Businesses hire
 - `support` — support tickets and knowledge base articles
 - `notifications` — user notifications
 - `relational-memory` — AI employee relational memories (preferences, context, interaction patterns)
+- `prompt-templates` — Versioned prompt templates with layer assignment and variable tracking
+- `prompt-audit-logs` — Audit trail for assembled prompts with PII redaction and token usage
 
 ## Production Hardening
 
@@ -206,5 +208,33 @@ All Phase 1 requirements verified complete:
   - `POST /api/personality/assess-priority` — assess task priority
 - **Personality Configuration UI** (`personality-config.tsx`): 7 sliders with tooltips, 8 preset buttons, live preview text, axis overview visualization
 - **Employee Detail Page** (`employee-detail.tsx`): Route `/team/:id`, tabs (Personality/Activity/Settings), integrated personality config with save/reset
+
+## Phase 5: Prompt Architecture & Assembly Pipeline (Complete)
+
+- **9-Layer Prompt Assembly**:
+  - Layer 1 (System): Identity, safety protocols, operational standards, escalation triggers
+  - Layer 2 (Role Definition): Title, department, seniority, reporting, core responsibilities from `ai_employee_roles`
+  - Layer 3 (Job Instructions): Task catalog, standard workflows, use cases from role data
+  - Layer 4 (Task Instructions): Active task context with steps, outputs, success criteria
+  - Layer 5 (Memory Context): Relational memories from Phase 4 engine (preferences, context, patterns)
+  - Layer 6 (User Context): User profile + recent conversation history
+  - Layer 7 (Company Context): Org name, industry, timezone, culture profile from Phase 4
+  - Layer 8 (Tool Access): Connected integrations with permissions, capabilities, rate limits
+  - Layer 9 (Compliance): Regulatory requirements, data classifications, audit requirements from role metadata
+- **7-Stage Assembly Pipeline** (`promptAssembler.ts`): Template resolution → context injection → memory hydration → personality overlay → tone adjustment → tool binding → token budget allocation
+- **Token Budget Manager** (`tokenBudget.ts`): Priority-based truncation hierarchy — critical (system/compliance: never cut) → high (role/job: trim_end) → medium (company/user: summarize) → low (memory: trim_old). Default 128k budget.
+- **Prompt Validation** (`promptValidator.ts`): Required layer presence checks, token budget enforcement, safety protocol verification, truncation warnings
+- **PII Redaction**: Email, SSN, credit card, phone, address, API key, password patterns redacted before audit logging
+- **Audit Logging**: `prompt_audit_logs` table with SHA-256 hash, redacted prompt, token counts, truncation details, validation results, assembly duration
+- **Template Versioning**: `prompt_templates` table with version tracking, layer assignment, variable support, active/inactive state
+- **Prompt API Routes** (`routes/prompts.ts`):
+  - `GET /api/prompts/templates` — list templates (filter by layer, roleId)
+  - `GET /api/prompts/templates/:id` — get template detail
+  - `POST /api/prompts/templates` — create template with auto-versioning
+  - `PUT /api/prompts/templates/:id` — update template
+  - `POST /api/prompts/assemble` — assemble full 9-layer prompt for AI employee
+  - `POST /api/prompts/preview` — preview assembled layers with PII redaction
+  - `GET /api/prompts/audit-logs` — list audit logs (filter by aiEmployeeId)
+  - `GET /api/prompts/audit-logs/:id` — get audit log detail
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
