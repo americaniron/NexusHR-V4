@@ -27,11 +27,9 @@ export function Sidebar() {
   return (
     <div className="flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border">
       <div className="flex h-16 shrink-0 items-center px-6 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold font-mono text-sm">NX</span>
-          </div>
-          <span className="text-lg font-bold text-sidebar-foreground tracking-tight">NexusHR VX</span>
+        <div className="flex items-center gap-2.5">
+          <img src={`${import.meta.env.BASE_URL}nexushr-logo.png`} alt="NexsusHR" className="h-9 w-9 object-contain" />
+          <span className="text-lg font-bold text-sidebar-foreground tracking-tight">NexsusHR</span>
         </div>
       </div>
 

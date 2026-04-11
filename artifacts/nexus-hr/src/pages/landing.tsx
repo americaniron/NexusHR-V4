@@ -6,11 +6,9 @@ export default function LandingPage() {
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background selection:bg-primary/30">
       <header className="flex h-20 items-center justify-between border-b border-border/40 px-6 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="font-mono text-sm font-bold text-primary-foreground">NX</span>
-          </div>
-          <span className="text-xl font-bold tracking-tight text-foreground">NexusHR VX</span>
+        <div className="flex items-center gap-2.5">
+          <img src={`${import.meta.env.BASE_URL}nexushr-logo.png`} alt="NexsusHR" className="h-10 w-10 object-contain" />
+          <span className="text-xl font-bold tracking-tight text-foreground">NexsusHR</span>
         </div>
         <div className="flex items-center gap-4">
           <Link href="/sign-in" className="text-sm font-medium text-muted-foreground hover:text-foreground">
@@ -31,11 +29,11 @@ export default function LandingPage() {
           <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm text-primary mb-8">
               <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
-              NexusHR VX v2.0 is live
+              NexsusHR — Autonomous AI Company OS
             </div>
             <h1 className="mx-auto max-w-4xl text-5xl font-extrabold tracking-tight text-foreground sm:text-7xl">
               The Cockpit for the <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">AI-Powered Enterprise</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-amber-400">AI-Powered Enterprise</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
               Hire, deploy, and manage fully autonomous AI beings as your workforce. Mission control meets talent marketplace for executives building the future of work.
@@ -86,13 +84,11 @@ export default function LandingPage() {
       <footer className="border-t border-border/40 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between">
           <div className="flex items-center gap-2 mb-4 md:mb-0">
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-primary">
-              <span className="font-mono text-[10px] font-bold text-primary-foreground">NX</span>
-            </div>
-            <span className="text-sm font-bold text-foreground">NexusHR VX</span>
+            <img src={`${import.meta.env.BASE_URL}nexushr-logo.png`} alt="NexsusHR" className="h-7 w-7 object-contain" />
+            <span className="text-sm font-bold text-foreground">NexsusHR</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} NexusHR. All rights reserved.
+            © {new Date().getFullYear()} NexsusHR. All rights reserved.
           </p>
         </div>
       </footer>

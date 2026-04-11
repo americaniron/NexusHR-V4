@@ -9,10 +9,8 @@ export default function SignInPage() {
     <div className="flex min-h-screen w-full items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center justify-center space-y-2 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-            <span className="font-mono text-xl font-bold text-primary-foreground">NX</span>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome to NexusHR VX</h1>
+          <img src={`${import.meta.env.BASE_URL}nexushr-logo.png`} alt="NexsusHR" className="h-14 w-14 object-contain" />
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome to NexsusHR</h1>
           <p className="text-sm text-muted-foreground">Sign in to command your AI workforce</p>
         </div>
         <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />

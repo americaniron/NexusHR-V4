@@ -1,8 +1,8 @@
-# NexusHR VX — AI Workforce SaaS Platform
+# NexsusHR — Autonomous AI Company OS
 
 ## Overview
 
-NexusHR VX is a production-grade AI workforce management platform. Businesses hire, deploy, and manage fully autonomous AI "Beings" across 20+ industries. Built as a pnpm workspace monorepo using TypeScript.
+NexsusHR is a production-grade AI workforce management platform. Businesses hire, deploy, and manage fully autonomous AI "Beings" across 20+ industries. Built as a pnpm workspace monorepo using TypeScript.
 
 ## Stack
 
@@ -98,14 +98,17 @@ NexusHR VX is a production-grade AI workforce management platform. Businesses hi
 - `/settings` — Profile and org settings
 - `/help` — Knowledge base and support tickets
 
-## Design System
+## Design System & Branding
 
-Dark theme by default (deep navy). CSS variables in `artifacts/nexus-hr/src/index.css`.
-- Primary: `hsl(199 89% 48%)` — Professional Blue
-- Background: `hsl(222 47% 11%)` — Deep Navy
+NexsusHR brand identity: bronze/copper geometric "NX" logo with wireframe sphere.
+Logo file: `artifacts/nexus-hr/public/nexushr-logo.png` (also at `attached_assets/NexusHR_logo_1775931812361.png`)
+Dark theme by default (charcoal). CSS variables in `artifacts/nexus-hr/src/index.css`.
+- Primary: `hsl(30 72% 50%)` — Bronze/Copper (brand color)
+- Background: `hsl(220 20% 10%)` — Dark Charcoal
 - Success: `hsl(145 63% 42%)`
 - Warning: `hsl(37 91% 51%)`
 - Destructive: `hsl(0 62.8% 30.6%)`
+- Chart palette: Bronze → Green → Dark Copper → Amber → Burnt Orange
 
 ## Environment Variables
 
