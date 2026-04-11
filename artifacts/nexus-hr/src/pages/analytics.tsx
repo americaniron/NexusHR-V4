@@ -7,7 +7,7 @@ import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip
 
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState("30d");
-  const { data, isLoading } = useGetAnalyticsOverview({ period: period as any });
+  const { data, isLoading } = useGetAnalyticsOverview();
 
   return (
     <div className="space-y-6">

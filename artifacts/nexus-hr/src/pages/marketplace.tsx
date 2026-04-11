@@ -54,7 +54,7 @@ export default function MarketplacePage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Sort By</label>
-              <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+              <Select value={sortBy} onValueChange={(val) => setSortBy(val as ListRolesSortBy)}>
                 <SelectTrigger className="bg-card">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>

@@ -125,7 +125,16 @@ export default function DashboardPage() {
   );
 }
 
-function MetricCard({ title, value, icon: Icon, trend, trendUp, isLoading }: any) {
+interface MetricCardProps {
+  title: string;
+  value: string | number | undefined;
+  icon: React.ComponentType<{ className?: string }>;
+  trend?: string;
+  trendUp?: boolean;
+  isLoading?: boolean;
+}
+
+function MetricCard({ title, value, icon: Icon, trend, trendUp, isLoading }: MetricCardProps) {
   return (
     <Card className="border-border bg-card">
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">

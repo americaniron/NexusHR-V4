@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { aiEmployeeRoles } from "@workspace/db";
 import { eq, sql, ilike, and, asc, desc } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 
 const router = Router();
 
@@ -12,19 +13,19 @@ router.get("/roles", async (req, res) => {
     const offset = (page - 1) * limit;
     const { category, industry, search, sortBy } = req.query;
 
-    let conditions: any[] = [eq(aiEmployeeRoles.isActive, 1)];
-    if (category) conditions.push(eq(aiEmployeeRoles.category, category as string));
-    if (industry) conditions.push(eq(aiEmployeeRoles.industry, industry as string));
-    if (search) conditions.push(ilike(aiEmployeeRoles.title, `%${search}%`));
+    const conditions: SQL[] = [eq(aiEmployeeRoles.isActive, 1)];
+    if (category) conditions.push(eq(aiEmployeeRoles.category, String(category)));
+    if (industry) conditions.push(eq(aiEmployeeRoles.industry, String(industry)));
+    if (search) conditions.push(ilike(aiEmployeeRoles.title, `%${String(search)}%`));
 
     const where = and(...conditions);
 
-    let orderBy: any = desc(aiEmployeeRoles.rating);
-    if (sortBy === "price_asc") orderBy = asc(aiEmployeeRoles.priceMonthly);
-    else if (sortBy === "price_desc") orderBy = desc(aiEmployeeRoles.priceMonthly);
-    else if (sortBy === "newest") orderBy = desc(aiEmployeeRoles.createdAt);
+    let orderByClause: SQL = desc(aiEmployeeRoles.rating);
+    if (sortBy === "price_asc") orderByClause = asc(aiEmployeeRoles.priceMonthly);
+    else if (sortBy === "price_desc") orderByClause = desc(aiEmployeeRoles.priceMonthly);
+    else if (sortBy === "newest") orderByClause = desc(aiEmployeeRoles.createdAt);
 
-    const data = await db.select().from(aiEmployeeRoles).where(where).orderBy(orderBy).limit(limit).offset(offset);
+    const data = await db.select().from(aiEmployeeRoles).where(where).orderBy(orderByClause).limit(limit).offset(offset);
     const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(aiEmployeeRoles).where(where);
 
     res.json({
@@ -51,9 +52,12 @@ router.get("/roles/categories", async (_req, res) => {
 
 router.get("/roles/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, id));
-    if (!role) return res.status(404).json({ error: "Role not found" });
+    if (!role) {
+      res.status(404).json({ error: "Role not found" });
+      return;
+    }
     res.json(role);
   } catch (error) {
     res.status(500).json({ error: "Failed to get role" });

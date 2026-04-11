@@ -1,4 +1,4 @@
-import { useListTasks, useCreateTask } from "@workspace/api-client-react";
+import { useListTasks, useCreateTask, type CreateTaskPriority } from "@workspace/api-client-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ export default function TasksPage() {
       await createTask.mutateAsync({
         data: {
           title: newTask.title,
-          priority: newTask.priority as any,
+          priority: newTask.priority as CreateTaskPriority,
           description: ""
         }
       });
