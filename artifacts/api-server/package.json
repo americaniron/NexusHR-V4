@@ -8,7 +8,8 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "seed:healthcare-roles": "tsx src/scripts/seed-healthcare-roles.ts"
+    "seed:healthcare-roles": "tsx src/scripts/seed-healthcare-roles.ts",
+    "seed:finance-legal-insurance-roles": "tsx src/scripts/seed-finance-legal-insurance-roles.ts"
   },
   "dependencies": {
     "@clerk/express": "^2.1.0",
