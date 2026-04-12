@@ -1,7 +1,8 @@
 import express, { Router, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod/v4";
-import { textToSpeechStream } from "../lib/elevenlabs";
+import { textToSpeechStream, textToSpeechWithAlignment } from "../lib/elevenlabs";
 import { personalityToVoiceSettings, resolveVoiceProfile, type PersonalityAxes } from "../lib/voiceConfig";
+import { analyzeEmotion } from "../lib/emotionEngine";
 import { requireAuth } from "../middlewares/requireAuth";
 import { rateLimit } from "../middlewares/rateLimit";
 import { validate } from "../middlewares/validate";
@@ -136,6 +137,55 @@ router.post("/voice/transcribe", requireAuth, transcribeLimit, transcribeJsonPar
     });
   } catch (error) {
     next(error);
+  }
+});
+
+const synthesizeAlignedBody = z.object({
+  text: z.string().min(1).max(5000),
+  voiceId: z.string().max(100).optional(),
+  roleTitle: z.string().max(200).optional(),
+  department: z.string().max(200).optional(),
+  personality: z.object({
+    energy: z.number().min(0).max(1).optional(),
+    formality: z.number().min(0).max(1).optional(),
+    warmth: z.number().min(0).max(1).optional(),
+  }).optional(),
+});
+
+router.post("/voice/synthesize-aligned", requireAuth, synthesizeLimit, validate({ body: synthesizeAlignedBody }), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { text, voiceId, roleTitle, department, personality } = req.body;
+
+    const profile = resolveVoiceProfile(roleTitle, department);
+    const personalitySettings = personalityToVoiceSettings(personality as PersonalityAxes | undefined);
+    const emotionAnalysis = analyzeEmotion(text);
+
+    const resolvedVoiceId = voiceId || personalitySettings.warmthVoiceId || profile.voiceId;
+
+    const result = await textToSpeechWithAlignment(text, {
+      voiceId: resolvedVoiceId,
+      stability: emotionAnalysis.voiceParams.stability,
+      similarityBoost: personalitySettings.similarity_boost,
+      speed: emotionAnalysis.voiceParams.speed,
+      style: emotionAnalysis.voiceParams.style,
+    });
+
+    const audioBase64 = result.audio.toString("base64");
+
+    res.json({
+      audio: `data:audio/mpeg;base64,${audioBase64}`,
+      alignment: result.alignment,
+      visemes: result.visemes,
+      emotion: emotionAnalysis.primary,
+      emotionIntensity: emotionAnalysis.intensity,
+      voiceProfile: profile.label,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("ElevenLabs")) {
+      next(AppError.badRequest(error.message));
+    } else {
+      next(error);
+    }
   }
 });
 

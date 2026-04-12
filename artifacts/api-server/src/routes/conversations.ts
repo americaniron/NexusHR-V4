@@ -13,6 +13,9 @@ import { logger } from "../lib/logger";
 import { publishEvent } from "../lib/websocket";
 import { recordUsage } from "../lib/billing/metering";
 import { requirePlanLimit } from "../middlewares/planLimits";
+import { analyzeEmotion, detectMessageType, extractQuickReplies } from "../lib/emotionEngine";
+import { detectTaskIntent, shouldCreateTaskFromConversation } from "../lib/intentDetection";
+import { tasks } from "@workspace/db";
 
 const router = Router();
 
@@ -134,11 +137,28 @@ Be helpful, professional, and demonstrate expertise in your role. Keep responses
 
     const aiResponse = await chatCompletion(chatMessages);
 
+    const emotionAnalysis = analyzeEmotion(aiResponse);
+    const msgType = detectMessageType(aiResponse);
+    const quickReplies = extractQuickReplies(aiResponse);
+
+    const aiMetadata: Record<string, unknown> = {
+      emotion: emotionAnalysis.primary,
+      emotionIntensity: emotionAnalysis.intensity,
+    };
+    if (quickReplies.length > 0) {
+      aiMetadata.quickReplies = quickReplies;
+    }
+
     let audioUrl: string | null = null;
     if (process.env.ELEVENLABS_API_KEY) {
       try {
         const voiceId = emp?.voiceId || "21m00Tcm4TlvDq8ikWAM";
-        const audioBuffer = await textToSpeech(aiResponse.slice(0, 5000), { voiceId });
+        const audioBuffer = await textToSpeech(aiResponse.slice(0, 5000), {
+          voiceId,
+          stability: emotionAnalysis.voiceParams.stability,
+          style: emotionAnalysis.voiceParams.style,
+          speed: emotionAnalysis.voiceParams.speed,
+        });
         const base64Audio = audioBuffer.toString("base64");
         audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
       } catch (ttsErr) {
@@ -146,8 +166,30 @@ Be helpful, professional, and demonstrate expertise in your role. Keep responses
       }
     }
 
+    const taskIntent = detectTaskIntent(aiResponse);
+    if (shouldCreateTaskFromConversation(taskIntent)) {
+      aiMetadata.taskIntent = {
+        title: taskIntent.title,
+        description: taskIntent.description,
+        priority: taskIntent.priority,
+        category: taskIntent.category,
+        confidence: taskIntent.confidence,
+      };
+    }
+
+    const finalMsgType = shouldCreateTaskFromConversation(taskIntent) ? "action_confirmation" : msgType;
+    if (shouldCreateTaskFromConversation(taskIntent)) {
+      aiMetadata.actionType = "create_task";
+      aiMetadata.actionLabel = `Create task: ${taskIntent.title}`;
+    }
+
     const [aiMsg] = await db.insert(messages).values({
-      conversationId: convId, role: "assistant", content: aiResponse, audioUrl,
+      conversationId: convId,
+      role: "assistant",
+      content: aiResponse,
+      messageType: finalMsgType,
+      metadata: aiMetadata,
+      audioUrl,
     }).returning();
 
     await db.update(conversations).set({ lastMessageAt: new Date() }).where(eq(conversations.id, convId));
@@ -160,6 +202,85 @@ Be helpful, professional, and demonstrate expertise in your role. Keep responses
 
     publishEvent(orgId, "conversations", "conversation:message", { conversationId: convId, userMessage: userMsg, aiMessage: aiMsg });
     res.json({ userMessage: userMsg, aiMessage: aiMsg });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const confirmTaskBody = z.object({
+  messageId: z.number().int().min(1),
+  action: z.enum(["approve", "reject"]),
+});
+
+router.post("/conversations/:id/confirm-task", requireAuth, validate({ params: idParam, body: confirmTaskBody }), async (req, res, next) => {
+  try {
+    const { orgId, userId } = await getAuthContext(req);
+    if (!orgId || !userId) throw AppError.forbidden();
+
+    const convId = parseInt(String(req.params.id));
+    const { messageId, action } = req.body;
+
+    const [conv] = await db.select().from(conversations).where(
+      and(eq(conversations.id, convId), eq(conversations.orgId, orgId), eq(conversations.userId, userId))
+    );
+    if (!conv) throw AppError.notFound("Conversation not found");
+
+    const [msg] = await db.select().from(messages).where(
+      and(eq(messages.id, messageId), eq(messages.conversationId, convId))
+    );
+    if (!msg) throw AppError.notFound("Message not found");
+
+    const meta = (msg.metadata || {}) as Record<string, unknown>;
+    const taskIntent = meta.taskIntent as { title: string; description: string; priority: string; category: string } | undefined;
+
+    if (!taskIntent) {
+      throw AppError.badRequest("No task intent found in this message");
+    }
+
+    if (action === "reject") {
+      await db.update(messages).set({
+        metadata: { ...meta, taskActionTaken: "rejected" },
+      }).where(eq(messages.id, messageId));
+
+      const [statusMsg] = await db.insert(messages).values({
+        conversationId: convId,
+        role: "assistant",
+        content: "Understood — I won't create a task for that. Let me know if you need anything else.",
+        messageType: "status_update",
+        metadata: { status: "dismissed", label: "Task creation declined" },
+      }).returning();
+
+      res.json({ status: "rejected", message: statusMsg });
+      return;
+    }
+
+    const [task] = await db.insert(tasks).values({
+      orgId,
+      assigneeId: conv.aiEmployeeId,
+      createdById: userId,
+      title: taskIntent.title,
+      description: taskIntent.description,
+      priority: taskIntent.priority,
+      category: taskIntent.category,
+      metadata: { sourceConversationId: convId, sourceMessageId: messageId },
+    }).returning();
+
+    await db.update(messages).set({
+      metadata: { ...meta, taskActionTaken: "approved", taskId: task.id },
+    }).where(eq(messages.id, messageId));
+
+    const [confirmMsg] = await db.insert(messages).values({
+      conversationId: convId,
+      role: "assistant",
+      content: `Task created: "${task.title}" (Priority: ${task.priority}). I'll get started on this right away.`,
+      messageType: "status_update",
+      metadata: { status: "completed", label: "Task created", taskId: task.id, progress: 100 },
+    }).returning();
+
+    publishEvent(orgId, "tasks", "task:created", { task });
+    publishEvent(orgId, "conversations", "conversation:message", { conversationId: convId, aiMessage: confirmMsg });
+
+    res.json({ status: "approved", task, message: confirmMsg });
   } catch (error) {
     next(error);
   }

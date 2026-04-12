@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { organizations } from "./organizations";
@@ -21,6 +21,8 @@ export const messages = pgTable("messages", {
   conversationId: integer("conversation_id").references(() => conversations.id).notNull(),
   role: text("role").notNull(),
   content: text("content").notNull(),
+  messageType: text("message_type").default("text").notNull(),
+  metadata: jsonb("metadata"),
   audioUrl: text("audio_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

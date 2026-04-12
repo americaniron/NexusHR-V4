@@ -6,6 +6,7 @@ import { Users, CheckSquare, Activity, Zap, ArrowUpRight, ArrowDownRight, Clock,
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEmployeeState } from "@/hooks/useEmployeeState";
 import { AIAvatar } from "@/components/ai-avatar";
+import { CollaborationPanel } from "@/components/collaboration-panel";
 import { Link } from "wouter";
 import { useState } from "react";
 
@@ -183,6 +184,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <CollaborationPanel />
 
       <Card className="border-border bg-card">
         <CardHeader className="flex flex-row items-center justify-between">

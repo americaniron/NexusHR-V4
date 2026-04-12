@@ -617,6 +617,45 @@ paths:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
 
+  /conversations/{id}/confirm-task:
+    post:
+      operationId: confirmConversationTask
+      tags: [conversations]
+      summary: Confirm or reject a task created from conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messageId:
+                  type: integer
+                action:
+                  type: string
+                  enum: [approve, reject]
+              required: [messageId, action]
+      responses:
+        "200":
+          description: Task confirmation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  task:
+                    $ref: "#/components/schemas/TaskItem"
+                  message:
+                    $ref: "#/components/schemas/MessageItem"
+
   /integrations:
     get:
       operationId: listIntegrations
@@ -776,6 +815,46 @@ paths:
               schema:
                 type: string
                 format: binary
+
+  /voice/synthesize-aligned:
+    post:
+      operationId: synthesizeVoiceAligned
+      tags: [voice]
+      summary: Synthesize text to speech with alignment data for lip sync
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 5000
+                voiceId:
+                  type: string
+                roleTitle:
+                  type: string
+                department:
+                  type: string
+                personality:
+                  type: object
+                  properties:
+                    energy:
+                      type: number
+                    formality:
+                      type: number
+                    warmth:
+                      type: number
+              required: [text]
+      responses:
+        "200":
+          description: Audio with alignment data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlignedSynthesisResponse"
 
   /voice/transcribe:
     post:
@@ -1711,6 +1790,13 @@ components:
           type: string
         content:
           type: string
+        messageType:
+          type: string
+          default: text
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
         audioUrl:
           type: string
           nullable: true
@@ -2335,6 +2421,47 @@ components:
           type: number
           minimum: 0.5
           maximum: 2.0
+
+    AlignedSynthesisResponse:
+      type: object
+      required: [audio, emotion]
+      properties:
+        audio:
+          type: string
+          description: Base64-encoded audio data URI
+        alignment:
+          type: object
+          nullable: true
+          properties:
+            chars:
+              type: array
+              items:
+                type: string
+            charStartTimesMs:
+              type: array
+              items:
+                type: number
+            charDurationsMs:
+              type: array
+              items:
+                type: number
+        visemes:
+          type: array
+          items:
+            type: object
+            properties:
+              viseme:
+                type: string
+              startMs:
+                type: number
+              durationMs:
+                type: number
+        emotion:
+          type: string
+        emotionIntensity:
+          type: number
+        voiceProfile:
+          type: string
 
     TranscriptionResult:
       type: object

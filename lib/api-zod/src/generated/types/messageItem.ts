@@ -5,11 +5,14 @@
  * NexusHR VX API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { MessageItemMetadata } from "./messageItemMetadata";
 
 export interface MessageItem {
   id: number;
   role: string;
   content: string;
+  messageType?: string;
+  metadata?: MessageItemMetadata;
   audioUrl?: string | null;
   createdAt: string;
 }

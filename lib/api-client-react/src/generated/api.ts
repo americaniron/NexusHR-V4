@@ -18,6 +18,7 @@ import type {
 
 import type {
   ActivityList,
+  AlignedSynthesisResponse,
   AnalyticsOverview,
   ArticleList,
   AvatarGallery,
@@ -27,6 +28,8 @@ import type {
   CategoryList,
   CheckoutRequest,
   CheckoutResponse,
+  ConfirmConversationTask200,
+  ConfirmConversationTaskBody,
   ConversationDetail,
   ConversationItem,
   ConversationList,
@@ -73,6 +76,7 @@ import type {
   SendInterviewMessage,
   SendMessage,
   Subscription,
+  SynthesizeVoiceAlignedBody,
   TaskItem,
   TaskList,
   TicketItem,
@@ -2680,6 +2684,97 @@ export const useSendMessage = <
 };
 
 /**
+ * @summary Confirm or reject a task created from conversation
+ */
+export const getConfirmConversationTaskUrl = (id: number) => {
+  return `/api/conversations/${id}/confirm-task`;
+};
+
+export const confirmConversationTask = async (
+  id: number,
+  confirmConversationTaskBody: ConfirmConversationTaskBody,
+  options?: RequestInit,
+): Promise<ConfirmConversationTask200> => {
+  return customFetch<ConfirmConversationTask200>(
+    getConfirmConversationTaskUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(confirmConversationTaskBody),
+    },
+  );
+};
+
+export const getConfirmConversationTaskMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmConversationTask>>,
+    TError,
+    { id: number; data: BodyType<ConfirmConversationTaskBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmConversationTask>>,
+  TError,
+  { id: number; data: BodyType<ConfirmConversationTaskBody> },
+  TContext
+> => {
+  const mutationKey = ["confirmConversationTask"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmConversationTask>>,
+    { id: number; data: BodyType<ConfirmConversationTaskBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return confirmConversationTask(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmConversationTaskMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmConversationTask>>
+>;
+export type ConfirmConversationTaskMutationBody =
+  BodyType<ConfirmConversationTaskBody>;
+export type ConfirmConversationTaskMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Confirm or reject a task created from conversation
+ */
+export const useConfirmConversationTask = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmConversationTask>>,
+    TError,
+    { id: number; data: BodyType<ConfirmConversationTaskBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof confirmConversationTask>>,
+  TError,
+  { id: number; data: BodyType<ConfirmConversationTaskBody> },
+  TContext
+> => {
+  return useMutation(getConfirmConversationTaskMutationOptions(options));
+};
+
+/**
  * @summary List available integrations
  */
 export const getListIntegrationsUrl = () => {
@@ -3471,6 +3566,93 @@ export const useSynthesizeVoice = <
   TContext
 > => {
   return useMutation(getSynthesizeVoiceMutationOptions(options));
+};
+
+/**
+ * @summary Synthesize text to speech with alignment data for lip sync
+ */
+export const getSynthesizeVoiceAlignedUrl = () => {
+  return `/api/voice/synthesize-aligned`;
+};
+
+export const synthesizeVoiceAligned = async (
+  synthesizeVoiceAlignedBody: SynthesizeVoiceAlignedBody,
+  options?: RequestInit,
+): Promise<AlignedSynthesisResponse> => {
+  return customFetch<AlignedSynthesisResponse>(getSynthesizeVoiceAlignedUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(synthesizeVoiceAlignedBody),
+  });
+};
+
+export const getSynthesizeVoiceAlignedMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof synthesizeVoiceAligned>>,
+    TError,
+    { data: BodyType<SynthesizeVoiceAlignedBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof synthesizeVoiceAligned>>,
+  TError,
+  { data: BodyType<SynthesizeVoiceAlignedBody> },
+  TContext
+> => {
+  const mutationKey = ["synthesizeVoiceAligned"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof synthesizeVoiceAligned>>,
+    { data: BodyType<SynthesizeVoiceAlignedBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return synthesizeVoiceAligned(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SynthesizeVoiceAlignedMutationResult = NonNullable<
+  Awaited<ReturnType<typeof synthesizeVoiceAligned>>
+>;
+export type SynthesizeVoiceAlignedMutationBody =
+  BodyType<SynthesizeVoiceAlignedBody>;
+export type SynthesizeVoiceAlignedMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Synthesize text to speech with alignment data for lip sync
+ */
+export const useSynthesizeVoiceAligned = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof synthesizeVoiceAligned>>,
+    TError,
+    { data: BodyType<SynthesizeVoiceAlignedBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof synthesizeVoiceAligned>>,
+  TError,
+  { data: BodyType<SynthesizeVoiceAlignedBody> },
+  TContext
+> => {
+  return useMutation(getSynthesizeVoiceAlignedMutationOptions(options));
 };
 
 /**

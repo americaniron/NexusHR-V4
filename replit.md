@@ -39,11 +39,18 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript (v5.9).
     -   **Interviews:** AI-powered interview sessions with candidates.
     -   **Conversations:** Real-time chat with AI people, including ElevenLabs audio playback.
     -   **Video Studio:** HeyGen Seedance 2.0 integration for cinematic AI person videos (requires HEYGEN_API_KEY, zero simulation).
--   **AI Avatar System:**
+-   **AI Avatar System (Phase 2):**
     -   **Generation:** OpenAI `gpt-image-1` for photorealistic headshots, stored in GCS-backed Replit Object Storage. DiceBear as a fallback.
     -   **Visual States:** `AIAvatar` component supports `idle`, `speaking`, `thinking`, and `listening` states with CSS animations.
+    -   **Emotion Engine:** 7 emotion states (neutral, enthusiastic, empathetic, focused, reassuring, apologetic, thoughtful) detected from AI response text via keyword/phrase pattern matching. Each emotion maps to specific ElevenLabs voice parameters (stability, style, speed). Backend: `lib/emotionEngine.ts`.
+    -   **Emotion-Aware Avatar:** Avatar component shows emotion-colored ring glows, emotion indicator dots, and emotion-tinted waveform bars during speech. Smooth 500ms cubic-bezier transitions between emotion states.
+    -   **Avatar Animator:** `AvatarAnimator` component provides viseme-driven mouth animation overlay (15 viseme shapes), idle breathing/blink cycles, and emotion-driven facial expression hints. Uses `requestAnimationFrame` for smooth 60fps animation.
+    -   **Rich Chat Messages (8 types):** Text, Voice Transcription, Data Card (expandable table), File Attachment (download link), Action Confirmation (Approve/Reject buttons), Status Update (progress bar), Quick Reply (pill buttons), Escalation Notice (4 priority levels). Components in `components/chat-messages/`.
+    -   **ElevenLabs Alignment API:** `textToSpeechWithAlignment()` calls ElevenLabs `/with-timestamps` endpoint to extract character-level timing data, converted to viseme sequences via `alignmentToVisemes()` for lip sync.
+    -   **Collaboration Visibility Panel:** Dashboard panel showing real-time inter-professional workflow progress with step-by-step dependency graphs, professional assignments, estimated completion times, and approval gates. Live-updating with 5s intervals.
 -   **Voice & Visual States:**
-    -   **Voice Synthesis:** ElevenLabs TTS with personality-mapped voice settings based on personality axes (Energy, Formality, Warmth, etc.).
+    -   **Voice Synthesis:** ElevenLabs TTS with personality-mapped voice settings based on personality axes (Energy, Formality, Warmth, etc.). Emotion-aware voice parameter modulation.
+    -   **Voice Synthesis with Alignment:** `/api/voice/synthesize-aligned` endpoint returns audio + character alignment data + viseme sequence + detected emotion for synchronized avatar animation.
     -   **Speech Recognition:** OpenAI Whisper STT for transcribing audio.
     -   **Voice Mode:** `useVoiceMode` hook for managing the full voice pipeline (mic permissions, audio capture, STT, AI response, TTS, playback).
 -   **AI Personality Engine:**
@@ -99,7 +106,7 @@ All platform pages are fully implemented with production-quality UI:
 -   **My AI Team** (`/team`): Employee card grid with status indicators, utilization bars, chat/settings quick actions, dropdown menus.
 -   **Employee Detail** (`/team/:id`): Profile header with stats cards (completed/in-progress/failed/rate), activity tab with task history, personality tuning tab, settings tab with custom instructions + danger zone for deactivation.
 -   **Task Management** (`/tasks`): Task table with search filter, create dialog, inline status transitions (start/done/fail), priority/status badges.
--   **Conversations** (`/conversations`): Split-panel chat UI, conversation sidebar, voice mode with waveform visualization, thinking/speaking/listening states.
+-   **Conversations** (`/conversations`): Split-panel chat UI, conversation sidebar, voice mode with waveform visualization, thinking/speaking/listening states, emotion-aware avatar with 7 emotion states, 8 rich message types (text, voice transcription, data card, file attachment, action confirmation with approve/reject, status update with progress, quick reply pills, escalation notice), emotion badges on AI messages.
 -   **Workflows** (`/workflows`): KPI summary cards, search + status filter, create dialog with trigger type selector (manual/scheduled/event/webhook), edit dialog, status toggling, visual workflow builder dialog with node palette (7 node types), edge drawing with conditional branches, node configuration panel, and workflow execution simulation with status display.
 -   **Analytics** (`/analytics`): 4 KPI cards, area chart (tasks over time), bar chart (utilization by dept), pie chart (task status distribution), bar chart (agents by dept), agent leaderboard table.
 -   **Billing** (`/billing`): Current plan banner, monthly/annual toggle, 4-plan comparison grid, usage progress bars per dimension.

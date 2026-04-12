@@ -4,6 +4,15 @@ import { cn } from "@/lib/utils";
 
 export type AvatarVisualState = "idle" | "speaking" | "thinking" | "listening";
 
+export type EmotionState =
+  | "neutral"
+  | "enthusiastic"
+  | "empathetic"
+  | "focused"
+  | "reassuring"
+  | "apologetic"
+  | "thoughtful";
+
 interface AIAvatarProps {
   src?: string | null;
   name?: string;
@@ -13,6 +22,7 @@ interface AIAvatarProps {
   className?: string;
   visualState?: AvatarVisualState;
   audioLevel?: number;
+  emotion?: EmotionState;
 }
 
 const sizeClasses = {
@@ -57,6 +67,26 @@ const stateRingClasses: Record<AvatarVisualState, string> = {
   listening: "border-green-500/60 animate-avatar-listening shadow-[0_0_8px_rgba(34,197,94,0.3)]",
 };
 
+const emotionGlowClasses: Record<EmotionState, string> = {
+  neutral: "",
+  enthusiastic: "shadow-[0_0_16px_rgba(251,146,60,0.35)]",
+  empathetic: "shadow-[0_0_16px_rgba(236,72,153,0.3)]",
+  focused: "shadow-[0_0_16px_rgba(59,130,246,0.3)]",
+  reassuring: "shadow-[0_0_16px_rgba(34,197,94,0.3)]",
+  apologetic: "shadow-[0_0_16px_rgba(168,85,247,0.3)]",
+  thoughtful: "shadow-[0_0_16px_rgba(99,102,241,0.3)]",
+};
+
+const emotionRingClasses: Record<EmotionState, string> = {
+  neutral: "",
+  enthusiastic: "border-orange-400",
+  empathetic: "border-pink-400",
+  focused: "border-blue-400",
+  reassuring: "border-green-400",
+  apologetic: "border-purple-400",
+  thoughtful: "border-indigo-400",
+};
+
 const dotSizes = {
   sm: "h-1 w-1",
   md: "h-1.5 w-1.5",
@@ -87,17 +117,28 @@ export function AIAvatar({
   className,
   visualState = "idle",
   audioLevel = 0,
+  emotion = "neutral",
 }: AIAvatarProps) {
   const initials = name
     ? name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
     : "";
 
+  const hasEmotion = emotion !== "neutral" && visualState === "speaking";
+
   const avatar = (
     <div className="relative inline-flex">
+      {hasEmotion && (
+        <div className={cn(
+          "absolute inset-0 rounded-full transition-all duration-[600ms] ease-[cubic-bezier(0.4,0,0.2,1)]",
+          emotionGlowClasses[emotion],
+        )} />
+      )}
+
       <Avatar className={cn(
         sizeClasses[size],
-        "border-2 shadow-md transition-all duration-300",
-        stateRingClasses[visualState],
+        "border-2 shadow-md transition-all duration-[500ms] ease-[cubic-bezier(0.4,0,0.2,1)]",
+        hasEmotion ? emotionRingClasses[emotion] : stateRingClasses[visualState],
+        !hasEmotion && stateRingClasses[visualState],
         !showLabel && className,
       )}>
         {src && <AvatarImage src={src} alt={name || "AI Avatar"} />}
@@ -106,12 +147,35 @@ export function AIAvatar({
         </AvatarFallback>
       </Avatar>
 
+      {visualState === "idle" && emotion !== "neutral" && (
+        <div className={cn(
+          "absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-card transition-all duration-500",
+          emotion === "enthusiastic" && "bg-orange-400",
+          emotion === "empathetic" && "bg-pink-400",
+          emotion === "focused" && "bg-blue-400",
+          emotion === "reassuring" && "bg-green-400",
+          emotion === "apologetic" && "bg-purple-400",
+          emotion === "thoughtful" && "bg-indigo-400",
+        )} />
+      )}
+
       {visualState === "speaking" && (
         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-end gap-[2px]">
           {[0, 1, 2, 3, 4].map(i => (
             <div
               key={i}
-              className="bg-primary rounded-full animate-waveform-bar"
+              className={cn(
+                "rounded-full animate-waveform-bar",
+                hasEmotion
+                  ? emotion === "enthusiastic" ? "bg-orange-400"
+                  : emotion === "empathetic" ? "bg-pink-400"
+                  : emotion === "focused" ? "bg-blue-400"
+                  : emotion === "reassuring" ? "bg-green-400"
+                  : emotion === "apologetic" ? "bg-purple-400"
+                  : emotion === "thoughtful" ? "bg-indigo-400"
+                  : "bg-primary"
+                  : "bg-primary",
+              )}
               style={{
                 width: size === "sm" ? 2 : 3,
                 animationDelay: `${i * 0.1}s`,

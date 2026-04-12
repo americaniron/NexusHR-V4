@@ -867,6 +867,8 @@ export const GetConversationParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const getConversationResponseMessagesItemMessageTypeDefault = `text`;
+
 export const GetConversationResponse = zod.object({
   id: zod.number(),
   aiEmployeeId: zod.number(),
@@ -877,6 +879,10 @@ export const GetConversationResponse = zod.object({
       id: zod.number(),
       role: zod.string(),
       content: zod.string(),
+      messageType: zod
+        .string()
+        .default(getConversationResponseMessagesItemMessageTypeDefault),
+      metadata: zod.record(zod.string(), zod.unknown()).nullish(),
       audioUrl: zod.string().nullish(),
       createdAt: zod.string(),
     }),
@@ -930,11 +936,18 @@ export const SendMessageBody = zod.object({
   content: zod.string(),
 });
 
+export const sendMessageResponseUserMessageMessageTypeDefault = `text`;
+export const sendMessageResponseAiMessageMessageTypeDefault = `text`;
+
 export const SendMessageResponse = zod.object({
   userMessage: zod.object({
     id: zod.number(),
     role: zod.string(),
     content: zod.string(),
+    messageType: zod
+      .string()
+      .default(sendMessageResponseUserMessageMessageTypeDefault),
+    metadata: zod.record(zod.string(), zod.unknown()).nullish(),
     audioUrl: zod.string().nullish(),
     createdAt: zod.string(),
   }),
@@ -942,9 +955,95 @@ export const SendMessageResponse = zod.object({
     id: zod.number(),
     role: zod.string(),
     content: zod.string(),
+    messageType: zod
+      .string()
+      .default(sendMessageResponseAiMessageMessageTypeDefault),
+    metadata: zod.record(zod.string(), zod.unknown()).nullish(),
     audioUrl: zod.string().nullish(),
     createdAt: zod.string(),
   }),
+});
+
+/**
+ * @summary Confirm or reject a task created from conversation
+ */
+export const ConfirmConversationTaskParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ConfirmConversationTaskBody = zod.object({
+  messageId: zod.number(),
+  action: zod.enum(["approve", "reject"]),
+});
+
+export const confirmConversationTaskResponseMessageMessageTypeDefault = `text`;
+
+export const ConfirmConversationTaskResponse = zod.object({
+  status: zod.string().optional(),
+  task: zod
+    .object({
+      id: zod.number(),
+      orgId: zod.number(),
+      assigneeId: zod.number().nullish(),
+      title: zod.string(),
+      description: zod.string().nullish(),
+      status: zod.string(),
+      priority: zod.string(),
+      category: zod.string().nullish(),
+      dueDate: zod.string().nullish(),
+      deliverable: zod.string().nullish(),
+      createdAt: zod.string(),
+      assignee: zod
+        .object({
+          id: zod.number(),
+          orgId: zod.number(),
+          roleId: zod.number(),
+          name: zod.string(),
+          avatarUrl: zod.string().url().nullish(),
+          department: zod.string().nullish(),
+          team: zod.string().nullish(),
+          status: zod.string(),
+          personality: zod.object({}).passthrough().nullish(),
+          customInstructions: zod.string().nullish(),
+          voiceId: zod.string().nullish(),
+          hiredAt: zod.string(),
+          role: zod
+            .object({
+              id: zod.number(),
+              title: zod.string(),
+              department: zod.string(),
+              category: zod.string(),
+              industry: zod.string(),
+              seniorityLevel: zod.string(),
+              description: zod.string(),
+              coreResponsibilities: zod.object({}).passthrough(),
+              tasks: zod.object({}).passthrough(),
+              toolsAndIntegrations: zod.object({}).passthrough().nullish(),
+              performanceMetrics: zod.object({}).passthrough().nullish(),
+              personalityDefaults: zod.object({}).passthrough().nullish(),
+              skillsTags: zod.object({}).passthrough().nullish(),
+              priceMonthly: zod.number(),
+              avatarUrl: zod.string().nullish(),
+              rating: zod.number().nullish(),
+            })
+            .optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+  message: zod
+    .object({
+      id: zod.number(),
+      role: zod.string(),
+      content: zod.string(),
+      messageType: zod
+        .string()
+        .default(confirmConversationTaskResponseMessageMessageTypeDefault),
+      metadata: zod.record(zod.string(), zod.unknown()).nullish(),
+      audioUrl: zod.string().nullish(),
+      createdAt: zod.string(),
+    })
+    .optional(),
 });
 
 /**
@@ -1153,6 +1252,48 @@ export const SynthesizeVoiceBody = zod.object({
     .min(synthesizeVoiceBodySpeedMin)
     .max(synthesizeVoiceBodySpeedMax)
     .optional(),
+});
+
+/**
+ * @summary Synthesize text to speech with alignment data for lip sync
+ */
+export const synthesizeVoiceAlignedBodyTextMax = 5000;
+
+export const SynthesizeVoiceAlignedBody = zod.object({
+  text: zod.string().min(1).max(synthesizeVoiceAlignedBodyTextMax),
+  voiceId: zod.string().optional(),
+  roleTitle: zod.string().optional(),
+  department: zod.string().optional(),
+  personality: zod
+    .object({
+      energy: zod.number().optional(),
+      formality: zod.number().optional(),
+      warmth: zod.number().optional(),
+    })
+    .optional(),
+});
+
+export const SynthesizeVoiceAlignedResponse = zod.object({
+  audio: zod.string().describe("Base64-encoded audio data URI"),
+  alignment: zod
+    .object({
+      chars: zod.array(zod.string()).optional(),
+      charStartTimesMs: zod.array(zod.number()).optional(),
+      charDurationsMs: zod.array(zod.number()).optional(),
+    })
+    .nullish(),
+  visemes: zod
+    .array(
+      zod.object({
+        viseme: zod.string().optional(),
+        startMs: zod.number().optional(),
+        durationMs: zod.number().optional(),
+      }),
+    )
+    .optional(),
+  emotion: zod.string(),
+  emotionIntensity: zod.number().optional(),
+  voiceProfile: zod.string().optional(),
 });
 
 /**

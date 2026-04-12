@@ -302,10 +302,14 @@ export interface CreateConversation {
   title?: string;
 }
 
+export type MessageItemMetadata = { [key: string]: unknown } | null;
+
 export interface MessageItem {
   id: number;
   role: string;
   content: string;
+  messageType?: string;
+  metadata?: MessageItemMetadata;
   audioUrl?: string | null;
   createdAt: string;
 }
@@ -718,6 +722,28 @@ export interface VoiceSynthesizeRequest {
   speed?: number;
 }
 
+export type AlignedSynthesisResponseAlignment = {
+  chars?: string[];
+  charStartTimesMs?: number[];
+  charDurationsMs?: number[];
+} | null;
+
+export type AlignedSynthesisResponseVisemesItem = {
+  viseme?: string;
+  startMs?: number;
+  durationMs?: number;
+};
+
+export interface AlignedSynthesisResponse {
+  /** Base64-encoded audio data URI */
+  audio: string;
+  alignment?: AlignedSynthesisResponseAlignment;
+  visemes?: AlignedSynthesisResponseVisemesItem[];
+  emotion: string;
+  emotionIntensity?: number;
+  voiceProfile?: string;
+}
+
 export interface TranscriptionResult {
   text: string;
   language?: string;
@@ -825,8 +851,45 @@ export type ListConversationsParams = {
   limit?: LimitParamParameter;
 };
 
+export type ConfirmConversationTaskBodyAction =
+  (typeof ConfirmConversationTaskBodyAction)[keyof typeof ConfirmConversationTaskBodyAction];
+
+export const ConfirmConversationTaskBodyAction = {
+  approve: "approve",
+  reject: "reject",
+} as const;
+
+export type ConfirmConversationTaskBody = {
+  messageId: number;
+  action: ConfirmConversationTaskBodyAction;
+};
+
+export type ConfirmConversationTask200 = {
+  status?: string;
+  task?: TaskItem;
+  message?: MessageItem;
+};
+
 export type CreateBillingPortal200 = {
   url: string;
+};
+
+export type SynthesizeVoiceAlignedBodyPersonality = {
+  energy?: number;
+  formality?: number;
+  warmth?: number;
+};
+
+export type SynthesizeVoiceAlignedBody = {
+  /**
+   * @minLength 1
+   * @maxLength 5000
+   */
+  text: string;
+  voiceId?: string;
+  roleTitle?: string;
+  department?: string;
+  personality?: SynthesizeVoiceAlignedBodyPersonality;
 };
 
 export type TranscribeAudioBody = {
