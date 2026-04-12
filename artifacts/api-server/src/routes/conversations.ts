@@ -242,50 +242,62 @@ router.post("/conversations/:id/confirm-task", requireAuth, validate({ params: i
       return;
     }
 
-    if (action === "reject") {
-      await db.update(messages).set({
-        metadata: { ...meta, actionStatus: "rejected" },
-      }).where(eq(messages.id, messageId));
+    const result = await db.transaction(async (tx) => {
+      const [freshMsg] = await tx.select().from(messages).where(eq(messages.id, messageId));
+      const freshMeta = (freshMsg?.metadata || {}) as Record<string, unknown>;
 
-      const [statusMsg] = await db.insert(messages).values({
-        conversationId: convId,
-        role: "assistant",
-        content: "Understood — I won't create a task for that. Let me know if you need anything else.",
-        messageType: "status_update",
-        metadata: { progressPercent: 0, progressLabel: "Task creation declined" },
+      if (freshMeta.actionStatus === "approved" || freshMeta.actionStatus === "rejected") {
+        return { status: freshMeta.actionStatus as string, alreadyProcessed: true, taskId: freshMeta.taskId ?? null };
+      }
+
+      if (action === "reject") {
+        await tx.update(messages).set({
+          metadata: { ...freshMeta, actionStatus: "rejected" },
+        }).where(eq(messages.id, messageId));
+
+        const [statusMsg] = await tx.insert(messages).values({
+          conversationId: convId,
+          role: "assistant",
+          content: "Understood — I won't create a task for that. Let me know if you need anything else.",
+          messageType: "status_update",
+          metadata: { progressPercent: 0, progressLabel: "Task creation declined" },
+        }).returning();
+
+        return { status: "rejected" as const, message: statusMsg };
+      }
+
+      const [task] = await tx.insert(tasks).values({
+        orgId,
+        assigneeId: conv.aiEmployeeId,
+        createdById: userId,
+        title: taskIntent!.title,
+        description: taskIntent!.description,
+        priority: taskIntent!.priority,
+        category: taskIntent!.category,
+        metadata: { sourceConversationId: convId, sourceMessageId: messageId },
       }).returning();
 
-      res.json({ status: "rejected", message: statusMsg });
-      return;
+      await tx.update(messages).set({
+        metadata: { ...freshMeta, actionStatus: "approved", taskId: task.id },
+      }).where(eq(messages.id, messageId));
+
+      const [confirmMsg] = await tx.insert(messages).values({
+        conversationId: convId,
+        role: "assistant",
+        content: `Task created: "${task.title}" (Priority: ${task.priority}). I'll get started on this right away.`,
+        messageType: "status_update",
+        metadata: { progressPercent: 100, progressLabel: "Task created", taskId: task.id },
+      }).returning();
+
+      return { status: "approved" as const, task, message: confirmMsg };
+    });
+
+    if ("task" in result) {
+      publishEvent(orgId, "tasks", "task:created", { task: result.task });
+      publishEvent(orgId, "conversations", "conversation:message", { conversationId: convId, aiMessage: result.message });
     }
 
-    const [task] = await db.insert(tasks).values({
-      orgId,
-      assigneeId: conv.aiEmployeeId,
-      createdById: userId,
-      title: taskIntent.title,
-      description: taskIntent.description,
-      priority: taskIntent.priority,
-      category: taskIntent.category,
-      metadata: { sourceConversationId: convId, sourceMessageId: messageId },
-    }).returning();
-
-    await db.update(messages).set({
-      metadata: { ...meta, actionStatus: "approved", taskId: task.id },
-    }).where(eq(messages.id, messageId));
-
-    const [confirmMsg] = await db.insert(messages).values({
-      conversationId: convId,
-      role: "assistant",
-      content: `Task created: "${task.title}" (Priority: ${task.priority}). I'll get started on this right away.`,
-      messageType: "status_update",
-      metadata: { progressPercent: 100, progressLabel: "Task created", taskId: task.id },
-    }).returning();
-
-    publishEvent(orgId, "tasks", "task:created", { task });
-    publishEvent(orgId, "conversations", "conversation:message", { conversationId: convId, aiMessage: confirmMsg });
-
-    res.json({ status: "approved", task, message: confirmMsg });
+    res.json(result);
   } catch (error) {
     next(error);
   }
