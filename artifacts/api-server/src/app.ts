@@ -68,7 +68,7 @@ app.use(cors({
 }));
 
 app.use((req, res, next) => {
-  if (req.path === "/api/voice/transcribe") {
+  if (req.path === "/api/voice/transcribe" || req.path === "/api/billing/webhook") {
     return next();
   }
   express.json({ limit: "1mb" })(req, res, next);

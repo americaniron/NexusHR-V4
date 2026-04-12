@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import express from "express";
 import { db } from "@workspace/db";
 import { billingSubscriptions, billingAlerts, billingInvoices } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
@@ -18,23 +19,35 @@ import {
 } from "../lib/billing/plans";
 import { getUsageSummary } from "../lib/billing/metering";
 import { publishEvent } from "../lib/websocket";
+import type Stripe from "stripe";
 
 const router = Router();
 
-let _stripeClient: any = null;
+let _stripeClient: Stripe | null = null;
 let _stripeKey: string | null = null;
 
-async function getStripeClient() {
+async function getStripeClient(): Promise<Stripe | null> {
   if (!process.env.STRIPE_SECRET_KEY) return null;
   if (_stripeClient && _stripeKey === process.env.STRIPE_SECRET_KEY) return _stripeClient;
-  const Stripe = (await import("stripe")).default;
-  _stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const StripeModule = (await import("stripe")).default;
+  _stripeClient = new StripeModule(process.env.STRIPE_SECRET_KEY);
   _stripeKey = process.env.STRIPE_SECRET_KEY;
   return _stripeClient;
 }
 
 function getFrontendUrl(): string {
   return process.env.FRONTEND_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`;
+}
+
+function computeUnitAmount(planDef: (typeof PLAN_DEFINITIONS)[PlanId], billingCycle: string): number {
+  if (billingCycle === "annual") {
+    return planDef.annual * 12 * 100;
+  }
+  return planDef.monthly * 100;
+}
+
+function stripeInterval(billingCycle: string): "year" | "month" {
+  return billingCycle === "annual" ? "year" : "month";
 }
 
 router.get("/billing/plans", requireAuth, async (_req, res, next) => {
@@ -128,7 +141,7 @@ router.post("/billing/checkout", requireAuth, validate({ body: checkoutBody }), 
     }
 
     const planDef = PLAN_DEFINITIONS[plan as PlanId];
-    const unitAmount = (billingCycle === "annual" ? planDef.annual : planDef.monthly) * 100;
+    const unitAmount = computeUnitAmount(planDef, billingCycle);
 
     let [sub] = await db.select().from(billingSubscriptions).where(eq(billingSubscriptions.orgId, orgId));
     let customerId = sub?.stripeCustomerId;
@@ -138,10 +151,21 @@ router.post("/billing/checkout", requireAuth, validate({ body: checkoutBody }), 
         metadata: { orgId: String(orgId) },
       });
       customerId = customer.id;
+
       if (sub) {
         await db.update(billingSubscriptions)
           .set({ stripeCustomerId: customerId, updatedAt: new Date() })
           .where(eq(billingSubscriptions.orgId, orgId));
+      } else {
+        [sub] = await db.insert(billingSubscriptions).values({
+          orgId,
+          plan: "trial",
+          status: "pending",
+          stripeCustomerId: customerId,
+          allocations: getPlanLimits("trial"),
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date(),
+        }).returning();
       }
     }
 
@@ -153,7 +177,7 @@ router.post("/billing/checkout", requireAuth, validate({ body: checkoutBody }), 
           price_data: {
             currency: "usd",
             unit_amount: unitAmount,
-            recurring: { interval: billingCycle === "annual" ? "year" : "month" },
+            recurring: { interval: stripeInterval(billingCycle) },
             product_data: { name: `NexsusHR ${planDef.name} Plan` },
           },
           quantity: 1,
@@ -197,12 +221,12 @@ router.post("/billing/change-plan", requireAuth, validate({ body: changePlanBody
     const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
     const planDef = PLAN_DEFINITIONS[newPlan as PlanId];
     const cycle = billingCycle || sub.billingCycle || "monthly";
-    const unitAmount = (cycle === "annual" ? planDef.annual : planDef.monthly) * 100;
+    const unitAmount = computeUnitAmount(planDef, cycle);
 
     const price = await stripe.prices.create({
       currency: "usd",
       unit_amount: unitAmount,
-      recurring: { interval: cycle === "annual" ? "year" : "month" },
+      recurring: { interval: stripeInterval(cycle) },
       product_data: { name: `NexsusHR ${planDef.name} Plan` },
     });
 
@@ -280,6 +304,21 @@ router.post("/billing/portal", requireAuth, async (req, res, next) => {
   }
 });
 
+interface InvoiceData {
+  id: string;
+  amountDue: number;
+  amountPaid: number;
+  currency: string;
+  status: string | null;
+  description: string;
+  invoiceUrl: string | null;
+  pdfUrl: string | null;
+  periodStart: Date | null;
+  periodEnd: Date | null;
+  paidAt: Date | null;
+  createdAt: Date;
+}
+
 router.get("/billing/invoices", requireAuth, async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
@@ -294,7 +333,7 @@ router.get("/billing/invoices", requireAuth, async (req, res, next) => {
         limit: 24,
       });
 
-      const data = invoices.data.map((inv: any) => ({
+      const data: InvoiceData[] = invoices.data.map((inv: Stripe.Invoice) => ({
         id: inv.id,
         amountDue: inv.amount_due,
         amountPaid: inv.amount_paid,
@@ -423,7 +462,7 @@ router.get("/billing/overage-estimate", requireAuth, async (req, res, next) => {
   }
 });
 
-router.post("/billing/webhook", async (req: Request, res: Response) => {
+router.post("/billing/webhook", express.raw({ type: "application/json" }), async (req: Request, res: Response) => {
   try {
     const stripe = await getStripeClient();
     if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) {
@@ -431,7 +470,7 @@ router.post("/billing/webhook", async (req: Request, res: Response) => {
     }
 
     const sig = req.headers["stripe-signature"] as string;
-    let event;
+    let event: Stripe.Event;
     try {
       event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
     } catch (err) {
@@ -441,39 +480,47 @@ router.post("/billing/webhook", async (req: Request, res: Response) => {
 
     switch (event.type) {
       case "checkout.session.completed": {
-        const session = event.data.object;
+        const session = event.data.object as Stripe.Checkout.Session;
         const orgId = parseInt(session.metadata?.orgId || "0");
         const plan = session.metadata?.plan || "starter";
         const billingCycle = session.metadata?.billingCycle || "monthly";
 
         if (orgId) {
-          const now = new Date();
-          const periodEnd = new Date(now);
-          periodEnd.setMonth(periodEnd.getMonth() + (billingCycle === "annual" ? 12 : 1));
-
-          await db.update(billingSubscriptions).set({
+          await upsertSubscription(orgId, {
             plan,
             status: "active",
             billingCycle,
             stripeCustomerId: session.customer as string,
             stripeSubscriptionId: session.subscription as string,
-            allocations: getPlanLimits(plan),
-            currentPeriodStart: now,
-            currentPeriodEnd: periodEnd,
-            failedPaymentCount: 0,
-            lastPaymentError: null,
-            graceEndsAt: null,
-            suspendedAt: null,
-            updatedAt: now,
-          }).where(eq(billingSubscriptions.orgId, orgId));
-
+          });
           logger.info({ orgId, plan }, "Subscription activated via checkout");
         }
         break;
       }
 
+      case "customer.subscription.created": {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = subscription.customer as string;
+        const orgIdStr = subscription.metadata?.orgId;
+        const plan = subscription.metadata?.plan || "starter";
+        const billingCycle = subscription.metadata?.billingCycle || "monthly";
+
+        if (orgIdStr) {
+          const orgId = parseInt(orgIdStr);
+          await upsertSubscription(orgId, {
+            plan,
+            status: subscription.status === "active" ? "active" : "pending",
+            billingCycle,
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscription.id,
+          });
+          logger.info({ orgId: orgIdStr, plan }, "Subscription created via webhook");
+        }
+        break;
+      }
+
       case "customer.subscription.updated": {
-        const subscription = event.data.object;
+        const subscription = event.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
         const status = subscription.status;
 
@@ -496,7 +543,7 @@ router.post("/billing/webhook", async (req: Request, res: Response) => {
       }
 
       case "customer.subscription.deleted": {
-        const subscription = event.data.object;
+        const subscription = event.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
         await db.update(billingSubscriptions).set({
           status: "canceled",
@@ -507,7 +554,7 @@ router.post("/billing/webhook", async (req: Request, res: Response) => {
       }
 
       case "invoice.payment_succeeded": {
-        const invoice = event.data.object;
+        const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
 
         await db.update(billingSubscriptions).set({
@@ -542,7 +589,7 @@ router.post("/billing/webhook", async (req: Request, res: Response) => {
       }
 
       case "invoice.payment_failed": {
-        const invoice = event.data.object;
+        const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
 
         const [sub] = await db.select().from(billingSubscriptions)
@@ -601,17 +648,27 @@ router.post("/billing/webhook", async (req: Request, res: Response) => {
   }
 });
 
-async function directActivation(orgId: number, plan: PlanId, billingCycle: string) {
+async function upsertSubscription(
+  orgId: number,
+  data: {
+    plan: string;
+    status: string;
+    billingCycle: string;
+    stripeCustomerId: string;
+    stripeSubscriptionId: string;
+  },
+) {
   const now = new Date();
   const periodEnd = new Date(now);
-  periodEnd.setMonth(periodEnd.getMonth() + (billingCycle === "annual" ? 12 : 1));
+  periodEnd.setMonth(periodEnd.getMonth() + (data.billingCycle === "annual" ? 12 : 1));
 
-  const [sub] = await db.select().from(billingSubscriptions).where(eq(billingSubscriptions.orgId, orgId));
   const values = {
-    plan,
-    status: "active" as const,
-    billingCycle,
-    allocations: getPlanLimits(plan),
+    plan: data.plan,
+    status: data.status,
+    billingCycle: data.billingCycle,
+    stripeCustomerId: data.stripeCustomerId,
+    stripeSubscriptionId: data.stripeSubscriptionId,
+    allocations: getPlanLimits(data.plan),
     currentPeriodStart: now,
     currentPeriodEnd: periodEnd,
     failedPaymentCount: 0,
@@ -621,14 +678,31 @@ async function directActivation(orgId: number, plan: PlanId, billingCycle: strin
     updatedAt: now,
   };
 
-  if (sub) {
-    const [updated] = await db.update(billingSubscriptions).set(values)
-      .where(eq(billingSubscriptions.orgId, orgId)).returning();
+  const [existing] = await db.select().from(billingSubscriptions)
+    .where(eq(billingSubscriptions.orgId, orgId));
+
+  if (existing) {
+    const [updated] = await db.update(billingSubscriptions)
+      .set(values)
+      .where(eq(billingSubscriptions.orgId, orgId))
+      .returning();
     return updated;
   }
 
-  const [created] = await db.insert(billingSubscriptions).values({ orgId, ...values }).returning();
+  const [created] = await db.insert(billingSubscriptions)
+    .values({ orgId, ...values })
+    .returning();
   return created;
+}
+
+async function directActivation(orgId: number, plan: PlanId, billingCycle: string) {
+  return upsertSubscription(orgId, {
+    plan,
+    status: "active",
+    billingCycle,
+    stripeCustomerId: "",
+    stripeSubscriptionId: "",
+  });
 }
 
 export default router;
