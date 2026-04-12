@@ -1,36 +1,38 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, lazy, Suspense } from "react";
 import { ClerkProvider, Show, useClerk } from '@clerk/react';
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from 'wouter';
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { createQueryClient } from "@/lib/queryClient";
 
 import { AppLayout } from "@/components/layout/app-layout";
 import LandingPage from "@/pages/landing";
 import SignInPage from "@/pages/auth/sign-in";
 import SignUpPage from "@/pages/auth/sign-up";
 import DashboardPage from "@/pages/dashboard";
-import MarketplacePage from "@/pages/marketplace";
-import MarketplaceDetailPage from "@/pages/marketplace-detail";
-import TeamPage from "@/pages/team";
-import TasksPage from "@/pages/tasks";
-import WorkflowsPage from "@/pages/workflows";
-import ConversationsPage from "@/pages/conversations";
-import AnalyticsPage from "@/pages/analytics";
-import IntegrationsPage from "@/pages/integrations";
-import BillingPage from "@/pages/billing";
-import SettingsPage from "@/pages/settings";
-import HelpPage from "@/pages/help";
-import OnboardingPage from "@/pages/onboarding";
-import EmployeeDetailPage from "@/pages/employee-detail";
 import NotFound from "@/pages/not-found";
+
+const MarketplacePage = lazy(() => import("@/pages/marketplace"));
+const MarketplaceDetailPage = lazy(() => import("@/pages/marketplace-detail"));
+const TeamPage = lazy(() => import("@/pages/team"));
+const TasksPage = lazy(() => import("@/pages/tasks"));
+const WorkflowsPage = lazy(() => import("@/pages/workflows"));
+const ConversationsPage = lazy(() => import("@/pages/conversations"));
+const AnalyticsPage = lazy(() => import("@/pages/analytics"));
+const IntegrationsPage = lazy(() => import("@/pages/integrations"));
+const BillingPage = lazy(() => import("@/pages/billing"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const HelpPage = lazy(() => import("@/pages/help"));
+const OnboardingPage = lazy(() => import("@/pages/onboarding"));
+const EmployeeDetailPage = lazy(() => import("@/pages/employee-detail"));
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-const queryClient = new QueryClient();
+const queryClient = createQueryClient();
 
 function stripBase(path: string): string {
   return basePath && path.startsWith(basePath)
@@ -40,6 +42,14 @@ function stripBase(path: string): string {
 
 if (!clerkPubKey) {
   throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
+}
+
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center h-full min-h-[200px]">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  );
 }
 
 function HomeRedirect() {
@@ -68,7 +78,9 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     <>
       <Show when="signed-in">
         <AppLayout>
-          <Component />
+          <Suspense fallback={<PageFallback />}>
+            <Component />
+          </Suspense>
         </AppLayout>
       </Show>
       <Show when="signed-out">
@@ -120,7 +132,9 @@ function ClerkProviderWithRoutes() {
             <Route path="/onboarding">
               {() => (
                 <Show when="signed-in">
-                  <OnboardingPage />
+                  <Suspense fallback={<PageFallback />}>
+                    <OnboardingPage />
+                  </Suspense>
                 </Show>
               )}
             </Route>

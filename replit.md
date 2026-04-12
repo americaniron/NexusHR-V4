@@ -331,4 +331,25 @@ All Phase 1 requirements verified complete:
   - `GET /audit-logs` — query audit logs
   - `GET /audit-summary` — aggregated audit summary
 
+## Phase 15: Technical System Architecture (Complete)
+
+- **State Management (3-tier)**:
+  - UI State: React `useState` for component-local (modals, form fields)
+  - Client State: Zustand stores with localStorage persistence (`useAppStore` for theme/sidebar/preferences/navigation, `useAuthStore` for user/org context)
+  - Server State: TanStack Query with entity-specific stale times (realtime 0s, fast 10s, standard 30s, slow 60s, static 5min), retry logic (skip 401/403/404), background refetch
+- **Real-time WebSocket Layer**: Socket.io server attached to HTTP server with:
+  - Origin-restricted CORS (allowed origins from REPLIT_DEV_DOMAIN/REPLIT_DEPLOYMENT_URL; permissive in dev)
+  - Auth middleware requiring orgId + userId on handshake
+  - Room-based subscriptions (tasks, employees, notifications, conversations, workflows, integrations)
+  - Domain event publisher (`publishEvent`, `publishToOrg`) for server-side broadcasting
+  - Client hook (`useSocket`) with auto-connect, room subscriptions, TanStack Query cache invalidation on events, offline message queue with sync on reconnect
+  - Optimistic update utility (`useOptimisticUpdate`) with rollback on failure
+- **Code Splitting**: React.lazy + Suspense for 13 route-level pages (marketplace, team, tasks, workflows, conversations, analytics, integrations, billing, settings, help, onboarding, employee-detail, marketplace-detail). Dashboard and landing page eagerly loaded.
+- **Component Architecture**: Page components (route-level), feature hooks (`useEmployeeState`, `useTaskState` with query key alignment to generated API client `/api/...` keys), shared UI components (shadcn/radix), utilities (`utils/transforms.ts` with formatCurrency, formatNumber, formatRelativeTime, groupBy, sortBy, uniqueBy)
+- **Performance Infrastructure**:
+  - `VirtualizedList` component (react-virtuoso) for large datasets with infinite scroll, empty state, loading indicator
+  - `usePerformanceMonitor` hook for render tracking with slow-render warnings
+  - `useDebounce` and `useThrottle` hooks for input optimization
+- **Query Client Configuration** (`lib/queryClient.ts`): `createQueryClient()` factory with entity-specific stale times, smart retry (skip auth errors), exponential backoff, window-focus refetch, helper functions for cache invalidation
+
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
