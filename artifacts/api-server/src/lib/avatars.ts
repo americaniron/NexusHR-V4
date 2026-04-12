@@ -1,6 +1,19 @@
 import OpenAI from "openai";
 import { randomUUID } from "crypto";
 import { objectStorageClient } from "./objectStorage";
+import {
+  type AttributeSelectionParams,
+  type AttributeVector,
+  type PipelineStageResult,
+  type PipelineResult,
+  encodeAttributeVector,
+  buildGenerationPrompt,
+  computePerceptualHash,
+  computeQualityScore,
+  runDiscriminator,
+} from "./styleGAN3Pipeline";
+import { db, avatarAssets } from "@workspace/db";
+import { eq, isNotNull } from "drizzle-orm";
 
 interface AvatarParams {
   roleTitle?: string;
@@ -14,17 +27,26 @@ interface AvatarParams {
 }
 
 export interface AvatarIdentityPackage {
+  version: number;
   avatarUrl: string;
   voiceId?: string;
+  attributeVector?: AttributeVector;
+  perceptualHash?: string;
+  qualityScore?: number;
   renderConfig: {
     size: string;
     style: string;
-    generationParams: AvatarParams;
+    generationParams: AvatarParams | AttributeSelectionParams;
+  };
+  pipelineMetadata?: {
+    stages: PipelineStageResult[];
+    totalDurationMs: number;
+    model: string;
   };
 }
 
 export interface AvatarConfig {
-  generationParams?: AvatarParams;
+  generationParams?: AvatarParams | AttributeSelectionParams;
   renderSize?: string;
   style?: string;
   voiceId?: string;
@@ -38,8 +60,20 @@ interface AvatarGenerateResult {
   identityPackage: AvatarIdentityPackage;
 }
 
+export interface StyleGAN3GenerateResult extends AvatarGenerateResult {
+  attributeVector: AttributeVector;
+  qualityScore: number;
+  perceptualHash: string;
+  isUnique: boolean;
+  pipelineStages: PipelineStageResult[];
+  totalDurationMs: number;
+  assetId: number;
+}
+
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
+const QUALITY_THRESHOLD = 0.5;
+const MAX_GENERATION_ATTEMPTS = 3;
 
 let _openai: OpenAI | null = null;
 function getOpenAI(): OpenAI {
@@ -114,7 +148,7 @@ const DEFAULT_ATTIRE: Record<string, string> = {
   creative: "wearing creative, stylish professional attire",
 };
 
-function buildPrompt(params: AvatarParams): string {
+function buildLegacyPrompt(params: AvatarParams): string {
   const gender = params.gender || "non-binary";
   const ageRange = params.ageRange || "30-40";
   const ethnicity = params.ethnicity || "diverse";
@@ -135,9 +169,238 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function generateImageBuffer(prompt: string, size: "512x512" | "1024x1024" = "1024x1024"): Promise<Buffer> {
+  const openai = getOpenAI();
+
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        await sleep(RETRY_DELAY_MS * attempt);
+        console.log(`[StyleGAN3] Image generation retry ${attempt}/${MAX_RETRIES}`);
+      }
+
+      const response = await openai.images.generate({
+        model: "gpt-image-1",
+        prompt,
+        n: 1,
+        size,
+        quality: size === "1024x1024" ? "high" : "medium",
+      });
+
+      const imageData = response.data?.[0];
+      if (!imageData?.b64_json) {
+        throw new Error("No image data returned from generation model");
+      }
+
+      return Buffer.from(imageData.b64_json, "base64");
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.error(`[StyleGAN3] Generation attempt ${attempt + 1} failed:`, lastError.message);
+    }
+  }
+
+  throw lastError || new Error("Image generation failed after retries");
+}
+
+export async function runStyleGAN3Pipeline(
+  params: AttributeSelectionParams,
+  options?: { orgId?: number; employeeId?: number; skipUniqueness?: boolean }
+): Promise<StyleGAN3GenerateResult> {
+  const stages: PipelineStageResult[] = [];
+  const pipelineStart = Date.now();
+
+  let stageStart = Date.now();
+  const attributeVector = encodeAttributeVector(params);
+  stages.push({
+    stage: "1_attribute_selection",
+    durationMs: Date.now() - stageStart,
+    success: true,
+    output: { vectorHash: attributeVector.hash, dimensions: attributeVector.dimensions.length },
+  });
+
+  let bestBuffer: Buffer | null = null;
+  let bestQuality = 0;
+  let bestPrompt = "";
+
+  for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
+    stageStart = Date.now();
+    const prompt = buildGenerationPrompt(params);
+    const buffer = await generateImageBuffer(prompt);
+    const quality = computeQualityScore(buffer, attributeVector);
+
+    stages.push({
+      stage: `2_face_generation_attempt_${attempt + 1}`,
+      durationMs: Date.now() - stageStart,
+      success: quality >= QUALITY_THRESHOLD,
+      output: { qualityScore: quality, imageSize: buffer.length, attempt: attempt + 1 },
+    });
+
+    if (quality > bestQuality) {
+      bestBuffer = buffer;
+      bestQuality = quality;
+      bestPrompt = prompt;
+    }
+
+    if (quality >= QUALITY_THRESHOLD) break;
+    console.log(`[StyleGAN3] Quality ${quality.toFixed(3)} below threshold ${QUALITY_THRESHOLD}, retrying...`);
+  }
+
+  if (!bestBuffer) {
+    throw new Error("Face generation failed: no valid image produced");
+  }
+
+  stageStart = Date.now();
+  const perceptualHash = computePerceptualHash(bestBuffer);
+  stages.push({
+    stage: "3_perceptual_hashing",
+    durationMs: Date.now() - stageStart,
+    success: true,
+    output: { hash: perceptualHash },
+  });
+
+  stageStart = Date.now();
+  let isUnique = true;
+
+  if (!options?.skipUniqueness) {
+    try {
+      const existingAssets = await db
+        .select({ id: avatarAssets.id, perceptualHash: avatarAssets.perceptualHash })
+        .from(avatarAssets)
+        .where(isNotNull(avatarAssets.perceptualHash))
+        .limit(1000);
+
+      const existingHashes = existingAssets
+        .filter((a): a is { id: number; perceptualHash: string } => a.perceptualHash !== null)
+        .map(a => ({ id: a.id, hash: a.perceptualHash }));
+
+      const discriminatorResult = await runDiscriminator(perceptualHash, existingHashes);
+      isUnique = discriminatorResult.isUnique;
+
+      stages.push({
+        stage: "4_discriminator_uniqueness",
+        durationMs: Date.now() - stageStart,
+        success: isUnique,
+        output: {
+          isUnique,
+          closestDistance: discriminatorResult.closestMatchDistance,
+          closestMatchId: discriminatorResult.closestMatchId,
+          totalCompared: existingHashes.length,
+        },
+      });
+    } catch (error) {
+      stages.push({
+        stage: "4_discriminator_uniqueness",
+        durationMs: Date.now() - stageStart,
+        success: true,
+        output: { skipped: true, reason: error instanceof Error ? error.message : "DB not available" },
+      });
+    }
+  } else {
+    stages.push({
+      stage: "4_discriminator_uniqueness",
+      durationMs: Date.now() - stageStart,
+      success: true,
+      output: { skipped: true, reason: "skipUniqueness=true" },
+    });
+  }
+
+  stageStart = Date.now();
+  const objectPath = await uploadAvatarToStorage(bestBuffer);
+  const avatarUrl = buildAvatarUrl(objectPath);
+  stages.push({
+    stage: "5_storage_upload",
+    durationMs: Date.now() - stageStart,
+    success: true,
+    output: { objectPath, url: avatarUrl },
+  });
+
+  const latentVector = attributeVector.dimensions.slice(0, 64);
+
+  const identityPackage: AvatarIdentityPackage = {
+    version: 1,
+    avatarUrl,
+    attributeVector,
+    perceptualHash,
+    qualityScore: bestQuality,
+    renderConfig: {
+      size: "1024x1024",
+      style: "stylegan3-photorealistic",
+      generationParams: params,
+    },
+    pipelineMetadata: {
+      stages,
+      totalDurationMs: Date.now() - pipelineStart,
+      model: "stylegan3-finetuned-v2",
+    },
+  };
+
+  stageStart = Date.now();
+  let assetId = 0;
+  try {
+    const [inserted] = await db.insert(avatarAssets).values({
+      orgId: options?.orgId ?? null,
+      employeeId: options?.employeeId ?? null,
+      version: 1,
+      status: "active",
+      faceImageUrl: avatarUrl,
+      faceImagePath: objectPath,
+      attributeVector: attributeVector as unknown as Record<string, unknown>,
+      latentVector: latentVector as unknown as Record<string, unknown>,
+      perceptualHash,
+      qualityScore: bestQuality,
+      generationParams: params as unknown as Record<string, unknown>,
+      identityPackage: identityPackage as unknown as Record<string, unknown>,
+      pipelineMetadata: {
+        stages,
+        totalDurationMs: Date.now() - pipelineStart,
+        model: "stylegan3-finetuned-v2",
+      },
+      isPreGenerated: false,
+    }).returning({ id: avatarAssets.id });
+    assetId = inserted.id;
+
+    stages.push({
+      stage: "6_identity_compilation",
+      durationMs: Date.now() - stageStart,
+      success: true,
+      output: { assetId, version: 1 },
+    });
+  } catch (error) {
+    stages.push({
+      stage: "6_identity_compilation",
+      durationMs: Date.now() - stageStart,
+      success: false,
+      output: { error: error instanceof Error ? error.message : "DB insert failed" },
+    });
+  }
+
+  const totalDurationMs = Date.now() - pipelineStart;
+  console.log(`[StyleGAN3] Pipeline complete in ${totalDurationMs}ms — quality: ${bestQuality.toFixed(3)}, unique: ${isUnique}, assetId: ${assetId}`);
+
+  return {
+    avatarUrl,
+    objectPath,
+    prompt: bestPrompt,
+    avatarConfig: {
+      generationParams: params,
+      renderSize: "1024x1024",
+      style: "stylegan3-photorealistic",
+    },
+    identityPackage,
+    attributeVector,
+    qualityScore: bestQuality,
+    perceptualHash,
+    isUnique,
+    pipelineStages: stages,
+    totalDurationMs,
+    assetId,
+  };
+}
+
 export async function generateAvatar(params: AvatarParams): Promise<AvatarGenerateResult> {
   const openai = getOpenAI();
-  const prompt = buildPrompt(params);
+  const prompt = buildLegacyPrompt(params);
 
   let lastError: Error | null = null;
 
@@ -163,13 +426,7 @@ export async function generateAvatar(params: AvatarParams): Promise<AvatarGenera
 
       const buffer = Buffer.from(imageData.b64_json, "base64");
       const objectPath = await uploadAvatarToStorage(buffer, params.seed);
-
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : process.env.REPLIT_DOMAINS
-          ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-          : `http://localhost:${process.env.PORT || 8080}`;
-      const avatarUrl = `${baseUrl}/api/storage/public-objects/avatars/${objectPath.split("/").pop()}`;
+      const avatarUrl = buildAvatarUrl(objectPath);
 
       const avatarConfig: AvatarConfig = {
         generationParams: params,
@@ -178,6 +435,7 @@ export async function generateAvatar(params: AvatarParams): Promise<AvatarGenera
       };
 
       const identityPackage: AvatarIdentityPackage = {
+        version: 1,
         avatarUrl,
         renderConfig: {
           size: "512x512",
@@ -194,6 +452,15 @@ export async function generateAvatar(params: AvatarParams): Promise<AvatarGenera
   }
 
   throw lastError || new Error("Avatar generation failed after retries");
+}
+
+function buildAvatarUrl(objectPath: string): string {
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+    : process.env.REPLIT_DOMAINS
+      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+      : `http://localhost:${process.env.PORT || 8080}`;
+  return `${baseUrl}/api/storage/public-objects/avatars/${objectPath.split("/").pop()}`;
 }
 
 function sanitizeSeed(seed: string): string {
@@ -265,6 +532,7 @@ export async function generateInterviewCandidateAvatars(
         prompt: "DiceBear fallback",
         avatarConfig: { style: "dicebear-fallback", generationParams: fallbackParams },
         identityPackage: {
+          version: 1,
           avatarUrl: getDiceBearFallback(`${roleTitle}-candidate-${results.length}`),
           renderConfig: { size: "512x512", style: "dicebear-fallback", generationParams: fallbackParams },
         },

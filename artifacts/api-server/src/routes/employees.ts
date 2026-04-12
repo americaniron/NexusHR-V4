@@ -86,6 +86,7 @@ router.post("/employees", requireAuth, requirePlanLimit("ai_employees"), validat
 
     const resolvedAvatarUrl = avatarUrl || role.avatarUrl || getDiceBearFallback(name || role.title);
     const aip: AvatarIdentityPackage = {
+      version: 1,
       avatarUrl: resolvedAvatarUrl,
       voiceId: voiceId || undefined,
       renderConfig: {

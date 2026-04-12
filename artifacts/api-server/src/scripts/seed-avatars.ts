@@ -52,6 +52,7 @@ async function seedAvatars() {
       } catch (error) {
         const fallbackUrl = getDiceBearFallback(role.title, "notionists");
         const fallbackAip: AvatarIdentityPackage = {
+          version: 1,
           avatarUrl: fallbackUrl,
           renderConfig: {
             size: "512x512",
