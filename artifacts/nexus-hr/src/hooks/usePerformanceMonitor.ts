@@ -49,7 +49,7 @@ export function useDebounce<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number,
 ): T {
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     return () => {
@@ -71,7 +71,7 @@ export function useThrottle<T extends (...args: unknown[]) => unknown>(
   delay: number,
 ): T {
   const lastCallRef = useRef<number>(0);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     return () => {

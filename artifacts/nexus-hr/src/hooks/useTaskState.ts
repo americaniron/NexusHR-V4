@@ -6,20 +6,24 @@ import {
   useGetTask,
   useCreateTask,
   useUpdateTask,
+  getListTasksQueryKey,
+  getGetTaskQueryKey,
 } from "@workspace/api-client-react";
 
 export function useTaskState(filters?: { status?: string; priority?: string; assigneeId?: number }) {
   const queryClient = useQueryClient();
+  const queryKey = getListTasksQueryKey(filters);
 
   const tasksQuery = useListTasks(filters, {
     query: {
+      queryKey,
       staleTime: getStaleTime("/api/tasks"),
     },
   });
 
   const invalidateTasks = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
   }, [queryClient]);
 
   const createMutation = useCreateTask({
@@ -49,9 +53,11 @@ export function useTaskState(filters?: { status?: string; priority?: string; ass
 
 export function useTaskDetail(taskId: number | undefined) {
   const queryClient = useQueryClient();
+  const queryKey = taskId ? getGetTaskQueryKey(taskId) : ["/api/tasks", "detail"];
 
   const taskQuery = useGetTask(taskId!, {
     query: {
+      queryKey,
       enabled: !!taskId,
       staleTime: getStaleTime("/api/tasks"),
     },

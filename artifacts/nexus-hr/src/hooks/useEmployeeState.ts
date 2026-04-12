@@ -6,20 +6,24 @@ import {
   useGetEmployee,
   useHireEmployee,
   useUpdateEmployee,
+  getListEmployeesQueryKey,
+  getGetEmployeeQueryKey,
 } from "@workspace/api-client-react";
 
 export function useEmployeeState() {
   const queryClient = useQueryClient();
+  const queryKey = getListEmployeesQueryKey();
 
   const employeesQuery = useListEmployees(undefined, {
     query: {
+      queryKey,
       staleTime: getStaleTime("/api/employees"),
     },
   });
 
   const invalidateEmployees = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
   }, [queryClient]);
 
   const createMutation = useHireEmployee({
@@ -49,9 +53,11 @@ export function useEmployeeState() {
 
 export function useEmployeeDetail(employeeId: number | undefined) {
   const queryClient = useQueryClient();
+  const queryKey = employeeId ? getGetEmployeeQueryKey(employeeId) : ["/api/employees", "detail"];
 
   const employeeQuery = useGetEmployee(employeeId!, {
     query: {
+      queryKey,
       enabled: !!employeeId,
       staleTime: getStaleTime("/api/employees"),
     },

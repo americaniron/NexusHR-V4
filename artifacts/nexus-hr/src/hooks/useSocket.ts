@@ -17,8 +17,8 @@ interface QueuedMessage {
 }
 
 const ROOM_TO_QUERY_KEYS: Record<Room, string[]> = {
-  tasks: ["/api/tasks", "/api/dashboard"],
-  employees: ["/api/employees", "/api/dashboard"],
+  tasks: ["/api/tasks", "/api/dashboard/summary"],
+  employees: ["/api/employees", "/api/dashboard/summary"],
   notifications: ["/api/notifications"],
   conversations: ["/api/conversations"],
   workflows: ["/api/workflows"],
