@@ -1,5 +1,4 @@
-import { useListEmployees } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AIAvatar } from "@/components/ai-avatar";
 import { Progress } from "@/components/ui/progress";
@@ -7,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { MoreHorizontal, MessageSquare, Settings, Activity } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "wouter";
+import { useEmployeeState } from "@/hooks/useEmployeeState";
 
 export default function TeamPage() {
-  const { data: team, isLoading } = useListEmployees({ limit: 50 });
+  const { employees, isLoading } = useEmployeeState();
 
   return (
     <div className="space-y-6">
@@ -31,7 +31,7 @@ export default function TeamPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {team?.data?.map((employee) => (
+          {employees?.data?.map((employee) => (
             <Card key={employee.id} className="bg-card border-border flex flex-col">
               <CardHeader className="flex flex-row justify-between items-start pb-2">
                 <AIAvatar src={employee.avatarUrl} name={employee.name} size="md" />
@@ -81,7 +81,7 @@ export default function TeamPage() {
             </Card>
           ))}
           
-          {(!team?.data || team.data.length === 0) && (
+          {(!employees?.data || employees.data.length === 0) && (
             <div className="col-span-full py-16 text-center border border-dashed rounded-xl bg-card/50">
               <Activity className="h-10 w-10 mx-auto text-muted-foreground/30 mb-4" />
               <h3 className="text-lg font-medium text-foreground">No agents deployed yet</h3>
