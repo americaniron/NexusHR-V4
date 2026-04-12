@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, jsonb, boolean, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { organizations } from "./organizations";
@@ -40,8 +40,8 @@ export const billingAlerts = pgTable("billing_alerts", {
   dimension: text("dimension").notNull(),
   thresholdPercent: integer("threshold_percent").notNull(),
   currentPercent: integer("current_percent").notNull(),
-  planLimit: integer("plan_limit").notNull(),
-  currentUsage: integer("current_usage").notNull(),
+  planLimit: numeric("plan_limit").notNull(),
+  currentUsage: numeric("current_usage").notNull(),
   acknowledged: boolean("acknowledged").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

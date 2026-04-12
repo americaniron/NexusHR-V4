@@ -1,7 +1,8 @@
 import { db } from "@workspace/db";
-import { usageEvents, billingSubscriptions, billingAlerts, aiEmployees, users, integrations } from "@workspace/db";
+import { usageEvents, billingSubscriptions, billingAlerts, aiEmployees, users, integrations, notifications } from "@workspace/db";
 import { eq, and, gte, sql } from "drizzle-orm";
-import { type BillingDimension, getPlanLimits, ALERT_THRESHOLD_PERCENT, isUnlimited } from "./plans";
+import { type BillingDimension, getPlanLimits, getPlanOverageRates, ALERT_THRESHOLD_PERCENT, isUnlimited } from "./plans";
+import { getStripeClient } from "./stripe-client";
 import { logger } from "../logger";
 import { publishEvent } from "../websocket";
 
@@ -36,6 +37,54 @@ export async function recordUsage(
   });
 
   await checkAndAlertThreshold(orgId, dimension);
+  await reportOverageToStripe(orgId, dimension, quantity);
+}
+
+async function reportOverageToStripe(
+  orgId: number,
+  dimension: BillingDimension,
+  quantity: number,
+): Promise<void> {
+  try {
+    if (COUNT_BASED_DIMENSIONS.has(dimension)) return;
+
+    const [sub] = await db.select().from(billingSubscriptions)
+      .where(eq(billingSubscriptions.orgId, orgId));
+    if (!sub?.stripeSubscriptionId || !sub.plan) return;
+
+    const overageRates = getPlanOverageRates(sub.plan);
+    const rate = overageRates[dimension as keyof typeof overageRates];
+    if (!rate || rate === 0) return;
+
+    const { used, limit } = await getDimensionUsage(orgId, dimension);
+    if (isUnlimited(limit) || used <= limit) return;
+
+    const stripe = await getStripeClient();
+    if (!stripe || !sub.stripeCustomerId) return;
+
+    const overageQuantity = Math.max(0, used - limit);
+    const unitAmountCents = Math.round(rate * 100);
+
+    await stripe.invoiceItems.create({
+      customer: sub.stripeCustomerId,
+      amount: overageQuantity * unitAmountCents,
+      currency: "usd",
+      description: `Overage: ${dimension.replace(/_/g, " ")} — ${overageQuantity} unit(s) over plan limit`,
+      metadata: {
+        orgId: String(orgId),
+        dimension,
+        overageQuantity: String(overageQuantity),
+        ratePerUnit: String(rate),
+      },
+    });
+
+    logger.info(
+      { orgId, dimension, overageQuantity, rate, totalChargeCents: overageQuantity * unitAmountCents },
+      `Stripe overage invoice item created for ${dimension}`,
+    );
+  } catch (err) {
+    logger.warn({ err, orgId, dimension }, "Failed to report overage to Stripe");
+  }
 }
 
 async function getCountBasedUsage(orgId: number, dimension: BillingDimension): Promise<number> {
@@ -197,8 +246,8 @@ async function checkAndAlertThreshold(orgId: number, dimension: BillingDimension
           dimension,
           thresholdPercent: ALERT_THRESHOLD_PERCENT,
           currentPercent: percentage,
-          planLimit: limit,
-          currentUsage: used,
+          planLimit: String(limit),
+          currentUsage: String(used),
         });
 
         publishEvent(orgId, "notifications", "notification:new", {
@@ -227,27 +276,33 @@ async function dispatchAlertEmail(
   limit: number,
 ): Promise<void> {
   try {
-    const orgUsers = await db.select({ email: users.email, firstName: users.firstName })
+    const orgUsers = await db.select({ id: users.id, email: users.email, firstName: users.firstName })
       .from(users)
       .where(eq(users.orgId, orgId));
 
     if (orgUsers.length === 0) return;
 
-    const adminEmail = orgUsers[0].email;
-    const adminName = orgUsers[0].firstName || "there";
     const dimensionLabel = dimension.replace(/_/g, " ");
+    const title = `Usage alert: ${dimensionLabel} at ${percentage}%`;
+    const message =
+      `Your organization has used ${used} of ${limit} ${dimensionLabel} (${percentage}%). ` +
+      `Consider upgrading your plan to avoid service interruptions.`;
 
-    const emailPayload = {
-      to: adminEmail,
-      subject: `NexsusHR: ${dimensionLabel} usage at ${percentage}%`,
-      body: `Hi ${adminName},\n\nYour organization has used ${used} of ${limit} ${dimensionLabel} (${percentage}%). ` +
-        `Consider upgrading your plan to avoid service interruptions.\n\n` +
-        `Visit your billing page to manage your subscription.\n\n— NexsusHR Team`,
-    };
+    for (const user of orgUsers) {
+      await db.insert(notifications).values({
+        orgId,
+        userId: user.id,
+        type: "usage_alert",
+        title,
+        message,
+        data: { dimension, percentage, used, limit, upgradeUrl: "/billing" },
+      });
+    }
 
+    const adminEmail = orgUsers[0].email;
     logger.info(
-      { orgId, to: adminEmail, dimension, percentage },
-      `Alert email dispatched: ${emailPayload.subject}`,
+      { orgId, to: adminEmail, dimension, percentage, notifiedUsers: orgUsers.length },
+      `Usage alert persisted for ${orgUsers.length} user(s): ${title}`,
     );
 
     publishEvent(orgId, "billing", "billing:alert_email", {
@@ -255,6 +310,7 @@ async function dispatchAlertEmail(
       percentage,
       emailSent: true,
       recipient: adminEmail,
+      notifiedUsers: orgUsers.length,
     });
   } catch (err) {
     logger.warn({ err, orgId, dimension }, "Failed to dispatch alert email");

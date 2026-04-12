@@ -20,20 +20,9 @@ import {
 import { getUsageSummary } from "../lib/billing/metering";
 import { publishEvent } from "../lib/websocket";
 import type Stripe from "stripe";
+import { getStripeClient } from "../lib/billing/stripe-client";
 
 const router = Router();
-
-let _stripeClient: Stripe | null = null;
-let _stripeKey: string | null = null;
-
-async function getStripeClient(): Promise<Stripe | null> {
-  if (!process.env.STRIPE_SECRET_KEY) return null;
-  if (_stripeClient && _stripeKey === process.env.STRIPE_SECRET_KEY) return _stripeClient;
-  const StripeModule = (await import("stripe")).default;
-  _stripeClient = new StripeModule(process.env.STRIPE_SECRET_KEY);
-  _stripeKey = process.env.STRIPE_SECRET_KEY;
-  return _stripeClient;
-}
 
 function getFrontendUrl(): string {
   return process.env.FRONTEND_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`;
@@ -699,6 +688,10 @@ async function upsertSubscription(
 }
 
 async function directActivation(orgId: number, plan: PlanId, billingCycle: string) {
+  if (process.env.NODE_ENV === "production") {
+    throw AppError.badRequest("Payment processing is required. Please try again or contact support.");
+  }
+  logger.warn({ orgId, plan }, "directActivation: Stripe unavailable — activating without payment (dev mode only)");
   return upsertSubscription(orgId, {
     plan,
     status: "active",
