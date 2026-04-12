@@ -175,6 +175,24 @@ export async function executeNextStep(
 
         await transitionAssignment(assignment.id, orgId, "accepted");
         await transitionAssignment(assignment.id, orgId, "in_progress");
+      } else {
+        currentResult.status = "failed";
+        currentResult.completedAt = new Date().toISOString();
+        currentResult.error = "No available AI employee could be routed for this step";
+
+        await db.update(workflowInstances).set({
+          status: "failed",
+          stepResults,
+          completedAt: new Date(),
+        }).where(eq(workflowInstances.id, instanceId));
+
+        return {
+          instanceId,
+          workflowId: instance.workflowId,
+          status: "failed",
+          stepResults,
+          currentStepId: currentStep.id,
+        };
       }
     }
   }

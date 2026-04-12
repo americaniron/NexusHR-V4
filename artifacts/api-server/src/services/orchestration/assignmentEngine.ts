@@ -1,7 +1,9 @@
 import { db } from "@workspace/db";
 import { taskAssignments, tasks, aiEmployees } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { AppError } from "../../middlewares/errorHandler";
+
+const MAX_CONCURRENT_TASKS = 5;
 
 type AssignmentStatus =
   | "queued"
@@ -50,6 +52,20 @@ export async function createAssignment(input: CreateAssignmentInput) {
     .from(aiEmployees)
     .where(and(eq(aiEmployees.id, input.aiEmployeeId), eq(aiEmployees.orgId, input.orgId)));
   if (!employee) throw AppError.notFound("AI employee not found or does not belong to this organization");
+
+  const activeAssignments = await db
+    .select()
+    .from(taskAssignments)
+    .where(and(
+      eq(taskAssignments.aiEmployeeId, input.aiEmployeeId),
+      eq(taskAssignments.orgId, input.orgId),
+      eq(taskAssignments.capacityReserved, 1),
+      sql`${taskAssignments.status} IN ('queued', 'accepted', 'in_progress', 'paused', 'waiting_dependency')`
+    ));
+
+  if (activeAssignments.length >= MAX_CONCURRENT_TASKS) {
+    throw AppError.badRequest(`AI employee has reached maximum concurrent task limit (${MAX_CONCURRENT_TASKS}). Current active: ${activeAssignments.length}`);
+  }
 
   const [assignment] = await db.insert(taskAssignments).values({
     orgId: input.orgId,

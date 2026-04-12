@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { tasks, taskAssignments } from "@workspace/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { AppError } from "../../middlewares/errorHandler";
+import { transitionAssignment } from "./assignmentEngine";
 
 interface TaskDependency {
   taskId: number;
@@ -174,15 +175,9 @@ export async function unblockDependents(taskId: number, orgId: number): Promise<
       ));
 
     if (assignment) {
-      await db.update(taskAssignments).set({
-        status: "in_progress",
-        updatedAt: new Date(),
-      }).where(eq(taskAssignments.id, assignment.id));
-
-      await db.update(tasks).set({
-        status: "in_progress",
-        updatedAt: new Date(),
-      }).where(eq(tasks.id, id));
+      await transitionAssignment(assignment.id, orgId, "in_progress", {
+        result: { reason: `Dependencies resolved for task ${id}` },
+      });
     }
   }
 
