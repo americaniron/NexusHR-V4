@@ -113,10 +113,14 @@ export async function executeNextStep(
   }
 
   let effectiveInput = stepInput;
-  if (effectiveInput === undefined && currentStepIdx > 0) {
-    const prevResult = stepResults.find(r => r.stepId === steps[currentStepIdx - 1].id);
-    if (prevResult?.status === "completed" && prevResult.output !== undefined) {
-      effectiveInput = prevResult.output;
+  if (effectiveInput === undefined) {
+    if (currentStepIdx > 0) {
+      const prevResult = stepResults.find(r => r.stepId === steps[currentStepIdx - 1].id);
+      if (prevResult?.status === "completed" && prevResult.output !== undefined) {
+        effectiveInput = prevResult.output;
+      }
+    } else if (currentResult.output !== undefined) {
+      effectiveInput = currentResult.output;
     }
   }
 

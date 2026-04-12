@@ -174,8 +174,9 @@ export async function detectStalls(
         escalationReason: `Stall detected: no updates for ${Math.round((Date.now() - new Date(assignment.updatedAt).getTime()) / 60000)} minutes`,
       });
       escalated = true;
-    } catch {
+    } catch (err) {
       escalated = false;
+      console.warn(`[Orchestration] Stall escalation failed for assignment ${assignment.id} (status: ${assignment.status}):`, err instanceof Error ? err.message : err);
     }
 
     alerts.push({
