@@ -27,7 +27,7 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Command Center</h1>
-        <p className="text-muted-foreground mt-1">Real-time overview of your AI people and operations.</p>
+        <p className="text-muted-foreground mt-1">Real-time overview of your AI professionals and operations.</p>
       </div>
 
       {visibleAlerts.length > 0 && (
@@ -51,7 +51,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          title="AI People"
+          title="AI Professionals"
           value={summary?.totalEmployees}
           icon={Users}
           trend="+12% from last month"
@@ -92,7 +92,7 @@ export default function DashboardPage() {
         <Card className="lg:col-span-4 border-border bg-card">
           <CardHeader>
             <CardTitle>System Activity</CardTitle>
-            <CardDescription>Recent events across your AI people</CardDescription>
+            <CardDescription>Recent events across your AI professionals</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoadingActivity ? (
@@ -153,7 +153,7 @@ export default function DashboardPage() {
         <Card className="lg:col-span-3 border-border bg-card flex flex-col">
           <CardHeader>
             <CardTitle>Department Activity</CardTitle>
-            <CardDescription>Active AI people by department</CardDescription>
+            <CardDescription>Active AI professionals by department</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col justify-center">
             {isLoadingSummary ? (
@@ -188,7 +188,7 @@ export default function DashboardPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2"><UserCircle className="h-5 w-5 text-primary" /> Your People</CardTitle>
-            <CardDescription>Your AI people at a glance</CardDescription>
+            <CardDescription>Your AI professionals at a glance</CardDescription>
           </div>
           <Link href="/team">
             <Button variant="outline" size="sm">View All</Button>
@@ -197,7 +197,7 @@ export default function DashboardPage() {
         <CardContent>
           {!employees?.data || employees.data.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground text-sm border border-dashed rounded-lg">
-              No AI people onboarded yet
+              No AI professionals hired yet
             </div>
           ) : (
             <div className="overflow-x-auto">

@@ -36,11 +36,11 @@ export default function TeamPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">My AI People</h1>
-          <p className="text-muted-foreground mt-1">Manage and connect with your AI people.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">My Workforce</h1>
+          <p className="text-muted-foreground mt-1">Manage and collaborate with your AI professionals.</p>
         </div>
         <Link href="/marketplace">
-          <Button>Find New People</Button>
+          <Button>Hire New Professionals</Button>
         </Link>
       </div>
 
@@ -104,7 +104,7 @@ export default function TeamPage() {
                     </DropdownMenuItem>
                     <DropdownMenuItem>Configure Instructions</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive">Offboard</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive">Release</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </CardHeader>
@@ -142,11 +142,11 @@ export default function TeamPage() {
               <Activity className="h-10 w-10 mx-auto text-muted-foreground/30 mb-4" />
               <h3 className="text-lg font-medium text-foreground">No people found</h3>
               <p className="text-muted-foreground mt-1 mb-6">
-                {search ? "Try adjusting your search." : "Visit the People Hub to find your first AI person."}
+                {search ? "Try adjusting your search." : "Visit the Talent Hub to hire your first AI professional."}
               </p>
               {!search && (
                 <Link href="/marketplace">
-                  <Button>Browse People Hub</Button>
+                  <Button>Browse Talent Hub</Button>
                 </Link>
               )}
             </div>

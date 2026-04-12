@@ -46,7 +46,7 @@ const TRIGGER_TYPES = [
 ];
 
 const NODE_PALETTE = [
-  { type: "ai_agent", label: "AI Agent", icon: Bot, color: "bg-blue-500/10 text-blue-500 border-blue-500/30" },
+  { type: "ai_agent", label: "AI Professional", icon: Bot, color: "bg-blue-500/10 text-blue-500 border-blue-500/30" },
   { type: "email", label: "Send Email", icon: Mail, color: "bg-green-500/10 text-green-500 border-green-500/30" },
   { type: "transform", label: "Transform Data", icon: Database, color: "bg-purple-500/10 text-purple-500 border-purple-500/30" },
   { type: "condition", label: "Condition", icon: GitMerge, color: "bg-amber-500/10 text-amber-500 border-amber-500/30" },
@@ -145,7 +145,7 @@ export default function WorkflowsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Workflows</h1>
-          <p className="text-muted-foreground mt-1">Design and manage multi-agent operational sequences.</p>
+          <p className="text-muted-foreground mt-1">Design and manage multi-professional operational sequences.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => handleOpenBuilder("New Workflow")}>
@@ -158,7 +158,7 @@ export default function WorkflowsPage() {
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>Create Workflow</DialogTitle>
-                <DialogDescription>Set up a new multi-agent operational sequence.</DialogDescription>
+                <DialogDescription>Set up a new multi-professional operational sequence.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
@@ -290,7 +290,7 @@ export default function WorkflowsPage() {
           <div className="col-span-full py-12 text-center text-muted-foreground border border-dashed rounded-xl bg-card/50">
             <GitMerge className="h-8 w-8 mx-auto mb-3 text-muted-foreground/50" />
             <p className="font-medium">No workflows found</p>
-            <p className="text-sm mt-1">Create your first workflow to automate multi-agent operations.</p>
+            <p className="text-sm mt-1">Create your first workflow to automate multi-professional operations.</p>
           </div>
         )}
       </div>
@@ -335,7 +335,7 @@ function VisualWorkflowBuilder({ workflowName, onClose }: { workflowName: string
   const [edges, setEdges] = useState<WorkflowEdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [configLabel, setConfigLabel] = useState("");
-  const [configAgent, setConfigAgent] = useState("");
+  const [configProfessional, setConfigProfessional] = useState("");
   const [configCondition, setConfigCondition] = useState("");
 
   const addNode = useCallback((type: string) => {
@@ -365,11 +365,11 @@ function VisualWorkflowBuilder({ workflowName, onClose }: { workflowName: string
     if (!selectedNode) return;
     setNodes(prev => prev.map(n =>
       n.id === selectedNode
-        ? { ...n, label: configLabel || n.label, config: { ...n.config, agent: configAgent, condition: configCondition } }
+        ? { ...n, label: configLabel || n.label, config: { ...n.config, agent: configProfessional, condition: configCondition } }
         : n
     ));
     toast({ title: "Node configuration saved" });
-  }, [selectedNode, configLabel, configAgent, configCondition, toast]);
+  }, [selectedNode, configLabel, configProfessional, configCondition, toast]);
 
   const simulateExecution = useCallback(() => {
     let delay = 0;
@@ -457,7 +457,7 @@ function VisualWorkflowBuilder({ workflowName, onClose }: { workflowName: string
                     onClick={() => {
                       setSelectedNode(node.id);
                       setConfigLabel(node.label);
-                      setConfigAgent(node.config.agent || "");
+                      setConfigProfessional(node.config.agent || "");
                       setConfigCondition(node.config.condition || "");
                     }}
                     className={`relative flex items-center gap-3 px-5 py-3 rounded-xl border-2 bg-card shadow-sm min-w-[220px] transition-all ${
@@ -519,9 +519,9 @@ function VisualWorkflowBuilder({ workflowName, onClose }: { workflowName: string
                 </div>
                 {selectedNodeData.type === "ai_agent" && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Assigned Agent</Label>
-                    <Select value={configAgent} onValueChange={setConfigAgent}>
-                      <SelectTrigger className="h-8 text-sm bg-background"><SelectValue placeholder="Select agent..." /></SelectTrigger>
+                    <Label className="text-xs">Assigned Professional</Label>
+                    <Select value={configProfessional} onValueChange={setConfigProfessional}>
+                      <SelectTrigger className="h-8 text-sm bg-background"><SelectValue placeholder="Select professional..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="auto">Auto-assign (Best Match)</SelectItem>
                         <SelectItem value="data_analyst">Data Analyst</SelectItem>

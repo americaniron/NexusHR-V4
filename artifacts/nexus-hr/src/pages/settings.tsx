@@ -185,7 +185,7 @@ export default function SettingsPage() {
                   />
                   <NotificationToggle
                     label="Task Assigned"
-                    description="When a new task is auto-assigned to an agent"
+                    description="When a new task is auto-assigned to a professional"
                     defaultChecked={false}
                   />
                 </div>
@@ -213,11 +213,11 @@ export default function SettingsPage() {
               </div>
               <Separator />
               <div>
-                <h4 className="font-medium text-foreground text-sm mb-4">Agent Notifications</h4>
+                <h4 className="font-medium text-foreground text-sm mb-4">Workforce Notifications</h4>
                 <div className="space-y-4">
                   <NotificationToggle
-                    label="Agent Status Changes"
-                    description="When an agent goes online or offline"
+                    label="Professional Status Changes"
+                    description="When a professional goes online or offline"
                     defaultChecked={false}
                   />
                   <NotificationToggle
@@ -402,7 +402,7 @@ export default function SettingsPage() {
           <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle>Webhooks</CardTitle>
-              <CardDescription>Configure webhook endpoints to receive real-time event notifications.</CardDescription>
+              <CardDescription>Set up webhook endpoints to receive real-time event notifications.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="py-6 text-center text-muted-foreground border border-dashed rounded-lg">

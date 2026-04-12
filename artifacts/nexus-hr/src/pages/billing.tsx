@@ -9,10 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
 const PLAN_FEATURES: Record<string, string[]> = {
-  starter: ["2 AI People", "40 Voice Hours/mo", "5,000 Messages/mo", "10 Workflows", "5 Integrations", "Email Support"],
-  growth: ["10 AI People", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "15 Integrations", "Priority Chat Support"],
-  business: ["50 AI People", "1,000 Voice Hours/mo", "Unlimited Messages", "200 Workflows", "Unlimited Integrations", "Dedicated CSM"],
-  enterprise: ["Unlimited AI People", "Unlimited Voice Hours", "Unlimited Messages", "Unlimited Workflows", "Unlimited Integrations", "24/7 Premium + SLA"],
+  starter: ["2 AI Professionals", "40 Voice Hours/mo", "5,000 Messages/mo", "10 Workflows", "5 Integrations", "Email Support"],
+  growth: ["10 AI Professionals", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "15 Integrations", "Priority Chat Support"],
+  business: ["50 AI Professionals", "1,000 Voice Hours/mo", "Unlimited Messages", "200 Workflows", "Unlimited Integrations", "Dedicated CSM"],
+  enterprise: ["Unlimited AI Professionals", "Unlimited Voice Hours", "Unlimited Messages", "Unlimited Workflows", "Unlimited Integrations", "24/7 Premium + SLA"],
 };
 
 export default function BillingPage() {

@@ -11,8 +11,8 @@ import { useEffect } from "react";
 
 const navigation = [
   { name: "Command Center", href: "/dashboard", icon: LayoutDashboard },
-  { name: "People Hub", href: "/marketplace", icon: Store },
-  { name: "My AI People", href: "/team", icon: UserCircle },
+  { name: "Talent Hub", href: "/marketplace", icon: Store },
+  { name: "My Workforce", href: "/team", icon: UserCircle },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Workflows", href: "/workflows", icon: GitMerge },
   { name: "Conversations", href: "/conversations", icon: MessageSquare },

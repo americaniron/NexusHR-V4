@@ -93,8 +93,8 @@ export default function MarketplacePage() {
     <div className="flex flex-col gap-6 h-[calc(100vh-100px)] overflow-hidden">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">People Hub</h1>
-          <p className="text-muted-foreground mt-1">Discover and bring aboard specialized AI people for your team.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Talent Hub</h1>
+          <p className="text-muted-foreground mt-1">Discover and hire specialized AI professionals for your workforce.</p>
         </div>
         <Badge variant="outline" className="py-1.5 hidden md:flex">{allRoles.length} roles available</Badge>
       </div>
@@ -190,7 +190,7 @@ export default function MarketplacePage() {
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-muted-foreground border border-dashed rounded-lg bg-card/50 p-12">
                 <Zap className="h-8 w-8 mx-auto mb-3 text-muted-foreground/50" />
-                <p>No AI people found matching your criteria.</p>
+                <p>No AI professionals found matching your criteria.</p>
                 <Button variant="link" onClick={() => { setSearchInput(""); setDebouncedSearchValue(""); setCategory(""); }}>
                   Clear filters
                 </Button>
@@ -200,7 +200,7 @@ export default function MarketplacePage() {
             <VirtualizedList
               data={roles}
               estimatedItemHeight={280}
-              emptyMessage="No AI people found matching your criteria."
+              emptyMessage="No AI professionals found matching your criteria."
               itemContent={(_index, role) => (
                 <div className="pb-4 px-1">
                   <RoleCard role={role} />

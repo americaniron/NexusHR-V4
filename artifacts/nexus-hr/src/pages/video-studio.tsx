@@ -117,8 +117,8 @@ export default function VideoStudioPage() {
 
   const handleTemplateSelect = (template: { prompt: string; title: string; duration?: number }) => {
     const empName = selectedEmployeeId
-      ? employees?.data?.find((e) => e.id === parseInt(selectedEmployeeId))?.name || "Your AI Person"
-      : "Your AI Person";
+      ? employees?.data?.find((e) => e.id === parseInt(selectedEmployeeId))?.name || "Your AI Professional"
+      : "Your AI Professional";
     setPrompt(template.prompt.replace("{{name}}", empName));
     setTitle(template.title);
     setDuration(template.duration || 10);
@@ -200,13 +200,13 @@ export default function VideoStudioPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Featured AI Person</Label>
+                    <Label>Featured AI Professional</Label>
                     <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
                       <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="Select an AI person (optional)" />
+                        <SelectValue placeholder="Select an AI professional (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No specific person</SelectItem>
+                        <SelectItem value="">No specific professional</SelectItem>
                         {employees?.data?.map((emp) => (
                           <SelectItem key={emp.id} value={String(emp.id)}>
                             {emp.name} — {emp.role?.title || emp.department}

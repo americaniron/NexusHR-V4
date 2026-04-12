@@ -9,7 +9,7 @@ const STEPS = [
     id: "welcome",
     title: "Welcome to NexsusHR",
     subtitle: "Your Autonomous AI Company OS",
-    description: "NexsusHR lets you hire, deploy, and manage fully autonomous AI employees. Let's get you set up in a few quick steps.",
+    description: "NexsusHR lets you hire and manage fully autonomous AI professionals. Let's get you set up in a few quick steps.",
     icon: Rocket,
   },
   {

@@ -31,12 +31,12 @@ import {
 import { format } from "date-fns";
 
 const FAQ_ITEMS = [
-  { q: "How long does deployment take?", a: "Agents are deployed instantly upon hiring. Once you complete the hire flow, your AI employee is live and ready to receive tasks, conversations, and workflow assignments immediately." },
-  { q: "Can I cancel or deactivate an agent?", a: "Yes, you can deactivate agents at any time from the Team page or Employee Detail page. Billing is pro-rated to the day, so you only pay for the time the agent was active." },
-  { q: "How does voice mode work?", a: "Voice mode uses ElevenLabs text-to-speech and speech-to-text technology. Click the voice mode button in a conversation to start speaking with your AI employee naturally. Voice usage is metered against your plan's voice hours allocation." },
-  { q: "Are conversations really powered by AI?", a: "Yes, every conversation uses Claude Sonnet 4.6, a state-of-the-art language model. There is zero simulation. Each agent has role-specific context and personality that shapes their responses." },
-  { q: "How does billing work?", a: "NexsusHR uses a subscription model with metered usage. You choose a plan that includes allocations for AI employees, voice hours, messages, and workflows. Overages are billed at transparent per-unit rates." },
-  { q: "Can I customize an agent's personality?", a: "Absolutely. Each agent has 7 personality axes (warmth, formality, assertiveness, energy, empathy, detail orientation, humor) that you can tune via the Personality tab in the Employee Detail page." },
+  { q: "How long does hiring take?", a: "AI professionals are ready instantly upon hiring. Once you complete the hire flow, your new colleague is live and ready to receive tasks, conversations, and workflow assignments immediately." },
+  { q: "Can I release an AI professional?", a: "Yes, you can release professionals at any time from the Workforce page or Professional Detail page. Billing is pro-rated to the day, so you only pay for the time they were active." },
+  { q: "How does voice mode work?", a: "Voice mode uses ElevenLabs text-to-speech and speech-to-text technology. Click the voice mode button in a conversation to start speaking with your AI professional naturally. Voice usage is metered against your plan's voice hours allocation." },
+  { q: "Are conversations really powered by AI?", a: "Yes, every conversation uses Claude Sonnet 4.6, a state-of-the-art language model. There is zero simulation. Each professional has role-specific context and personality that shapes their responses." },
+  { q: "How does billing work?", a: "NexsusHR uses a subscription model with metered usage. You choose a plan that includes allocations for AI professionals, voice hours, messages, and workflows. Overages are billed at transparent per-unit rates." },
+  { q: "Can I customize a professional's personality?", a: "Absolutely. Each professional has 7 personality axes (warmth, formality, assertiveness, energy, empathy, detail orientation, humor) that you can tune via the Personality tab in the Professional Detail page." },
   { q: "What integrations are available?", a: "We support 20+ integrations including Slack, GitHub, Jira, Google Workspace, Salesforce, HubSpot, and more. Visit the Integrations page to connect your existing tools." },
   { q: "Is my data secure?", a: "Yes. We use enterprise-grade encryption, SOC2 compliant infrastructure, and comprehensive audit logs. Your data is never used to train AI models." },
 ];
@@ -61,7 +61,7 @@ const CHANGELOG = [
     date: "Mar 15, 2026",
     title: "Enhanced Analytics Dashboard",
     type: "feature" as const,
-    items: ["Interactive area, bar, and pie charts", "Agent leaderboard with performance ranking", "Department utilization breakdown", "Date range filtering"],
+    items: ["Interactive area, bar, and pie charts", "Workforce leaderboard with performance ranking", "Department engagement breakdown", "Date range filtering"],
   },
   {
     version: "2.2.0",
@@ -88,10 +88,10 @@ const CHANGELOG = [
 
 const KNOWLEDGE_BASE = [
   { title: "Getting Started Guide", desc: "Learn the basics of setting up your NexsusHR workspace", category: "Getting Started", readTime: "5 min" },
-  { title: "Hiring Your First AI Employee", desc: "Step-by-step guide to browsing roles and deploying agents", category: "Getting Started", readTime: "3 min" },
-  { title: "Understanding Personality Tuning", desc: "How to customize agent behavior with 7 personality axes", category: "Agents", readTime: "4 min" },
-  { title: "Voice Mode Deep Dive", desc: "Everything about voice conversations with your AI team", category: "Agents", readTime: "6 min" },
-  { title: "Creating Multi-Agent Workflows", desc: "Chain agents into automated operational pipelines", category: "Workflows", readTime: "8 min" },
+  { title: "Hiring Your First AI Professional", desc: "Step-by-step guide to browsing roles and hiring professionals", category: "Getting Started", readTime: "3 min" },
+  { title: "Understanding Personality Tuning", desc: "How to customize professional behavior with 7 personality axes", category: "Workforce", readTime: "4 min" },
+  { title: "Voice Mode Deep Dive", desc: "Everything about voice conversations with your AI colleagues", category: "Workforce", readTime: "6 min" },
+  { title: "Creating Multi-Professional Workflows", desc: "Chain professionals into automated operational pipelines", category: "Workflows", readTime: "8 min" },
   { title: "Billing & Usage Explained", desc: "Understanding plans, metering, and overage billing", category: "Billing", readTime: "5 min" },
   { title: "API Documentation", desc: "Programmatic access to NexsusHR via REST API", category: "Developer", readTime: "10 min" },
   { title: "Security & Compliance", desc: "SOC2 compliance, data handling, and audit logs", category: "Security", readTime: "7 min" },
@@ -241,7 +241,7 @@ export default function HelpPage() {
                             <SelectItem value="general">General Inquiry</SelectItem>
                             <SelectItem value="billing">Billing</SelectItem>
                             <SelectItem value="technical">Technical Issue</SelectItem>
-                            <SelectItem value="agent_behavior">Agent Behavior</SelectItem>
+                            <SelectItem value="agent_behavior">Professional Behavior</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

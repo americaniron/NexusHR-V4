@@ -117,7 +117,7 @@ export default function EmployeeDetailPage() {
   const handleDeactivate = async () => {
     try {
       await deactivateEmployee.mutateAsync({ id: employeeId });
-      toast({ title: "Agent deactivated", description: "This agent has been removed from your active roster." });
+      toast({ title: "Professional released", description: "This professional has been removed from your active roster." });
     } catch {
       toast({ title: "Failed to deactivate", variant: "destructive" });
     }
@@ -136,8 +136,8 @@ export default function EmployeeDetailPage() {
   if (!employee) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <h2 className="text-xl font-semibold text-foreground">Agent not found</h2>
-        <p className="text-muted-foreground mt-2">This AI agent doesn't exist or you don't have access.</p>
+        <h2 className="text-xl font-semibold text-foreground">Professional not found</h2>
+        <p className="text-muted-foreground mt-2">This AI professional doesn't exist or you don't have access.</p>
         <Link href="/team">
           <Button className="mt-4" variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Team
@@ -318,21 +318,21 @@ export default function EmployeeDetailPage() {
 
           <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle>Agent Preferences</CardTitle>
+              <CardTitle>Professional Preferences</CardTitle>
               <CardDescription>Configure how {employee.name} operates within your organization.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Auto-assign Tasks</Label>
-                  <p className="text-xs text-muted-foreground">Automatically assign relevant tasks based on agent expertise.</p>
+                  <p className="text-xs text-muted-foreground">Automatically assign relevant tasks based on professional expertise.</p>
                 </div>
                 <Switch checked={autoAssign} onCheckedChange={setAutoAssign} />
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Notification on Completion</Label>
-                  <p className="text-xs text-muted-foreground">Receive notifications when this agent completes a task.</p>
+                  <p className="text-xs text-muted-foreground">Receive notifications when this professional completes a task.</p>
                 </div>
                 <Switch defaultChecked />
               </div>
@@ -354,8 +354,8 @@ export default function EmployeeDetailPage() {
             <CardContent>
               <div className="flex items-center justify-between p-4 rounded-lg border border-destructive/20 bg-destructive/5">
                 <div>
-                  <p className="font-medium text-foreground text-sm">Deactivate Agent</p>
-                  <p className="text-xs text-muted-foreground">This will remove the agent from your active roster. Billing is pro-rated.</p>
+                  <p className="font-medium text-foreground text-sm">Release Professional</p>
+                  <p className="text-xs text-muted-foreground">This will remove the professional from your active roster. Billing is pro-rated.</p>
                 </div>
                 <Button
                   variant="destructive"
@@ -364,7 +364,7 @@ export default function EmployeeDetailPage() {
                   disabled={deactivateEmployee.isPending || employee.status !== "active"}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  {deactivateEmployee.isPending ? "Deactivating..." : "Deactivate"}
+                  {deactivateEmployee.isPending ? "Releasing..." : "Release"}
                 </Button>
               </div>
             </CardContent>

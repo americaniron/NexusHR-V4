@@ -140,7 +140,7 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <KPICard title="AI People" value={kpis.totalEmployees} icon={Users} trend="+12%" trendUp />
+        <KPICard title="AI Professionals" value={kpis.totalEmployees} icon={Users} trend="+12%" trendUp />
         <KPICard title="Tasks Completed" value={kpis.completedTasks} icon={CheckSquare} trend="+8%" trendUp />
         <KPICard title="Completion Rate" value={`${kpis.completionRate}%`} icon={Zap} trend={kpis.completionRate >= 80 ? "+3%" : "-2%"} trendUp={kpis.completionRate >= 80} />
         <KPICard title="Active Tasks" value={kpis.inProgressTasks} icon={Activity} trend="In progress" />
@@ -180,7 +180,7 @@ export default function AnalyticsPage() {
           <CardHeader className="flex flex-row items-start justify-between space-y-0">
             <div>
               <CardTitle>Engagement by Department</CardTitle>
-              <CardDescription>AI people engagement percentage by department</CardDescription>
+              <CardDescription>AI professional engagement percentage by department</CardDescription>
             </div>
             <ExportButton chartName="Utilization" onExport={(f) => handleExport("Utilization", f)} />
           </CardHeader>
@@ -239,7 +239,7 @@ export default function AnalyticsPage() {
           <CardHeader className="flex flex-row items-start justify-between space-y-0">
             <div>
               <CardTitle>People by Department</CardTitle>
-              <CardDescription>Distribution of AI people across departments</CardDescription>
+              <CardDescription>Distribution of AI professionals across departments</CardDescription>
             </div>
             <ExportButton chartName="Department Distribution" onExport={(f) => handleExport("Department Distribution", f)} />
           </CardHeader>
@@ -265,9 +265,9 @@ export default function AnalyticsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
-            People Leaderboard
+            Workforce Leaderboard
           </CardTitle>
-          <CardDescription>Top performing AI people by completed tasks</CardDescription>
+          <CardDescription>Top performing AI professionals by completed tasks</CardDescription>
         </CardHeader>
         <CardContent>
           {leaderboard.length === 0 ? (

@@ -119,12 +119,12 @@ export default function MarketplaceDetailPage() {
       });
       toast({
         title: "Welcome Aboard!",
-        description: `${name} has been onboarded to your team.`,
+        description: `${name} has been hired to your workforce.`,
       });
       navigate("/team");
     } catch {
       toast({
-        title: "Onboarding Failed",
+        title: "Hiring Failed",
         description: "Please try again later.",
         variant: "destructive"
       });
@@ -260,10 +260,10 @@ export default function MarketplaceDetailPage() {
                     className="w-full text-base h-12 shadow-sm"
                     onClick={() => setShowCustomize(true)}
                   >
-                    Customize & Onboard
+                    Customize & Hire
                   </Button>
                   <Button variant="outline" className="w-full h-12 bg-background" onClick={handleHire} disabled={isHiring}>
-                    {isHiring ? "Onboarding..." : "Quick Onboard (Default Settings)"}
+                    {isHiring ? "Hiring..." : "Quick Hire (Default Settings)"}
                   </Button>
                 </div>
               ) : (
@@ -285,7 +285,7 @@ export default function MarketplaceDetailPage() {
                     <span>Identity</span><span>Appearance</span><span>Voice</span><span>Welcome</span>
                   </div>
                   <h4 className="font-semibold text-sm flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary" /> Customize Your AI Person
+                    <User className="h-4 w-4 text-primary" /> Customize Your AI Professional
                   </h4>
 
                   <div className="space-y-2">
@@ -480,7 +480,7 @@ export default function MarketplaceDetailPage() {
                     onClick={handleHire}
                     disabled={isHiring}
                   >
-                    {isHiring ? "Onboarding..." : "Bring Aboard"}
+                    {isHiring ? "Hiring..." : "Hire Now"}
                   </Button>
                 </div>
               )}

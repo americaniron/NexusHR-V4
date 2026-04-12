@@ -48,7 +48,7 @@ export default function ConversationsPage() {
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-sm text-foreground truncate">
-                      {conv.aiEmployee?.name || "AI Person"}
+                      {conv.aiEmployee?.name || "AI Professional"}
                     </span>
                     <span className="text-[10px] text-muted-foreground shrink-0">
                       {"updatedAt" in conv && conv.updatedAt ? new Date(String(conv.updatedAt)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
