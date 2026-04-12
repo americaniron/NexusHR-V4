@@ -17,6 +17,12 @@ import {
   Star,
   ChevronDown,
   Crown,
+  XCircle,
+  Clock,
+  DollarSign,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -58,6 +64,25 @@ const TESTIMONIALS = [
   { name: "Dr. Priya Sharma", role: "CTO, MedAI Solutions", quote: "Personality tuning lets us match our company culture exactly. Our AI customer success agents feel like natural extensions of our team.", rating: 5 },
 ];
 
+const PROBLEMS = [
+  { icon: Clock, title: "Months-Long Hiring Cycles", desc: "Traditional hiring takes 3-6 months per role. Interviews, negotiations, onboarding — time you don't have." },
+  { icon: DollarSign, title: "Skyrocketing Labor Costs", desc: "Salaries, benefits, office space, equipment. Every new hire adds $80K+ in annual overhead." },
+  { icon: XCircle, title: "Scaling Bottlenecks", desc: "Need 10 analysts by Friday? Good luck. Human talent pipelines can't match the pace of modern business." },
+];
+
+const SOLUTION_ROLES = [
+  { title: "Data Analyst", department: "Engineering", desc: "Processes datasets, generates insights, builds reports, and identifies trends autonomously.", skills: ["SQL", "Python", "Statistics", "Visualization"] },
+  { title: "Content Writer", department: "Marketing", desc: "Writes blog posts, social media content, ad copy, and email campaigns that convert.", skills: ["SEO", "Copywriting", "Brand Voice", "Research"] },
+  { title: "Customer Success Agent", department: "Support", desc: "Handles tickets, manages relationships, runs QBRs, and proactively identifies churn risk.", skills: ["Communication", "CRM", "Empathy", "Analytics"] },
+  { title: "Financial Analyst", department: "Finance", desc: "Builds forecasts, analyzes P&L, monitors cash flow, and produces investor-ready reports.", skills: ["Modeling", "Excel", "GAAP", "Forecasting"] },
+  { title: "DevOps Engineer", department: "Engineering", desc: "Manages CI/CD pipelines, monitors infrastructure, handles incidents, and optimizes deployments.", skills: ["AWS", "Docker", "Terraform", "Monitoring"] },
+  { title: "Recruiter", department: "Human Resources", desc: "Screens candidates, schedules interviews, manages pipelines, and improves employer branding.", skills: ["Sourcing", "ATS", "Screening", "Outreach"] },
+];
+
+const TRUST_LOGOS = [
+  "SOC2 Certified", "GDPR Compliant", "99.9% Uptime SLA", "256-bit Encryption", "ISO 27001",
+];
+
 const FAQ = [
   { q: "How do AI employees differ from chatbots?", a: "NexsusHR agents are fully autonomous beings with persistent memory, personality, and role-specific expertise. They don't just answer questions — they plan, execute tasks, collaborate in workflows, and deliver measurable outcomes." },
   { q: "Is every conversation powered by a real LLM?", a: "Yes. Every single interaction uses Claude Sonnet 4.6, a state-of-the-art language model. Zero simulation, zero canned responses. Each agent maintains context across conversations and tasks." },
@@ -68,6 +93,7 @@ const FAQ = [
 
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [roleIdx, setRoleIdx] = useState(0);
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background selection:bg-primary/30">
@@ -133,6 +159,91 @@ export default function LandingPage() {
                 <div key={stat.label} className="text-center">
                   <div className="text-4xl font-extrabold text-foreground">{stat.value}</div>
                   <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <Badge variant="outline" className="mb-4 border-destructive/30 text-destructive">The Problem</Badge>
+              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Hiring Is Broken. AI Fixes It.</h2>
+              <p className="mt-4 text-muted-foreground text-lg">Every company faces the same crushing bottlenecks when trying to scale their workforce.</p>
+            </div>
+            <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
+              {PROBLEMS.map((p, i) => (
+                <Card key={i} className="bg-card border-destructive/10 hover:border-destructive/20 transition-colors">
+                  <CardContent className="p-6">
+                    <div className="h-12 w-12 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center mb-4">
+                      <p.icon className="h-6 w-6" />
+                    </div>
+                    <h3 className="text-lg font-bold text-foreground mb-2">{p.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20 bg-card/50 border-y border-border/40">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <Badge variant="outline" className="mb-4">
+                <Sparkles className="h-3 w-3 mr-1" /> Solution Showcase
+              </Badge>
+              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">105+ Specialized AI Roles, Ready Now</h2>
+              <p className="mt-4 text-muted-foreground text-lg">Browse our marketplace of autonomous AI employees. Each one is purpose-built for their role.</p>
+            </div>
+            <div className="max-w-3xl mx-auto">
+              <div className="bg-card rounded-2xl border border-border p-8 relative">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Bot className="h-7 w-7 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-foreground">{SOLUTION_ROLES[roleIdx].title}</h3>
+                    <Badge variant="secondary" className="mt-1">{SOLUTION_ROLES[roleIdx].department}</Badge>
+                  </div>
+                </div>
+                <p className="text-muted-foreground leading-relaxed mb-6">{SOLUTION_ROLES[roleIdx].desc}</p>
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {SOLUTION_ROLES[roleIdx].skills.map((s) => (
+                    <Badge key={s} variant="outline" className="bg-primary/5 border-primary/20 text-primary">{s}</Badge>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setRoleIdx((roleIdx - 1 + SOLUTION_ROLES.length) % SOLUTION_ROLES.length)}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setRoleIdx((roleIdx + 1) % SOLUTION_ROLES.length)}>
+                      <ChevronRightIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {SOLUTION_ROLES.map((_, i) => (
+                      <button key={i} onClick={() => setRoleIdx(i)} className={`h-2 w-2 rounded-full transition-colors ${i === roleIdx ? "bg-primary" : "bg-border hover:bg-muted-foreground"}`} />
+                    ))}
+                  </div>
+                  <Link href="/sign-up">
+                    <Button size="sm">Hire This Role <ArrowRight className="ml-2 h-3.5 w-3.5" /></Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-10 border-b border-border/40 bg-muted/30">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-center gap-8 flex-wrap">
+              {TRUST_LOGOS.map((label) => (
+                <div key={label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Shield className="h-4 w-4 text-primary/60" />
+                  <span>{label}</span>
                 </div>
               ))}
             </div>

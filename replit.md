@@ -92,16 +92,16 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript (v5.9).
 
 All platform pages are fully implemented with production-quality UI:
 
--   **Landing Page** (`/`): Hero section, stats counter, 8-feature grid, how-it-works steps, pricing cards (4 plans), testimonials, interactive FAQ accordion, CTA banner, full footer with nav links.
+-   **Landing Page** (`/`): Hero section with gradient CTAs, stats counter, problem statement cards (3 pain-points), solution showcase with interactive role carousel (6 roles), trust bar (SOC2/GDPR/ISO badges), 8-feature grid, how-it-works steps, testimonials, pricing cards (4 plans), interactive FAQ accordion, CTA banner, full footer with nav links.
 -   **Dashboard** (`/dashboard`): 4 KPI metric cards, system activity feed, department utilization bars.
 -   **AI Marketplace** (`/marketplace`): Search + filters sidebar, category navigation, sort options, virtualized role card grid, role detail page with customize & hire flow.
 -   **My AI Team** (`/team`): Employee card grid with status indicators, utilization bars, chat/settings quick actions, dropdown menus.
 -   **Employee Detail** (`/team/:id`): Profile header with stats cards (completed/in-progress/failed/rate), activity tab with task history, personality tuning tab, settings tab with custom instructions + danger zone for deactivation.
 -   **Task Management** (`/tasks`): Task table with search filter, create dialog, inline status transitions (start/done/fail), priority/status badges.
 -   **Conversations** (`/conversations`): Split-panel chat UI, conversation sidebar, voice mode with waveform visualization, thinking/speaking/listening states.
--   **Workflows** (`/workflows`): KPI summary cards, search + status filter, create dialog with trigger type selector (manual/scheduled/event/webhook), edit dialog, status toggling.
+-   **Workflows** (`/workflows`): KPI summary cards, search + status filter, create dialog with trigger type selector (manual/scheduled/event/webhook), edit dialog, status toggling, visual workflow builder dialog with node palette (7 node types), edge drawing with conditional branches, node configuration panel, and workflow execution simulation with status display.
 -   **Analytics** (`/analytics`): 4 KPI cards, area chart (tasks over time), bar chart (utilization by dept), pie chart (task status distribution), bar chart (agents by dept), agent leaderboard table.
 -   **Billing** (`/billing`): Current plan banner, monthly/annual toggle, 4-plan comparison grid, usage progress bars per dimension.
--   **Settings** (`/settings`): Organization tab (name/industry/slug + danger zone), profile tab, notifications tab (task/billing/agent toggles), API keys tab (show/copy key, webhooks).
+-   **Settings** (`/settings`): Organization tab (name/industry/slug + danger zone), profile tab, notifications tab (task/billing/agent toggles), team members tab (role assignment + invite + remove), security tab (MFA setup, active sessions, password management), API keys tab (show/copy key, webhooks).
 -   **Integrations** (`/integrations`): Search + status filter, category-grouped cards with connect/disconnect toggles, connection status indicators, custom integration CTA.
--   **Help & Support** (`/help`): Support channel cards, tabbed interface (knowledge base with search, support tickets with form + recent list, FAQ accordion).
+-   **Help & Support** (`/help`): Support channel cards, tabbed interface (knowledge base with search, support tickets with form + recent list, FAQ accordion, changelog with versioned release notes).

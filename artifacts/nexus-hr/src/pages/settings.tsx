@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, User, Bell, Key, Shield, Copy, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { Building2, User, Bell, Key, Shield, Copy, Eye, EyeOff, RefreshCw, Users, Plus, Trash2, Lock, Smartphone, Monitor, LogOut, Mail } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function SettingsPage() {
   const { data: org, isLoading: orgLoading } = useGetCurrentOrganization();
@@ -71,6 +72,12 @@ export default function SettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="h-4 w-4" /> Notifications
+          </TabsTrigger>
+          <TabsTrigger value="team" className="gap-2">
+            <Users className="h-4 w-4" /> Team Members
+          </TabsTrigger>
+          <TabsTrigger value="security" className="gap-2">
+            <Shield className="h-4 w-4" /> Security
           </TabsTrigger>
           <TabsTrigger value="api" className="gap-2">
             <Key className="h-4 w-4" /> API Keys
@@ -229,6 +236,133 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="team" className="mt-6 space-y-6">
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Team Members</CardTitle>
+                  <CardDescription>Manage who has access to your NexsusHR workspace.</CardDescription>
+                </div>
+                <Button size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" /> Invite Member
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <TeamMemberRow
+                  name={user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : "You"}
+                  email={user?.email || "admin@company.com"}
+                  role="Owner"
+                  isOwner
+                />
+                <TeamMemberRow name="Alex Johnson" email="alex.j@company.com" role="Admin" />
+                <TeamMemberRow name="Maria Garcia" email="maria.g@company.com" role="Member" />
+                <TeamMemberRow name="James Lee" email="james.l@company.com" role="Viewer" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle>Pending Invitations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="py-6 text-center text-muted-foreground text-sm border border-dashed rounded-lg">
+                <Mail className="h-6 w-6 mx-auto mb-2 text-muted-foreground/30" />
+                <p>No pending invitations</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="security" className="mt-6 space-y-6">
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Lock className="h-5 w-5 text-primary" /> Multi-Factor Authentication</CardTitle>
+              <CardDescription>Add an extra layer of security to your account.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-background">
+                <div className="flex items-center gap-3">
+                  <Smartphone className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Authenticator App</p>
+                    <p className="text-xs text-muted-foreground">Use an app like Google Authenticator or Authy</p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => toast({ title: "MFA setup initiated — managed via Clerk" })}>
+                  Enable
+                </Button>
+              </div>
+              <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-background">
+                <div className="flex items-center gap-3">
+                  <Key className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Recovery Codes</p>
+                    <p className="text-xs text-muted-foreground">Backup codes for account recovery</p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" disabled>Generate</Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle>Active Sessions</CardTitle>
+              <CardDescription>Devices currently signed into your account.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-4 rounded-lg border border-primary/20 bg-primary/5">
+                <div className="flex items-center gap-3">
+                  <Monitor className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Current Session</p>
+                    <p className="text-xs text-muted-foreground">Chrome on macOS &middot; Last active now</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="text-primary border-primary/30">Active</Badge>
+              </div>
+              <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-background">
+                <div className="flex items-center gap-3">
+                  <Smartphone className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Mobile App</p>
+                    <p className="text-xs text-muted-foreground">Safari on iOS &middot; Last active 2 hours ago</p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                  <LogOut className="h-4 w-4 mr-1" /> Revoke
+                </Button>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t border-border/50 pt-6">
+              <Button variant="destructive" size="sm" onClick={() => toast({ title: "All other sessions revoked" })}>
+                Revoke All Other Sessions
+              </Button>
+            </CardFooter>
+          </Card>
+
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle>Password & Authentication</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-background">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Change Password</p>
+                  <p className="text-xs text-muted-foreground">Last changed 30 days ago</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => toast({ title: "Password management handled via Clerk" })}>
+                  Update Password
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="api" className="mt-6 space-y-6">
           <Card className="bg-card border-border">
             <CardHeader>
@@ -292,6 +426,41 @@ function NotificationToggle({ label, description, defaultChecked }: { label: str
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
       <Switch defaultChecked={defaultChecked} />
+    </div>
+  );
+}
+
+function TeamMemberRow({ name, email, role, isOwner }: { name: string; email: string; role: string; isOwner?: boolean }) {
+  return (
+    <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-background">
+      <div className="flex items-center gap-3">
+        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium text-sm">
+          {name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+        </div>
+        <div>
+          <p className="text-sm font-medium text-foreground">{name}</p>
+          <p className="text-xs text-muted-foreground">{email}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        {isOwner ? (
+          <Badge className="bg-primary/10 text-primary border-primary/30">{role}</Badge>
+        ) : (
+          <Select defaultValue={role.toLowerCase()}>
+            <SelectTrigger className="w-28 h-8 text-xs bg-card"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="member">Member</SelectItem>
+              <SelectItem value="viewer">Viewer</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+        {!isOwner && (
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

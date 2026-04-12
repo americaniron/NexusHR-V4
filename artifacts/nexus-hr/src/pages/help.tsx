@@ -23,6 +23,10 @@ import {
   ExternalLink,
   Mail,
   Headphones,
+  Sparkles,
+  Bug,
+  Wrench,
+  Rocket,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -35,6 +39,51 @@ const FAQ_ITEMS = [
   { q: "Can I customize an agent's personality?", a: "Absolutely. Each agent has 7 personality axes (warmth, formality, assertiveness, energy, empathy, detail orientation, humor) that you can tune via the Personality tab in the Employee Detail page." },
   { q: "What integrations are available?", a: "We support 20+ integrations including Slack, GitHub, Jira, Google Workspace, Salesforce, HubSpot, and more. Visit the Integrations page to connect your existing tools." },
   { q: "Is my data secure?", a: "Yes. We use enterprise-grade encryption, SOC2 compliant infrastructure, and comprehensive audit logs. Your data is never used to train AI models." },
+];
+
+const CHANGELOG = [
+  {
+    version: "2.4.0",
+    date: "Apr 8, 2026",
+    title: "Visual Workflow Builder",
+    type: "feature" as const,
+    items: ["Visual drag-and-drop workflow canvas", "Node palette with 7 node types", "Conditional branching support", "Workflow execution simulation"],
+  },
+  {
+    version: "2.3.2",
+    date: "Mar 28, 2026",
+    title: "Performance & Bug Fixes",
+    type: "fix" as const,
+    items: ["Fixed analytics null-guard for unassigned departments", "Improved conversation loading speed by 40%", "Fixed webhook delivery reliability"],
+  },
+  {
+    version: "2.3.0",
+    date: "Mar 15, 2026",
+    title: "Enhanced Analytics Dashboard",
+    type: "feature" as const,
+    items: ["Interactive area, bar, and pie charts", "Agent leaderboard with performance ranking", "Department utilization breakdown", "Date range filtering"],
+  },
+  {
+    version: "2.2.0",
+    date: "Feb 20, 2026",
+    title: "Voice Mode Improvements",
+    type: "improvement" as const,
+    items: ["Waveform visualization during speech", "Reduced STT latency by 200ms", "Added voice personality mapping", "New voice selection options"],
+  },
+  {
+    version: "2.1.0",
+    date: "Feb 5, 2026",
+    title: "Team & Security Settings",
+    type: "feature" as const,
+    items: ["Team member management with role assignment", "MFA via authenticator app", "Active session management", "Invite members via email"],
+  },
+  {
+    version: "2.0.0",
+    date: "Jan 15, 2026",
+    title: "NexsusHR VX Launch",
+    type: "feature" as const,
+    items: ["Complete platform redesign", "105 AI roles in marketplace", "Stripe billing with metered usage", "Real-time conversation with Claude Sonnet 4.6"],
+  },
 ];
 
 const KNOWLEDGE_BASE = [
@@ -125,6 +174,9 @@ export default function HelpPage() {
           </TabsTrigger>
           <TabsTrigger value="faq" className="gap-2">
             <HelpCircle className="h-4 w-4" /> FAQ
+          </TabsTrigger>
+          <TabsTrigger value="changelog" className="gap-2">
+            <Rocket className="h-4 w-4" /> Changelog
           </TabsTrigger>
         </TabsList>
 
@@ -279,6 +331,50 @@ export default function HelpPage() {
                 )}
               </div>
             ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="changelog" className="mt-6">
+          <div className="max-w-3xl space-y-6">
+            {CHANGELOG.map((release) => {
+              const typeConfig = release.type === "feature"
+                ? { icon: Sparkles, color: "text-primary bg-primary/10 border-primary/30", label: "New Feature" }
+                : release.type === "fix"
+                ? { icon: Bug, color: "text-amber-500 bg-amber-500/10 border-amber-500/30", label: "Bug Fix" }
+                : { icon: Wrench, color: "text-cyan-500 bg-cyan-500/10 border-cyan-500/30", label: "Improvement" };
+
+              return (
+                <Card key={release.version} className="bg-card border-border">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-10 w-10 rounded-lg flex items-center justify-center border ${typeConfig.color}`}>
+                          <typeConfig.icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-foreground">{release.title}</h3>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <Badge variant="outline" className="text-[10px]">v{release.version}</Badge>
+                            <span className="text-xs text-muted-foreground">{release.date}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className={`shrink-0 text-[10px] ${typeConfig.color}`}>
+                        {typeConfig.label}
+                      </Badge>
+                    </div>
+                    <ul className="space-y-2 pl-1">
+                      {release.items.map((item, j) => (
+                        <li key={j} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
       </Tabs>
