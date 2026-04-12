@@ -7,6 +7,8 @@ import { getAuthContext } from "../lib/auth-helpers";
 import { z } from "zod/v4";
 import { validate } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
+import { recordUsage } from "../lib/billing/metering";
+import { requirePlanLimit } from "../middlewares/planLimits";
 
 const router = Router();
 
@@ -48,7 +50,7 @@ router.get("/integrations", requireAuth, async (req, res, next) => {
   }
 });
 
-router.post("/integrations/:toolId/connect", requireAuth, validate({ params: toolIdParam }), async (req, res, next) => {
+router.post("/integrations/:toolId/connect", requireAuth, requirePlanLimit("integrations"), validate({ params: toolIdParam }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.badRequest("No organization");
@@ -70,6 +72,7 @@ router.post("/integrations/:toolId/connect", requireAuth, validate({ params: too
       orgId, toolId, status: "connected", connectedAt: new Date(),
     }).returning();
 
+    await recordUsage(orgId, "integrations", 1, { toolId });
     res.json(created);
   } catch (error) {
     next(error);

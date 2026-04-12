@@ -12,6 +12,7 @@ import { AppError } from "../middlewares/errorHandler";
 import { logger } from "../lib/logger";
 import { publishEvent } from "../lib/websocket";
 import { recordUsage } from "../lib/billing/metering";
+import { requirePlanLimit } from "../middlewares/planLimits";
 
 const router = Router();
 
@@ -100,7 +101,7 @@ router.get("/conversations/:id", requireAuth, validate({ params: idParam }), asy
   }
 });
 
-router.post("/conversations/:id/messages", requireAuth, validate({ params: idParam, body: sendMessageBody }), async (req, res, next) => {
+router.post("/conversations/:id/messages", requireAuth, requirePlanLimit("messages", 2), validate({ params: idParam, body: sendMessageBody }), async (req, res, next) => {
   try {
     const { orgId, userId } = await getAuthContext(req);
     if (!orgId || !userId) throw AppError.forbidden();
@@ -154,7 +155,7 @@ Be helpful, professional, and demonstrate expertise in your role. Keep responses
     await recordUsage(orgId, "messages", 2, { conversationId: convId });
     if (audioUrl) {
       const estimatedMinutes = Math.ceil(aiResponse.length / 800);
-      await recordUsage(orgId, "voice_hours", estimatedMinutes, { conversationId: convId, type: "tts" });
+      await recordUsage(orgId, "voice_hours", estimatedMinutes, { conversationId: convId, type: "tts", unit: "minutes" });
     }
 
     publishEvent(orgId, "conversations", "conversation:message", { conversationId: convId, userMessage: userMsg, aiMessage: aiMsg });
