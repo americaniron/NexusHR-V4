@@ -346,7 +346,7 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
                 }
               }
 
-              const blob = new Blob(chunks, { type: "audio/mpeg" });
+              const blob = new Blob(chunks as BlobPart[], { type: "audio/mpeg" });
               const audioUrl = URL.createObjectURL(blob);
               const audio = new Audio(audioUrl);
               audioPlayerRef.current = audio;

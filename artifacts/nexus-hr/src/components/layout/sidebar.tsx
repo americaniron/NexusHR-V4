@@ -1,8 +1,9 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, CheckSquare, GitMerge, MessageSquare, BarChart, Plug, CreditCard, Settings, HelpCircle, LogOut, PanelLeftClose, PanelLeft } from "lucide-react";
+import { LayoutDashboard, Users, UserCircle, CheckSquare, GitMerge, MessageSquare, BarChart, Plug, CreditCard, Settings, HelpCircle, LogOut, PanelLeftClose, PanelLeft, Clapperboard, Store } from "lucide-react";
 import { useClerk, useUser } from "@clerk/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/appStore";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -10,11 +11,12 @@ import { useEffect } from "react";
 
 const navigation = [
   { name: "Command Center", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Marketplace", href: "/marketplace", icon: Users },
-  { name: "My AI Team", href: "/team", icon: Users },
+  { name: "People Hub", href: "/marketplace", icon: Store },
+  { name: "My AI People", href: "/team", icon: UserCircle },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Workflows", href: "/workflows", icon: GitMerge },
   { name: "Conversations", href: "/conversations", icon: MessageSquare },
+  { name: "Video Studio", href: "/video-studio", icon: Clapperboard, isNew: true },
   { name: "Analytics", href: "/analytics", icon: BarChart },
   { name: "Integrations", href: "/integrations", icon: Plug },
   { name: "Billing", href: "/billing", icon: CreditCard },
@@ -22,7 +24,11 @@ const navigation = [
   { name: "Help & Support", href: "/help", icon: HelpCircle },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const [location] = useLocation();
   const { signOut } = useClerk();
   const { user } = useUser();
@@ -51,13 +57,15 @@ export function Sidebar() {
       </div>
 
       <div className="flex-1 overflow-y-auto py-4">
-        <nav className="flex flex-col gap-1 px-2">
+        <nav className="flex flex-col gap-1 px-2" aria-label="Main navigation">
           {navigation.map((item) => {
             const isActive = location === item.href || location.startsWith(`${item.href}/`);
             const linkContent = (
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={onNavigate}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   collapsed && "justify-center px-2",
@@ -67,7 +75,14 @@ export function Sidebar() {
                 )}
               >
                 <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
-                {!collapsed && item.name}
+                {!collapsed && (
+                  <span className="flex items-center gap-2 flex-1">
+                    {item.name}
+                    {"isNew" in item && item.isNew && (
+                      <Badge variant="default" className="h-4 px-1 text-[9px] leading-none bg-primary text-primary-foreground">NEW</Badge>
+                    )}
+                  </span>
+                )}
               </Link>
             );
 

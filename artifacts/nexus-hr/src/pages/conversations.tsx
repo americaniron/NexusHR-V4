@@ -7,7 +7,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, MessageSquare, Mic, MicOff, PhoneOff } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Send, Bot, User, MessageSquare, Mic, MicOff, PhoneOff, ChevronLeft } from "lucide-react";
 import { useVoiceMode } from "@/hooks/use-voice-mode";
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,9 +24,12 @@ export default function ConversationsPage() {
 
   return (
     <div className="flex h-[calc(100vh-140px)] border border-border rounded-xl overflow-hidden bg-card shadow-sm">
-      <div className="w-80 border-r border-border flex flex-col bg-muted/10">
-        <div className="p-4 border-b border-border bg-card font-semibold text-foreground">
-          Conversations
+      <div className={`${activeId ? 'hidden sm:flex' : 'flex'} w-full sm:w-80 border-r border-border flex-col bg-muted/10`}>
+        <div className="p-4 border-b border-border bg-card font-semibold text-foreground flex items-center justify-between">
+          <span>Conversations</span>
+          {convList?.data && (
+            <Badge variant="secondary" className="text-xs">{convList.data.length}</Badge>
+          )}
         </div>
         <ScrollArea className="flex-1">
           <div className="p-2 space-y-1">
@@ -37,10 +41,18 @@ export default function ConversationsPage() {
                   activeId === conv.id ? 'bg-primary/10 hover:bg-primary/15' : 'hover:bg-muted/50'
                 }`}
               >
-                <AIAvatar src={conv.aiEmployee?.avatarUrl} name={conv.aiEmployee?.name} size="sm" />
+                <div className="relative shrink-0">
+                  <AIAvatar src={conv.aiEmployee?.avatarUrl} name={conv.aiEmployee?.name} size="sm" />
+                  <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-card" />
+                </div>
                 <div className="flex-1 overflow-hidden">
-                  <div className="font-medium text-sm text-foreground truncate">
-                    {conv.aiEmployee?.name || "Agent"}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-sm text-foreground truncate">
+                      {conv.aiEmployee?.name || "AI Person"}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">
+                      {(conv as any).updatedAt ? new Date((conv as any).updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                    </span>
                   </div>
                   <div className="text-xs text-muted-foreground truncate">
                     {conv.title || "New Conversation"}
@@ -54,9 +66,14 @@ export default function ConversationsPage() {
 
       <div className="flex-1 flex flex-col bg-background">
         {activeId ? (
-          <ChatWindow conversationId={activeId} />
+          <div className="flex flex-col flex-1">
+            <button onClick={() => setActiveId(null)} className="sm:hidden flex items-center gap-2 p-3 border-b border-border text-sm text-muted-foreground hover:text-foreground" aria-label="Back to conversation list">
+              <ChevronLeft className="h-4 w-4" /> Back
+            </button>
+            <ChatWindow conversationId={activeId} />
+          </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground flex-col">
+          <div className={`${activeId ? '' : 'hidden sm:flex'} flex-1 items-center justify-center text-muted-foreground flex-col`}>
             <MessageSquare className="h-12 w-12 mb-4 text-muted-foreground/30" />
             <p>Select a conversation to start chatting</p>
           </div>

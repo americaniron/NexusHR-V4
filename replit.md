@@ -2,7 +2,7 @@
 
 ## Overview
 
-NexsusHR is a production-grade AI workforce management platform designed for businesses to hire, deploy, and manage fully autonomous AI "Beings" across various industries. It aims to revolutionize workforce management by leveraging AI for tasks like interviewing, task management, workflow automation, and real-time conversations. The platform focuses on providing a comprehensive solution for integrating AI into business operations.
+NexsusHR is a production-grade AI People platform designed for businesses to discover, onboard, and collaborate with fully autonomous AI People across various industries. The platform elevates the concept from "AI Employees/Agents" to "AI People" — each with unique identity, personality, voice, and cinematic video presence via HeyGen Seedance 2.0. It provides a comprehensive solution for integrating AI people into business operations.
 
 ## User Preferences
 
@@ -33,11 +33,12 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript (v5.9).
 -   **Real-time Communication:** Socket.io for WebSocket connections with authentication, origin-restricted CORS, and room-based subscriptions.
 
 **Core Features & Implementations:**
--   **AI Workforce Management:**
-    -   **AI Employee Roles:** A catalog of 105+ AI roles with detailed attributes.
-    -   **AI Employees:** Management of hired AI employees, linked to roles and organizations.
+-   **AI People Management:**
+    -   **AI People Roles:** A catalog of 105+ AI roles with detailed attributes.
+    -   **AI People:** Onboarding and management of AI people, linked to roles and organizations.
     -   **Interviews:** AI-powered interview sessions with candidates.
-    -   **Conversations:** Real-time chat with AI employees, including ElevenLabs audio playback.
+    -   **Conversations:** Real-time chat with AI people, including ElevenLabs audio playback.
+    -   **Video Studio:** HeyGen Seedance 2.0 integration for cinematic AI person videos (requires HEYGEN_API_KEY, zero simulation).
 -   **AI Avatar System:**
     -   **Generation:** OpenAI `gpt-image-1` for photorealistic headshots, stored in GCS-backed Replit Object Storage. DiceBear as a fallback.
     -   **Visual States:** `AIAvatar` component supports `idle`, `speaking`, `thinking`, and `listening` states with CSS animations.

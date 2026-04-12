@@ -118,13 +118,13 @@ export default function MarketplaceDetailPage() {
         }
       });
       toast({
-        title: "Agent Hired Successfully",
-        description: `${name} has been deployed to your workspace.`,
+        title: "Welcome Aboard!",
+        description: `${name} has been onboarded to your team.`,
       });
       navigate("/team");
     } catch {
       toast({
-        title: "Failed to hire agent",
+        title: "Onboarding Failed",
         description: "Please try again later.",
         variant: "destructive"
       });
@@ -260,20 +260,36 @@ export default function MarketplaceDetailPage() {
                     className="w-full text-base h-12 shadow-sm"
                     onClick={() => setShowCustomize(true)}
                   >
-                    Customize & Hire
+                    Customize & Onboard
                   </Button>
                   <Button variant="outline" className="w-full h-12 bg-background" onClick={handleHire} disabled={isHiring}>
-                    {isHiring ? "Deploying..." : "Quick Hire (Default Settings)"}
+                    {isHiring ? "Onboarding..." : "Quick Onboard (Default Settings)"}
                   </Button>
                 </div>
               ) : (
                 <div className="pt-4 space-y-4 border-t border-border">
+                  <div className="flex items-center gap-0 px-2">
+                    {["Identity", "Appearance", "Voice", "Welcome"].map((label, idx) => {
+                      const stepDone = idx === 0 ? !!employeeName : idx === 1 ? !!(generatedAvatarUrl || selectedGalleryUrl) : idx === 2 ? !!selectedVoiceId : false;
+                      return (
+                        <div key={label} className="flex items-center flex-1 last:flex-none">
+                          <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${stepDone ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                            {stepDone ? <CheckCircle2 className="h-3.5 w-3.5" /> : idx + 1}
+                          </div>
+                          {idx < 3 && <div className={`h-px flex-1 mx-1 ${stepDone ? "bg-primary" : "bg-border"}`} />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex justify-between text-[9px] text-muted-foreground px-1">
+                    <span>Identity</span><span>Appearance</span><span>Voice</span><span>Welcome</span>
+                  </div>
                   <h4 className="font-semibold text-sm flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary" /> Customize Your AI Employee
+                    <User className="h-4 w-4 text-primary" /> Customize Your AI Person
                   </h4>
 
                   <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Employee Name</Label>
+                    <Label className="text-xs text-muted-foreground">Name</Label>
                     <Input
                       value={employeeName}
                       onChange={(e) => setEmployeeName(e.target.value)}
@@ -464,7 +480,7 @@ export default function MarketplaceDetailPage() {
                     onClick={handleHire}
                     disabled={isHiring}
                   >
-                    {isHiring ? "Deploying..." : "Hire & Deploy Agent"}
+                    {isHiring ? "Onboarding..." : "Bring Aboard"}
                   </Button>
                 </div>
               )}

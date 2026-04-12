@@ -2,17 +2,17 @@ import { useGetSubscription, useGetUsageSummary, useGetBillingPlans, useCreateCh
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Zap, CheckCircle2, Crown, ArrowRight } from "lucide-react";
+import { CreditCard, Zap, CheckCircle2, Crown, ArrowRight, AlertTriangle, FileText, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
 const PLAN_FEATURES: Record<string, string[]> = {
-  starter: ["2 AI Employees", "40 Voice Hours/mo", "5,000 Messages/mo", "10 Workflows", "5 Integrations", "Email Support"],
-  growth: ["10 AI Employees", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "15 Integrations", "Priority Chat Support"],
-  business: ["50 AI Employees", "1,000 Voice Hours/mo", "Unlimited Messages", "200 Workflows", "Unlimited Integrations", "Dedicated CSM"],
-  enterprise: ["Unlimited AI Employees", "Unlimited Voice Hours", "Unlimited Messages", "Unlimited Workflows", "Unlimited Integrations", "24/7 Premium + SLA"],
+  starter: ["2 AI People", "40 Voice Hours/mo", "5,000 Messages/mo", "10 Workflows", "5 Integrations", "Email Support"],
+  growth: ["10 AI People", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "15 Integrations", "Priority Chat Support"],
+  business: ["50 AI People", "1,000 Voice Hours/mo", "Unlimited Messages", "200 Workflows", "Unlimited Integrations", "Dedicated CSM"],
+  enterprise: ["Unlimited AI People", "Unlimited Voice Hours", "Unlimited Messages", "Unlimited Workflows", "Unlimited Integrations", "24/7 Premium + SLA"],
 };
 
 export default function BillingPage() {
@@ -200,19 +200,61 @@ export default function BillingPage() {
         {usageLoading ? (
           [1,2].map(i => <Skeleton key={i} className="h-32 w-full rounded-xl" />)
         ) : (
-          usage?.dimensions.map((dim) => (
-            <Card key={dim.dimension} className="bg-card border-border">
-              <CardContent className="p-6">
-                <div className="flex justify-between mb-2">
-                  <span className="font-medium capitalize">{dim.dimension.replace(/_/g, ' ')}</span>
-                  <span className="text-sm text-muted-foreground">{dim.used.toLocaleString()} / {dim.limit >= 999999 ? "Unlimited" : dim.limit.toLocaleString()}</span>
-                </div>
-                <Progress value={dim.limit >= 999999 ? 0 : dim.percentage} className={`h-2 ${dim.percentage > 90 ? '[&>div]:bg-destructive' : ''}`} />
-                <p className="text-xs text-muted-foreground mt-3">{dim.percentage}% utilized this billing period.</p>
-              </CardContent>
-            </Card>
-          ))
+          usage?.dimensions.map((dim) => {
+            const isUnlimited = dim.limit >= 999999;
+            const isWarning = dim.percentage >= 75 && dim.percentage < 90;
+            const isDanger = dim.percentage >= 90;
+
+            return (
+              <Card key={dim.dimension} className={`bg-card ${isDanger ? "border-destructive/30" : isWarning ? "border-amber-500/30" : "border-border"}`}>
+                <CardContent className="p-6">
+                  <div className="flex justify-between mb-2">
+                    <span className="font-medium capitalize flex items-center gap-2">
+                      {dim.dimension.replace(/_/g, ' ')}
+                      {isDanger && <AlertTriangle className="h-4 w-4 text-destructive" />}
+                      {isWarning && !isDanger && <AlertTriangle className="h-4 w-4 text-amber-500" />}
+                    </span>
+                    <span className="text-sm text-muted-foreground">{dim.used.toLocaleString()} / {isUnlimited ? "Unlimited" : dim.limit.toLocaleString()}</span>
+                  </div>
+                  <div className="relative">
+                    <Progress value={isUnlimited ? 0 : dim.percentage} className={`h-2.5 ${isDanger ? '[&>div]:bg-destructive' : isWarning ? '[&>div]:bg-amber-500' : ''}`} />
+                    {!isUnlimited && (
+                      <>
+                        <div className="absolute top-0 h-2.5 w-px bg-amber-500/70" style={{ left: "75%" }} title="75% threshold" />
+                        <div className="absolute top-0 h-2.5 w-px bg-destructive/70" style={{ left: "90%" }} title="90% threshold" />
+                      </>
+                    )}
+                  </div>
+                  <div className="flex justify-between mt-3">
+                    <p className="text-xs text-muted-foreground">{dim.percentage}% utilized this billing period</p>
+                    {isDanger && <span className="text-xs text-destructive font-medium">Near limit</span>}
+                    {isWarning && !isDanger && <span className="text-xs text-amber-500 font-medium">Approaching limit</span>}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
         )}
+      </div>
+
+      <div className="mt-10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            Invoice History
+          </h2>
+        </div>
+        <Card className="bg-card border-border">
+          <CardContent className="py-8 text-center">
+            <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground mb-3">
+              View and download your invoices through the Stripe billing portal.
+            </p>
+            <Button variant="outline" onClick={handleManageBilling}>
+              <Download className="h-4 w-4 mr-2" /> Open Billing Portal
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

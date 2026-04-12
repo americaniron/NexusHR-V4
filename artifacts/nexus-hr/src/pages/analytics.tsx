@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { AIAvatar } from "@/components/ai-avatar";
 import {
   BarChart as RechartsBarChart,
@@ -33,7 +34,12 @@ import {
   Zap,
   Trophy,
   Activity,
+  Download,
+  ImageIcon,
+  FileSpreadsheet,
 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
@@ -42,11 +48,36 @@ const tooltipStyle = {
   itemStyle: { color: "var(--foreground)" },
 };
 
+function ExportButton({ chartName, onExport }: { chartName: string; onExport: (format: string) => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground">
+          <Download className="h-3.5 w-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onExport("csv")}>
+          <FileSpreadsheet className="h-3.5 w-3.5 mr-2" /> Export CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onExport("png")}>
+          <ImageIcon className="h-3.5 w-3.5 mr-2" /> Export PNG
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState("30d");
   const { data, isLoading } = useGetAnalyticsOverview();
   const { employees } = useEmployeeState();
   const { tasks } = useTaskState();
+  const { toast } = useToast();
+
+  const handleExport = (chartName: string, format: string) => {
+    toast({ title: `Exporting ${chartName}`, description: `${format.toUpperCase()} export will download shortly.` });
+  };
 
   const kpis = useMemo(() => {
     const totalEmployees = employees?.data?.length || 0;
@@ -94,7 +125,7 @@ export default function AnalyticsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Analytics</h1>
-          <p className="text-muted-foreground mt-1">Performance and utilization metrics across the organization.</p>
+          <p className="text-muted-foreground mt-1">Performance and engagement metrics across the organization.</p>
         </div>
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="w-36 bg-card">
@@ -109,7 +140,7 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <KPICard title="Total AI Employees" value={kpis.totalEmployees} icon={Users} trend="+12%" trendUp />
+        <KPICard title="AI People" value={kpis.totalEmployees} icon={Users} trend="+12%" trendUp />
         <KPICard title="Tasks Completed" value={kpis.completedTasks} icon={CheckSquare} trend="+8%" trendUp />
         <KPICard title="Completion Rate" value={`${kpis.completionRate}%`} icon={Zap} trend={kpis.completionRate >= 80 ? "+3%" : "-2%"} trendUp={kpis.completionRate >= 80} />
         <KPICard title="Active Tasks" value={kpis.inProgressTasks} icon={Activity} trend="In progress" />
@@ -117,9 +148,12 @@ export default function AnalyticsPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle>Tasks Completed Over Time</CardTitle>
-            <CardDescription>Trend of completed tasks by date</CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between space-y-0">
+            <div>
+              <CardTitle>Tasks Completed Over Time</CardTitle>
+              <CardDescription>Trend of completed tasks by date</CardDescription>
+            </div>
+            <ExportButton chartName="Tasks Over Time" onExport={(f) => handleExport("Tasks Over Time", f)} />
           </CardHeader>
           <CardContent className="h-80">
             {isLoading ? <Skeleton className="h-full w-full" /> : (
@@ -143,9 +177,12 @@ export default function AnalyticsPage() {
         </Card>
 
         <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle>Utilization by Department</CardTitle>
-            <CardDescription>Agent utilization percentage by department</CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between space-y-0">
+            <div>
+              <CardTitle>Engagement by Department</CardTitle>
+              <CardDescription>AI people engagement percentage by department</CardDescription>
+            </div>
+            <ExportButton chartName="Utilization" onExport={(f) => handleExport("Utilization", f)} />
           </CardHeader>
           <CardContent className="h-80">
             {isLoading ? <Skeleton className="h-full w-full" /> : (
@@ -164,9 +201,12 @@ export default function AnalyticsPage() {
         </Card>
 
         <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle>Task Status Distribution</CardTitle>
-            <CardDescription>Current breakdown of all tasks by status</CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between space-y-0">
+            <div>
+              <CardTitle>Task Status Distribution</CardTitle>
+              <CardDescription>Current breakdown of all tasks by status</CardDescription>
+            </div>
+            <ExportButton chartName="Task Status" onExport={(f) => handleExport("Task Status", f)} />
           </CardHeader>
           <CardContent className="h-80">
             {taskStatusData.length === 0 ? (
@@ -196,13 +236,16 @@ export default function AnalyticsPage() {
         </Card>
 
         <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle>Agents by Department</CardTitle>
-            <CardDescription>Distribution of AI employees across departments</CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between space-y-0">
+            <div>
+              <CardTitle>People by Department</CardTitle>
+              <CardDescription>Distribution of AI people across departments</CardDescription>
+            </div>
+            <ExportButton chartName="Department Distribution" onExport={(f) => handleExport("Department Distribution", f)} />
           </CardHeader>
           <CardContent className="h-80">
             {departmentData.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No employee data available</div>
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No people data available</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsBarChart data={departmentData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
@@ -222,9 +265,9 @@ export default function AnalyticsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
-            Agent Leaderboard
+            People Leaderboard
           </CardTitle>
-          <CardDescription>Top performing AI employees by completed tasks</CardDescription>
+          <CardDescription>Top performing AI people by completed tasks</CardDescription>
         </CardHeader>
         <CardContent>
           {leaderboard.length === 0 ? (

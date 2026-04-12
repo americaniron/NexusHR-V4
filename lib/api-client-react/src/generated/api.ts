@@ -35,6 +35,7 @@ import type {
   CreateInterview,
   CreateTask,
   CreateTicket,
+  CreateVideoProjectBody,
   CreateWorkflow,
   DashboardSummary,
   Employee,
@@ -58,6 +59,9 @@ import type {
   ListTasksParams,
   ListTicketsParams,
   ListUsersParams,
+  ListVideoProjects200,
+  ListVideoProjectsParams,
+  ListVideoTemplates200,
   ListWorkflowsParams,
   MarkAllNotificationsRead200,
   MessageResponse,
@@ -84,6 +88,7 @@ import type {
   UsageSummary,
   User,
   UserList,
+  VideoProject,
   VoiceList,
   VoiceSynthesizeRequest,
   WorkflowItem,
@@ -4702,3 +4707,432 @@ export const useRegenerateAvatar = <
 > => {
   return useMutation(getRegenerateAvatarMutationOptions(options));
 };
+
+/**
+ * @summary List all video projects
+ */
+export const getListVideoProjectsUrl = (params?: ListVideoProjectsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/video-studio/projects?${stringifiedParams}`
+    : `/api/video-studio/projects`;
+};
+
+export const listVideoProjects = async (
+  params?: ListVideoProjectsParams,
+  options?: RequestInit,
+): Promise<ListVideoProjects200> => {
+  return customFetch<ListVideoProjects200>(getListVideoProjectsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListVideoProjectsQueryKey = (
+  params?: ListVideoProjectsParams,
+) => {
+  return [`/api/video-studio/projects`, ...(params ? [params] : [])] as const;
+};
+
+export const getListVideoProjectsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listVideoProjects>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListVideoProjectsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listVideoProjects>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListVideoProjectsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listVideoProjects>>
+  > = ({ signal }) => listVideoProjects(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listVideoProjects>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListVideoProjectsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listVideoProjects>>
+>;
+export type ListVideoProjectsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all video projects
+ */
+
+export function useListVideoProjects<
+  TData = Awaited<ReturnType<typeof listVideoProjects>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListVideoProjectsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listVideoProjects>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListVideoProjectsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new video project using HeyGen Video Agent + Seedance 2.0
+ */
+export const getCreateVideoProjectUrl = () => {
+  return `/api/video-studio/projects`;
+};
+
+export const createVideoProject = async (
+  createVideoProjectBody: CreateVideoProjectBody,
+  options?: RequestInit,
+): Promise<VideoProject> => {
+  return customFetch<VideoProject>(getCreateVideoProjectUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createVideoProjectBody),
+  });
+};
+
+export const getCreateVideoProjectMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createVideoProject>>,
+    TError,
+    { data: BodyType<CreateVideoProjectBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createVideoProject>>,
+  TError,
+  { data: BodyType<CreateVideoProjectBody> },
+  TContext
+> => {
+  const mutationKey = ["createVideoProject"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createVideoProject>>,
+    { data: BodyType<CreateVideoProjectBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createVideoProject(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateVideoProjectMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createVideoProject>>
+>;
+export type CreateVideoProjectMutationBody = BodyType<CreateVideoProjectBody>;
+export type CreateVideoProjectMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new video project using HeyGen Video Agent + Seedance 2.0
+ */
+export const useCreateVideoProject = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createVideoProject>>,
+    TError,
+    { data: BodyType<CreateVideoProjectBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createVideoProject>>,
+  TError,
+  { data: BodyType<CreateVideoProjectBody> },
+  TContext
+> => {
+  return useMutation(getCreateVideoProjectMutationOptions(options));
+};
+
+/**
+ * @summary Get a video project by ID
+ */
+export const getGetVideoProjectUrl = (id: number) => {
+  return `/api/video-studio/projects/${id}`;
+};
+
+export const getVideoProject = async (
+  id: number,
+  options?: RequestInit,
+): Promise<VideoProject> => {
+  return customFetch<VideoProject>(getGetVideoProjectUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetVideoProjectQueryKey = (id: number) => {
+  return [`/api/video-studio/projects/${id}`] as const;
+};
+
+export const getGetVideoProjectQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVideoProject>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getVideoProject>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetVideoProjectQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVideoProject>>> = ({
+    signal,
+  }) => getVideoProject(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getVideoProject>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetVideoProjectQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getVideoProject>>
+>;
+export type GetVideoProjectQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get a video project by ID
+ */
+
+export function useGetVideoProject<
+  TData = Awaited<ReturnType<typeof getVideoProject>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getVideoProject>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetVideoProjectQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Delete a video project
+ */
+export const getDeleteVideoProjectUrl = (id: number) => {
+  return `/api/video-studio/projects/${id}`;
+};
+
+export const deleteVideoProject = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteVideoProjectUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteVideoProjectMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteVideoProject>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteVideoProject>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteVideoProject"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteVideoProject>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteVideoProject(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteVideoProjectMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteVideoProject>>
+>;
+
+export type DeleteVideoProjectMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a video project
+ */
+export const useDeleteVideoProject = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteVideoProject>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteVideoProject>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteVideoProjectMutationOptions(options));
+};
+
+/**
+ * @summary List video prompt templates (Seedance 2.0 presets)
+ */
+export const getListVideoTemplatesUrl = () => {
+  return `/api/video-studio/templates`;
+};
+
+export const listVideoTemplates = async (
+  options?: RequestInit,
+): Promise<ListVideoTemplates200> => {
+  return customFetch<ListVideoTemplates200>(getListVideoTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListVideoTemplatesQueryKey = () => {
+  return [`/api/video-studio/templates`] as const;
+};
+
+export const getListVideoTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listVideoTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listVideoTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListVideoTemplatesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listVideoTemplates>>
+  > = ({ signal }) => listVideoTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listVideoTemplates>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListVideoTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listVideoTemplates>>
+>;
+export type ListVideoTemplatesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List video prompt templates (Seedance 2.0 presets)
+ */
+
+export function useListVideoTemplates<
+  TData = Awaited<ReturnType<typeof listVideoTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listVideoTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListVideoTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

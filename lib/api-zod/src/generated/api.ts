@@ -1596,3 +1596,104 @@ export const RegenerateAvatarResponse = zod.object({
     })
     .optional(),
 });
+
+/**
+ * @summary List all video projects
+ */
+export const listVideoProjectsQueryLimitDefault = 20;
+
+export const ListVideoProjectsQueryParams = zod.object({
+  limit: zod.coerce.number().default(listVideoProjectsQueryLimitDefault),
+});
+
+export const ListVideoProjectsResponse = zod.object({
+  data: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        title: zod.string(),
+        prompt: zod.string().optional(),
+        duration: zod.number().optional(),
+        aspectRatio: zod.string().optional(),
+        enhance: zod.boolean().optional(),
+        status: zod.enum(["queued", "generating", "completed", "failed"]),
+        videoUrl: zod.string().nullish(),
+        thumbnailUrl: zod.string().nullish(),
+        employeeId: zod.number().nullish(),
+        employeeName: zod.string().nullish(),
+        employeeAvatarUrl: zod.string().nullish(),
+        errorMessage: zod.string().nullish(),
+        createdAt: zod.coerce.date(),
+        completedAt: zod.coerce.date().nullish(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Create a new video project using HeyGen Video Agent + Seedance 2.0
+ */
+export const createVideoProjectBodyDurationDefault = 10;
+export const createVideoProjectBodyAspectRatioDefault = `16:9`;
+export const createVideoProjectBodyEnhanceDefault = true;
+
+export const CreateVideoProjectBody = zod.object({
+  prompt: zod.string(),
+  title: zod.string().optional(),
+  duration: zod.number().default(createVideoProjectBodyDurationDefault),
+  aspectRatio: zod
+    .enum(["16:9", "9:16", "1:1"])
+    .default(createVideoProjectBodyAspectRatioDefault),
+  enhance: zod.boolean().default(createVideoProjectBodyEnhanceDefault),
+  employeeId: zod.number().nullish(),
+});
+
+/**
+ * @summary Get a video project by ID
+ */
+export const GetVideoProjectParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetVideoProjectResponse = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  prompt: zod.string().optional(),
+  duration: zod.number().optional(),
+  aspectRatio: zod.string().optional(),
+  enhance: zod.boolean().optional(),
+  status: zod.enum(["queued", "generating", "completed", "failed"]),
+  videoUrl: zod.string().nullish(),
+  thumbnailUrl: zod.string().nullish(),
+  employeeId: zod.number().nullish(),
+  employeeName: zod.string().nullish(),
+  employeeAvatarUrl: zod.string().nullish(),
+  errorMessage: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+  completedAt: zod.coerce.date().nullish(),
+});
+
+/**
+ * @summary Delete a video project
+ */
+export const DeleteVideoProjectParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List video prompt templates (Seedance 2.0 presets)
+ */
+export const ListVideoTemplatesResponse = zod.object({
+  data: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        title: zod.string(),
+        prompt: zod.string(),
+        category: zod.string(),
+        thumbnailUrl: zod.string(),
+        duration: zod.number().optional(),
+      }),
+    )
+    .optional(),
+});

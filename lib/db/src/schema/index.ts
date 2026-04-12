@@ -15,3 +15,4 @@ export * from "./prompt-templates";
 export * from "./prompt-audit-logs";
 export * from "./task-assignments";
 export * from "./tool-permissions";
+export * from "./video-projects";

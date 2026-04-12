@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Star, Briefcase, Zap } from "lucide-react";
+import { Search, Filter, Star, Briefcase, Zap, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -53,10 +53,15 @@ function RoleCard({ role }: { role: { id: number; title: string; department: str
   );
 }
 
+const ITEMS_PER_PAGE_OPTIONS = [12, 24, 48];
+
 export default function MarketplacePage() {
   const [searchInput, setSearchInput] = useState("");
   const [category, setCategory] = useState<string>("");
   const [sortBy, setSortBy] = useState<ListRolesSortBy>("relevance");
+  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(24);
 
   const debouncedSearch = useDebounce((val: string) => {
     setDebouncedSearchValue(val);
@@ -77,23 +82,33 @@ export default function MarketplacePage() {
 
   const { data: categoriesData } = useGetRoleCategories();
 
-  const roles = useMemo(() => rolesData?.data || [], [rolesData]);
+  const allRoles = useMemo(() => rolesData?.data || [], [rolesData]);
+  const totalPages = Math.max(1, Math.ceil(allRoles.length / perPage));
+  const roles = useMemo(() => {
+    const start = (page - 1) * perPage;
+    return allRoles.slice(start, start + perPage);
+  }, [allRoles, page, perPage]);
 
   return (
     <div className="flex flex-col gap-6 h-[calc(100vh-100px)] overflow-hidden">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">AI Marketplace</h1>
-          <p className="text-muted-foreground mt-1">Discover and hire specialized AI employees for your team.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">People Hub</h1>
+          <p className="text-muted-foreground mt-1">Discover and bring aboard specialized AI people for your team.</p>
         </div>
+        <Badge variant="outline" className="py-1.5 hidden md:flex">{allRoles.length} roles available</Badge>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden">
-        <div className="w-full lg:w-64 flex flex-col gap-6 shrink-0 overflow-y-auto pr-2">
+        <div className={`w-full lg:w-64 flex flex-col gap-6 shrink-0 overflow-y-auto pr-2 ${filtersOpen ? "" : "lg:flex"}`}>
           <div className="space-y-4">
-            <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <Filter className="h-4 w-4" /> Filters
-            </h3>
+            <button
+              onClick={() => setFiltersOpen(!filtersOpen)}
+              className="font-semibold text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2 w-full justify-between lg:pointer-events-none"
+            >
+              <span className="flex items-center gap-2"><Filter className="h-4 w-4" /> Filters</span>
+              <span className="lg:hidden">{filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</span>
+            </button>
             
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -175,7 +190,7 @@ export default function MarketplacePage() {
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-muted-foreground border border-dashed rounded-lg bg-card/50 p-12">
                 <Zap className="h-8 w-8 mx-auto mb-3 text-muted-foreground/50" />
-                <p>No AI roles found matching your criteria.</p>
+                <p>No AI people found matching your criteria.</p>
                 <Button variant="link" onClick={() => { setSearchInput(""); setDebouncedSearchValue(""); setCategory(""); }}>
                   Clear filters
                 </Button>
@@ -185,7 +200,7 @@ export default function MarketplacePage() {
             <VirtualizedList
               data={roles}
               estimatedItemHeight={280}
-              emptyMessage="No AI roles found matching your criteria."
+              emptyMessage="No AI people found matching your criteria."
               itemContent={(_index, role) => (
                 <div className="pb-4 px-1">
                   <RoleCard role={role} />

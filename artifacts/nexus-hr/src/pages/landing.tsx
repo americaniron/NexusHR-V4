@@ -34,28 +34,28 @@ const STATS = [
 ];
 
 const FEATURES = [
-  { icon: Bot, title: "Autonomous Agents", desc: "Deploy agents that require zero hand-holding. They plan, execute, and deliver results independently." },
-  { icon: Zap, title: "Instant Onboarding", desc: "No training period. Your AI team is productive from second one with role-specific expertise." },
+  { icon: Bot, title: "Autonomous AI People", desc: "Bring aboard AI people that require zero hand-holding. They plan, execute, and deliver results independently." },
+  { icon: Zap, title: "Instant Onboarding", desc: "No training period. Your AI people are productive from second one with role-specific expertise." },
   { icon: Shield, title: "Enterprise Grade", desc: "SOC2 compliant, encrypted data handling, and comprehensive audit logs for every action." },
-  { icon: BarChart3, title: "Command Center", desc: "Real-time oversight of tasks, utilization, and performance across your entire fleet." },
-  { icon: MessageSquare, title: "Natural Conversations", desc: "Chat or use voice mode with your AI employees. Real LLM-powered dialogue, not canned responses." },
+  { icon: BarChart3, title: "Command Center", desc: "Real-time oversight of tasks, engagement, and performance across your entire organization." },
+  { icon: MessageSquare, title: "Natural Conversations", desc: "Chat or use voice mode with your AI people. Real LLM-powered dialogue, not canned responses." },
   { icon: Brain, title: "Personality Tuning", desc: "Adjust warmth, formality, humor, and 4 other personality axes to match your company culture." },
-  { icon: Workflow, title: "Multi-Agent Workflows", desc: "Chain agents into automated pipelines. One agent's output becomes another's input seamlessly." },
-  { icon: Globe, title: "Tool Integrations", desc: "Connect Slack, GitHub, Jira, and 20+ tools so your AI workforce operates in your existing stack." },
+  { icon: Workflow, title: "Multi-Person Workflows", desc: "Chain AI people into automated pipelines. One person's output becomes another's input seamlessly." },
+  { icon: Globe, title: "Tool Integrations", desc: "Connect Slack, GitHub, Jira, and 20+ tools so your AI people operate in your existing stack." },
 ];
 
 const HOW_IT_WORKS = [
-  { step: "01", title: "Browse the Marketplace", desc: "Explore 105+ specialized AI roles across engineering, marketing, finance, HR, and more." },
-  { step: "02", title: "Customize & Hire", desc: "Name your agent, choose a voice, generate an avatar, and tune personality axes to your culture." },
-  { step: "03", title: "Deploy Instantly", desc: "Your AI employee is live immediately. Assign tasks, start conversations, or add them to workflows." },
-  { step: "04", title: "Scale Without Limits", desc: "Add more agents as you grow. Pay only for what you use with transparent metered billing." },
+  { step: "01", title: "Browse the People Hub", desc: "Explore 105+ specialized AI people across engineering, marketing, finance, HR, and more." },
+  { step: "02", title: "Customize & Onboard", desc: "Name your AI person, choose a voice, generate an avatar, and tune personality axes to your culture." },
+  { step: "03", title: "Go Live Instantly", desc: "Your AI person is ready immediately. Assign tasks, start conversations, or add them to workflows." },
+  { step: "04", title: "Scale Without Limits", desc: "Bring more people aboard as you grow. Pay only for what you use with transparent metered billing." },
 ];
 
 const PLANS = [
-  { id: "starter", name: "Starter", price: 49, desc: "For small teams getting started", features: ["2 AI Employees", "40 Voice Hours/mo", "5,000 Messages/mo", "10 Workflows", "Email Support"] },
-  { id: "growth", name: "Growth", price: 149, desc: "For growing organizations", features: ["10 AI Employees", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "Priority Chat Support"], popular: true },
-  { id: "business", name: "Business", price: 499, desc: "For scaling enterprises", features: ["50 AI Employees", "1,000 Voice Hours/mo", "Unlimited Messages", "200 Workflows", "Dedicated CSM"] },
-  { id: "enterprise", name: "Enterprise", price: null, desc: "For large organizations", features: ["Unlimited AI Employees", "Unlimited Voice Hours", "Unlimited Messages", "Unlimited Workflows", "24/7 Premium + SLA"] },
+  { id: "starter", name: "Starter", price: 49, desc: "For small teams getting started", features: ["2 AI People", "40 Voice Hours/mo", "5,000 Messages/mo", "10 Workflows", "Email Support"] },
+  { id: "growth", name: "Growth", price: 149, desc: "For growing organizations", features: ["10 AI People", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "Priority Chat Support"], popular: true },
+  { id: "business", name: "Business", price: 499, desc: "For scaling enterprises", features: ["50 AI People", "1,000 Voice Hours/mo", "Unlimited Messages", "200 Workflows", "Dedicated CSM"] },
+  { id: "enterprise", name: "Enterprise", price: null, desc: "For large organizations", features: ["Unlimited AI People", "Unlimited Voice Hours", "Unlimited Messages", "Unlimited Workflows", "24/7 Premium + SLA"] },
 ];
 
 const TESTIMONIALS = [
@@ -84,10 +84,10 @@ const TRUST_LOGOS = [
 ];
 
 const FAQ = [
-  { q: "How do AI employees differ from chatbots?", a: "NexsusHR agents are fully autonomous beings with persistent memory, personality, and role-specific expertise. They don't just answer questions — they plan, execute tasks, collaborate in workflows, and deliver measurable outcomes." },
-  { q: "Is every conversation powered by a real LLM?", a: "Yes. Every single interaction uses Claude Sonnet 4.6, a state-of-the-art language model. Zero simulation, zero canned responses. Each agent maintains context across conversations and tasks." },
-  { q: "Can I cancel or deactivate agents?", a: "Absolutely. You can deactivate any agent at any time. Billing is pro-rated to the day, and you can re-activate agents whenever you need them again." },
-  { q: "What integrations are supported?", a: "We support 20+ integrations including Slack, GitHub, Jira, Google Workspace, Salesforce, HubSpot, and more. Your AI workforce operates directly within your existing tool stack." },
+  { q: "How do AI people differ from chatbots?", a: "NexsusHR AI people are fully autonomous beings with persistent memory, personality, and role-specific expertise. They don't just answer questions — they plan, execute tasks, collaborate in workflows, and deliver measurable outcomes." },
+  { q: "Is every conversation powered by a real LLM?", a: "Yes. Every single interaction uses Claude Sonnet 4.6, a state-of-the-art language model. Zero simulation, zero canned responses. Each AI person maintains context across conversations and tasks." },
+  { q: "Can I offboard AI people?", a: "Absolutely. You can offboard any AI person at any time. Billing is pro-rated to the day, and you can bring them back whenever you need them again." },
+  { q: "What integrations are supported?", a: "We support 20+ integrations including Slack, GitHub, Jira, Google Workspace, Salesforce, HubSpot, and more. Your AI people operate directly within your existing tool stack." },
   { q: "Is my data secure?", a: "Enterprise-grade security with SOC2 compliance, end-to-end encryption, and comprehensive audit logs. Your data never leaves our secure infrastructure and is never used to train models." },
 ];
 
@@ -109,13 +109,14 @@ export default function LandingPage() {
           <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
           <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
         </nav>
-        <div className="flex items-center gap-4">
-          <Link href="/sign-in" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Link href="/sign-in" className="hidden sm:inline text-sm font-medium text-muted-foreground hover:text-foreground">
             Log in
           </Link>
           <Link href="/sign-up">
-            <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-              Command Your Fleet
+            <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs sm:text-sm">
+              <span className="hidden sm:inline">Meet Your AI People</span>
+              <span className="sm:hidden">Sign Up</span>
             </Button>
           </Link>
         </div>
@@ -131,21 +132,21 @@ export default function LandingPage() {
               <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
               NexsusHR — Autonomous AI Company OS
             </div>
-            <h1 className="mx-auto max-w-4xl text-5xl font-extrabold tracking-tight text-foreground sm:text-7xl">
+            <h1 className="mx-auto max-w-4xl text-3xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-7xl">
               The Cockpit for the <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-amber-400">AI-Powered Enterprise</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
-              Hire, deploy, and manage fully autonomous AI beings as your workforce. Mission control meets talent marketplace for executives building the future of work.
+              Discover, onboard, and collaborate with fully autonomous AI people. Where talent meets technology for leaders building the future of work.
             </p>
-            <div className="mt-10 flex items-center justify-center gap-4">
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
               <Link href="/sign-up">
-                <Button size="lg" className="h-12 px-8 text-base bg-primary text-primary-foreground hover:bg-primary/90">
-                  Deploy Your First Agent <ArrowRight className="ml-2 h-4 w-4" />
+                <Button size="lg" className="h-12 px-6 sm:px-8 text-sm sm:text-base bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto">
+                  Meet Your First AI Person <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
               <a href="#features">
-                <Button size="lg" variant="outline" className="h-12 px-8 text-base border-border bg-background hover:bg-accent hover:text-accent-foreground">
+                <Button size="lg" variant="outline" className="h-12 px-6 sm:px-8 text-sm sm:text-base border-border bg-background hover:bg-accent hover:text-accent-foreground w-full sm:w-auto">
                   View Capabilities
                 </Button>
               </a>
@@ -171,7 +172,7 @@ export default function LandingPage() {
             <div className="text-center max-w-3xl mx-auto mb-14">
               <Badge variant="outline" className="mb-4 border-destructive/30 text-destructive">The Problem</Badge>
               <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Hiring Is Broken. AI Fixes It.</h2>
-              <p className="mt-4 text-muted-foreground text-lg">Every company faces the same crushing bottlenecks when trying to scale their workforce.</p>
+              <p className="mt-4 text-muted-foreground text-lg">Every company faces the same crushing bottlenecks when trying to scale their team.</p>
             </div>
             <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
               {PROBLEMS.map((p, i) => (
@@ -196,7 +197,7 @@ export default function LandingPage() {
                 <Sparkles className="h-3 w-3 mr-1" /> Solution Showcase
               </Badge>
               <h2 className="text-3xl font-bold text-foreground sm:text-4xl">105+ Specialized AI Roles, Ready Now</h2>
-              <p className="mt-4 text-muted-foreground text-lg">Browse our marketplace of autonomous AI employees. Each one is purpose-built for their role.</p>
+              <p className="mt-4 text-muted-foreground text-lg">Browse our People Hub of autonomous AI people. Each one is purpose-built for their role.</p>
             </div>
             <div className="max-w-3xl mx-auto">
               <div className="bg-card rounded-2xl border border-border p-8 relative">
@@ -230,7 +231,7 @@ export default function LandingPage() {
                     ))}
                   </div>
                   <Link href="/sign-up">
-                    <Button size="sm">Hire This Role <ArrowRight className="ml-2 h-3.5 w-3.5" /></Button>
+                    <Button size="sm">Meet This Person <ArrowRight className="ml-2 h-3.5 w-3.5" /></Button>
                   </Link>
                 </div>
               </div>
@@ -255,8 +256,8 @@ export default function LandingPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto mb-16">
               <Badge variant="outline" className="mb-4">Platform Capabilities</Badge>
-              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Everything You Need to Run an AI Workforce</h2>
-              <p className="mt-4 text-muted-foreground text-lg">From hiring to performance management, NexsusHR provides the complete operating system for your autonomous AI team.</p>
+              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Everything You Need to Lead AI People</h2>
+              <p className="mt-4 text-muted-foreground text-lg">From onboarding to performance management, NexsusHR provides the complete operating system for your AI people.</p>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               {FEATURES.map((feature, i) => (
@@ -276,7 +277,7 @@ export default function LandingPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto mb-16">
               <Badge variant="outline" className="mb-4">Getting Started</Badge>
-              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Deploy Your AI Workforce in Minutes</h2>
+              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Onboard Your AI People in Minutes</h2>
               <p className="mt-4 text-muted-foreground text-lg">Four simple steps from sign-up to a fully operational AI team.</p>
             </div>
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
@@ -424,8 +425,8 @@ export default function LandingPage() {
         <section className="py-24">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="max-w-3xl mx-auto bg-gradient-to-br from-primary/10 via-card to-amber-500/10 rounded-3xl p-12 border border-primary/20">
-              <h2 className="text-3xl font-bold text-foreground sm:text-4xl mb-4">Ready to Build Your AI Workforce?</h2>
-              <p className="text-muted-foreground text-lg mb-8">Join thousands of companies already using NexsusHR to scale operations with autonomous AI employees.</p>
+              <h2 className="text-3xl font-bold text-foreground sm:text-4xl mb-4">Ready to Meet Your AI People?</h2>
+              <p className="text-muted-foreground text-lg mb-8">Join thousands of companies already using NexsusHR to scale operations with autonomous AI people.</p>
               <div className="flex items-center justify-center gap-4">
                 <Link href="/sign-up">
                   <Button size="lg" className="h-12 px-8 text-base">

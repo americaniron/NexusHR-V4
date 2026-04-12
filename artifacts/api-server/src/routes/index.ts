@@ -21,6 +21,7 @@ import personalityRouter from "./personality";
 import promptsRouter from "./prompts";
 import orchestrationRouter from "./orchestration";
 import toolsRouter from "./tools";
+import videoStudioRouter from "./video-studio";
 
 const router: IRouter = Router();
 
@@ -46,5 +47,6 @@ router.use(personalityRouter);
 router.use(promptsRouter);
 router.use(orchestrationRouter);
 router.use(toolsRouter);
+router.use(videoStudioRouter);
 
 export default router;

@@ -42,6 +42,8 @@ tags:
     description: Object storage upload and serving endpoints
   - name: Avatars
     description: AI avatar generation and management
+  - name: video-studio
+    description: HeyGen Video Agent with Seedance 2.0 integration
 
 paths:
   /healthz:
@@ -1055,6 +1057,116 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AvatarResult"
+
+  /video-studio/projects:
+    get:
+      tags: [video-studio]
+      operationId: listVideoProjects
+      summary: List all video projects
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Video projects list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/VideoProject"
+    post:
+      tags: [video-studio]
+      operationId: createVideoProject
+      summary: Create a new video project using HeyGen Video Agent + Seedance 2.0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prompt]
+              properties:
+                prompt:
+                  type: string
+                title:
+                  type: string
+                duration:
+                  type: integer
+                  default: 10
+                aspectRatio:
+                  type: string
+                  default: "16:9"
+                  enum: ["16:9", "9:16", "1:1"]
+                enhance:
+                  type: boolean
+                  default: true
+                employeeId:
+                  type: integer
+                  nullable: true
+      responses:
+        "201":
+          description: Created video project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoProject"
+
+  /video-studio/projects/{id}:
+    get:
+      tags: [video-studio]
+      operationId: getVideoProject
+      summary: Get a video project by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Video project detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoProject"
+    delete:
+      tags: [video-studio]
+      operationId: deleteVideoProject
+      summary: Delete a video project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /video-studio/templates:
+    get:
+      tags: [video-studio]
+      operationId: listVideoTemplates
+      summary: List video prompt templates (Seedance 2.0 presets)
+      responses:
+        "200":
+          description: Templates list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/VideoTemplate"
 
 components:
   parameters:
@@ -2245,3 +2357,65 @@ components:
           type: string
         voiceId:
           type: string
+
+    VideoProject:
+      type: object
+      required: [id, title, status, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        prompt:
+          type: string
+        duration:
+          type: integer
+        aspectRatio:
+          type: string
+        enhance:
+          type: boolean
+        status:
+          type: string
+          enum: [queued, generating, completed, failed]
+        videoUrl:
+          type: string
+          nullable: true
+        thumbnailUrl:
+          type: string
+          nullable: true
+        employeeId:
+          type: integer
+          nullable: true
+        employeeName:
+          type: string
+          nullable: true
+        employeeAvatarUrl:
+          type: string
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    VideoTemplate:
+      type: object
+      required: [id, title, prompt, category, thumbnailUrl]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        prompt:
+          type: string
+        category:
+          type: string
+        thumbnailUrl:
+          type: string
+        duration:
+          type: integer

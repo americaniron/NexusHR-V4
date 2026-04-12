@@ -730,6 +730,43 @@ export interface VoiceProfile {
   voiceId: string;
 }
 
+export type VideoProjectStatus =
+  (typeof VideoProjectStatus)[keyof typeof VideoProjectStatus];
+
+export const VideoProjectStatus = {
+  queued: "queued",
+  generating: "generating",
+  completed: "completed",
+  failed: "failed",
+} as const;
+
+export interface VideoProject {
+  id: number;
+  title: string;
+  prompt?: string;
+  duration?: number;
+  aspectRatio?: string;
+  enhance?: boolean;
+  status: VideoProjectStatus;
+  videoUrl?: string | null;
+  thumbnailUrl?: string | null;
+  employeeId?: number | null;
+  employeeName?: string | null;
+  employeeAvatarUrl?: string | null;
+  errorMessage?: string | null;
+  createdAt: string;
+  completedAt?: string | null;
+}
+
+export interface VideoTemplate {
+  id: string;
+  title: string;
+  prompt: string;
+  category: string;
+  thumbnailUrl: string;
+  duration?: number;
+}
+
 export type PageParamParameter = number;
 
 export type LimitParamParameter = number;
@@ -851,4 +888,34 @@ export type GetAvatarBrandingPresets200Data = { [key: string]: BrandingPreset };
 
 export type GetAvatarBrandingPresets200 = {
   data?: GetAvatarBrandingPresets200Data;
+};
+
+export type ListVideoProjectsParams = {
+  limit?: number;
+};
+
+export type ListVideoProjects200 = {
+  data?: VideoProject[];
+};
+
+export type CreateVideoProjectBodyAspectRatio =
+  (typeof CreateVideoProjectBodyAspectRatio)[keyof typeof CreateVideoProjectBodyAspectRatio];
+
+export const CreateVideoProjectBodyAspectRatio = {
+  "16:9": "16:9",
+  "9:16": "9:16",
+  "1:1": "1:1",
+} as const;
+
+export type CreateVideoProjectBody = {
+  prompt: string;
+  title?: string;
+  duration?: number;
+  aspectRatio?: CreateVideoProjectBodyAspectRatio;
+  enhance?: boolean;
+  employeeId?: number | null;
+};
+
+export type ListVideoTemplates200 = {
+  data?: VideoTemplate[];
 };
