@@ -51,7 +51,7 @@ export default function VideoStudioPage() {
   const [duration, setDuration] = useState(10);
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "1:1">("16:9");
   const [enhance, setEnhance] = useState(true);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("none");
   const [activeTab, setActiveTab] = useState("create");
   const [pollingIds, setPollingIds] = useState<number[]>([]);
 
@@ -91,7 +91,7 @@ export default function VideoStudioPage() {
           duration,
           aspectRatio,
           enhance,
-          employeeId: selectedEmployeeId ? parseInt(selectedEmployeeId) : null,
+          employeeId: selectedEmployeeId !== "none" ? parseInt(selectedEmployeeId) : null,
         },
       });
       toast({ title: "Video Queued", description: "Your cinematic video is being generated with Seedance 2.0" });
@@ -116,7 +116,7 @@ export default function VideoStudioPage() {
   };
 
   const handleTemplateSelect = (template: { prompt: string; title: string; duration?: number }) => {
-    const empName = selectedEmployeeId
+    const empName = selectedEmployeeId !== "none"
       ? employees?.data?.find((e) => e.id === parseInt(selectedEmployeeId))?.name || "Your AI Professional"
       : "Your AI Professional";
     setPrompt(template.prompt.replace("{{name}}", empName));
@@ -206,7 +206,7 @@ export default function VideoStudioPage() {
                         <SelectValue placeholder="Select an AI professional (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No specific professional</SelectItem>
+                        <SelectItem value="none">No specific professional</SelectItem>
                         {employees?.data?.map((emp) => (
                           <SelectItem key={emp.id} value={String(emp.id)}>
                             {emp.name} — {emp.role?.title || emp.department}
@@ -288,7 +288,7 @@ export default function VideoStudioPage() {
                 </CardFooter>
               </Card>
 
-              {selectedEmployeeId && employees?.data && (
+              {selectedEmployeeId !== "none" && employees?.data && (
                 <Card className="bg-card border-primary/20">
                   <CardContent className="p-4 flex items-center gap-3">
                     <AIAvatar
