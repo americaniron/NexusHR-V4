@@ -1,5 +1,5 @@
 import { Virtuoso, VirtuosoProps } from "react-virtuoso";
-import { forwardRef, memo } from "react";
+import { memo } from "react";
 
 interface VirtualizedListProps<T> {
   data: T[];
@@ -15,25 +15,22 @@ interface VirtualizedListProps<T> {
   style?: React.CSSProperties;
 }
 
-function VirtualizedListInner<T>(
-  {
-    data,
-    itemContent,
-    className,
-    overscan = 200,
-    estimatedItemHeight = 64,
-    endReached,
-    isLoadingMore,
-    emptyMessage = "No items to display",
-    header,
-    footer,
-    style,
-  }: VirtualizedListProps<T>,
-  ref: React.Ref<HTMLDivElement>,
-) {
+function VirtualizedListInner<T>({
+  data,
+  itemContent,
+  className,
+  overscan = 200,
+  estimatedItemHeight = 64,
+  endReached,
+  isLoadingMore,
+  emptyMessage = "No items to display",
+  header,
+  footer,
+  style,
+}: VirtualizedListProps<T>) {
   if (data.length === 0) {
     return (
-      <div className={className} ref={ref}>
+      <div className={className}>
         {header}
         <div className="flex items-center justify-center py-12 text-muted-foreground">
           {emptyMessage}
@@ -79,9 +76,9 @@ function VirtualizedListInner<T>(
     };
   }
 
-  return <Virtuoso<T> ref={ref as never} {...virtuosoProps} />;
+  return <Virtuoso<T> {...virtuosoProps} />;
 }
 
-export const VirtualizedList = memo(forwardRef(VirtualizedListInner)) as <T>(
-  props: VirtualizedListProps<T> & { ref?: React.Ref<HTMLDivElement> },
+export const VirtualizedList = memo(VirtualizedListInner) as <T>(
+  props: VirtualizedListProps<T>,
 ) => React.ReactElement;

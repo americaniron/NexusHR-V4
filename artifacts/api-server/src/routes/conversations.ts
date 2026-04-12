@@ -10,6 +10,7 @@ import { z } from "zod/v4";
 import { validate, paginationQuery, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
 import { logger } from "../lib/logger";
+import { publishEvent } from "../lib/websocket";
 
 const router = Router();
 
@@ -67,6 +68,7 @@ router.post("/conversations", requireAuth, validate({ body: createConversationBo
       orgId, userId, aiEmployeeId, title,
     }).returning();
 
+    publishEvent(orgId, "conversations", "conversation:message", { ...conv, aiEmployee: emp });
     res.status(201).json({ ...conv, aiEmployee: emp });
   } catch (error) {
     next(error);
@@ -148,6 +150,7 @@ Be helpful, professional, and demonstrate expertise in your role. Keep responses
 
     await db.update(conversations).set({ lastMessageAt: new Date() }).where(eq(conversations.id, convId));
 
+    publishEvent(orgId, "conversations", "conversation:message", { conversationId: convId, userMessage: userMsg, aiMessage: aiMsg });
     res.json({ userMessage: userMsg, aiMessage: aiMsg });
   } catch (error) {
     next(error);
