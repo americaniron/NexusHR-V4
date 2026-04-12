@@ -247,7 +247,7 @@ router.post("/conversations/:id/confirm-task", requireAuth, validate({ params: i
         role: "assistant",
         content: "Understood — I won't create a task for that. Let me know if you need anything else.",
         messageType: "status_update",
-        metadata: { status: "dismissed", label: "Task creation declined" },
+        metadata: { progressPercent: 0, progressLabel: "Task creation declined" },
       }).returning();
 
       res.json({ status: "rejected", message: statusMsg });
@@ -274,7 +274,7 @@ router.post("/conversations/:id/confirm-task", requireAuth, validate({ params: i
       role: "assistant",
       content: `Task created: "${task.title}" (Priority: ${task.priority}). I'll get started on this right away.`,
       messageType: "status_update",
-      metadata: { status: "completed", label: "Task created", taskId: task.id, progress: 100 },
+      metadata: { progressPercent: 100, progressLabel: "Task created", taskId: task.id },
     }).returning();
 
     publishEvent(orgId, "tasks", "task:created", { task });
