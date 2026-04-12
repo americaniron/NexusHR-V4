@@ -12,9 +12,8 @@ interface ActionConfirmationProps {
 export function ActionConfirmation({ message, onApprove, onReject }: ActionConfirmationProps) {
   const actionId = message.metadata?.actionId || String(message.id);
   const actionLabel = message.metadata?.actionLabel || "Confirm Action";
-  const [status, setStatus] = useState<"pending" | "approved" | "rejected">(
-    message.metadata?.actionStatus || "pending"
-  );
+  const initialStatus = (message.metadata?.actionStatus as "pending" | "approved" | "rejected") || "pending";
+  const [status, setStatus] = useState<"pending" | "approved" | "rejected">(initialStatus);
 
   const handleApprove = () => {
     setStatus("approved");

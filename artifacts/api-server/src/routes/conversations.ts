@@ -237,9 +237,14 @@ router.post("/conversations/:id/confirm-task", requireAuth, validate({ params: i
       throw AppError.badRequest("No task intent found in this message");
     }
 
+    if (meta.actionStatus === "approved" || meta.actionStatus === "rejected") {
+      res.json({ status: meta.actionStatus as string, alreadyProcessed: true, taskId: meta.taskId ?? null });
+      return;
+    }
+
     if (action === "reject") {
       await db.update(messages).set({
-        metadata: { ...meta, taskActionTaken: "rejected" },
+        metadata: { ...meta, actionStatus: "rejected" },
       }).where(eq(messages.id, messageId));
 
       const [statusMsg] = await db.insert(messages).values({
@@ -266,7 +271,7 @@ router.post("/conversations/:id/confirm-task", requireAuth, validate({ params: i
     }).returning();
 
     await db.update(messages).set({
-      metadata: { ...meta, taskActionTaken: "approved", taskId: task.id },
+      metadata: { ...meta, actionStatus: "approved", taskId: task.id },
     }).where(eq(messages.id, messageId));
 
     const [confirmMsg] = await db.insert(messages).values({
