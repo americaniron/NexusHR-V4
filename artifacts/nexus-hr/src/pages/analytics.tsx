@@ -76,7 +76,59 @@ export default function AnalyticsPage() {
   const { toast } = useToast();
 
   const handleExport = (chartName: string, format: string) => {
-    toast({ title: `Exporting ${chartName}`, description: `${format.toUpperCase()} export will download shortly.` });
+    if (format === "csv") {
+      let csvContent = "";
+      const safeName = chartName.toLowerCase().replace(/\s+/g, "_");
+      if (chartName === "Tasks Over Time") {
+        csvContent = "Date,Completed\n" + (data?.tasksOverTime || []).map((r: { date: string; completed: number }) => `${r.date},${r.completed}`).join("\n");
+      } else if (chartName === "Utilization") {
+        csvContent = "Department,Utilization\n" + (data?.utilizationByDepartment || []).map((r: { department: string; utilization: number }) => `${r.department},${r.utilization}`).join("\n");
+      } else if (chartName === "Task Status") {
+        csvContent = "Status,Count\n" + taskStatusData.map(r => `${r.name},${r.value}`).join("\n");
+      } else if (chartName === "Department Distribution") {
+        csvContent = "Department,Count\n" + departmentData.map(r => `${r.department},${r.count}`).join("\n");
+      }
+      if (csvContent) {
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${safeName}_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast({ title: "CSV Downloaded", description: `${chartName} data exported successfully.` });
+      }
+    } else if (format === "png") {
+      const chartId = chartName.toLowerCase().replace(/\s+/g, "-");
+      const el = document.querySelector(`[data-chart="${chartId}"]`);
+      const svg = el?.querySelector("svg.recharts-surface");
+      if (svg) {
+        const svgData = new XMLSerializer().serializeToString(svg);
+        const canvas = document.createElement("canvas");
+        const rect = svg.getBoundingClientRect();
+        canvas.width = rect.width * 2;
+        canvas.height = rect.height * 2;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.scale(2, 2);
+          const img = new Image();
+          img.onload = () => {
+            ctx.fillStyle = "#09090b";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, rect.width, rect.height);
+            const pngUrl = canvas.toDataURL("image/png");
+            const a = document.createElement("a");
+            a.href = pngUrl;
+            a.download = `${chartId}_${new Date().toISOString().slice(0, 10)}.png`;
+            a.click();
+            toast({ title: "PNG Downloaded", description: `${chartName} chart exported successfully.` });
+          };
+          img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+        }
+      } else {
+        toast({ title: "Export unavailable", description: "Could not capture chart. Try CSV instead.", variant: "destructive" });
+      }
+    }
   };
 
   const kpis = useMemo(() => {
@@ -155,7 +207,7 @@ export default function AnalyticsPage() {
             </div>
             <ExportButton chartName="Tasks Over Time" onExport={(f) => handleExport("Tasks Over Time", f)} />
           </CardHeader>
-          <CardContent className="h-80">
+          <CardContent className="h-80" data-chart="tasks-over-time">
             {isLoading ? <Skeleton className="h-full w-full" /> : (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data?.tasksOverTime || []}>
@@ -184,7 +236,7 @@ export default function AnalyticsPage() {
             </div>
             <ExportButton chartName="Utilization" onExport={(f) => handleExport("Utilization", f)} />
           </CardHeader>
-          <CardContent className="h-80">
+          <CardContent className="h-80" data-chart="utilization">
             {isLoading ? <Skeleton className="h-full w-full" /> : (
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsBarChart data={data?.utilizationByDepartment || []} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -208,7 +260,7 @@ export default function AnalyticsPage() {
             </div>
             <ExportButton chartName="Task Status" onExport={(f) => handleExport("Task Status", f)} />
           </CardHeader>
-          <CardContent className="h-80">
+          <CardContent className="h-80" data-chart="task-status">
             {taskStatusData.length === 0 ? (
               <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No task data available</div>
             ) : (
@@ -243,7 +295,7 @@ export default function AnalyticsPage() {
             </div>
             <ExportButton chartName="Department Distribution" onExport={(f) => handleExport("Department Distribution", f)} />
           </CardHeader>
-          <CardContent className="h-80">
+          <CardContent className="h-80" data-chart="department-distribution">
             {departmentData.length === 0 ? (
               <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No people data available</div>
             ) : (
