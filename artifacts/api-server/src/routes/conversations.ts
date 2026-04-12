@@ -242,12 +242,45 @@ router.post("/conversations/:id/confirm-task", requireAuth, validate({ params: i
       return;
     }
 
+    if (action === "reject") {
+      const claimResult = await db.execute(sql`
+        UPDATE messages
+        SET metadata = jsonb_set(
+          COALESCE(metadata, '{}'::jsonb),
+          '{actionStatus}',
+          '"rejected"'::jsonb
+        )
+        WHERE id = ${messageId}
+          AND conversation_id = ${convId}
+          AND (metadata->>'actionStatus' IS NULL OR metadata->>'actionStatus' = 'pending')
+        RETURNING metadata
+      `);
+
+      if (!claimResult.rows || claimResult.rows.length === 0) {
+        const [freshMsg] = await db.select().from(messages).where(eq(messages.id, messageId));
+        const freshMeta = (freshMsg?.metadata || {}) as Record<string, unknown>;
+        res.json({ status: freshMeta.actionStatus as string, alreadyProcessed: true, taskId: freshMeta.taskId ?? null });
+        return;
+      }
+
+      const [statusMsg] = await db.insert(messages).values({
+        conversationId: convId,
+        role: "assistant",
+        content: "Understood — I won't create a task for that. Let me know if you need anything else.",
+        messageType: "status_update",
+        metadata: { progressPercent: 0, progressLabel: "Task creation declined" },
+      }).returning();
+
+      res.json({ status: "rejected", message: statusMsg });
+      return;
+    }
+
     const claimResult = await db.execute(sql`
       UPDATE messages
       SET metadata = jsonb_set(
         COALESCE(metadata, '{}'::jsonb),
         '{actionStatus}',
-        ${JSON.stringify(action === "approve" ? "approved" : "rejected")}::jsonb
+        '"processing"'::jsonb
       )
       WHERE id = ${messageId}
         AND conversation_id = ${convId}
@@ -262,46 +295,53 @@ router.post("/conversations/:id/confirm-task", requireAuth, validate({ params: i
       return;
     }
 
-    if (action === "reject") {
-      const [statusMsg] = await db.insert(messages).values({
-        conversationId: convId,
-        role: "assistant",
-        content: "Understood — I won't create a task for that. Let me know if you need anything else.",
-        messageType: "status_update",
-        metadata: { progressPercent: 0, progressLabel: "Task creation declined" },
+    try {
+      const [task] = await db.insert(tasks).values({
+        orgId,
+        assigneeId: conv.aiEmployeeId,
+        createdById: userId,
+        title: taskIntent.title,
+        description: taskIntent.description,
+        priority: taskIntent.priority,
+        category: taskIntent.category,
+        metadata: { sourceConversationId: convId, sourceMessageId: messageId },
       }).returning();
 
-      res.json({ status: "rejected", message: statusMsg });
-      return;
+      await db.execute(sql`
+        UPDATE messages
+        SET metadata = jsonb_set(
+          jsonb_set(COALESCE(metadata, '{}'::jsonb), '{actionStatus}', '"approved"'::jsonb),
+          '{taskId}',
+          ${task.id}::text::jsonb
+        )
+        WHERE id = ${messageId}
+      `);
+
+      const [confirmMsg] = await db.insert(messages).values({
+        conversationId: convId,
+        role: "assistant",
+        content: `Task created: "${task.title}" (Priority: ${task.priority}). I'll get started on this right away.`,
+        messageType: "status_update",
+        metadata: { progressPercent: 100, progressLabel: "Task created", taskId: task.id },
+      }).returning();
+
+      publishEvent(orgId, "tasks", "task:created", { task });
+      publishEvent(orgId, "conversations", "conversation:message", { conversationId: convId, aiMessage: confirmMsg });
+
+      res.json({ status: "approved", task, message: confirmMsg });
+    } catch (taskErr) {
+      await db.execute(sql`
+        UPDATE messages
+        SET metadata = jsonb_set(
+          COALESCE(metadata, '{}'::jsonb),
+          '{actionStatus}',
+          '"pending"'::jsonb
+        )
+        WHERE id = ${messageId}
+          AND metadata->>'actionStatus' = 'processing'
+      `);
+      throw taskErr;
     }
-
-    const [task] = await db.insert(tasks).values({
-      orgId,
-      assigneeId: conv.aiEmployeeId,
-      createdById: userId,
-      title: taskIntent.title,
-      description: taskIntent.description,
-      priority: taskIntent.priority,
-      category: taskIntent.category,
-      metadata: { sourceConversationId: convId, sourceMessageId: messageId },
-    }).returning();
-
-    await db.update(messages).set({
-      metadata: sql`jsonb_set(COALESCE(metadata, '{}'::jsonb), '{taskId}', ${task.id}::text::jsonb)`,
-    }).where(eq(messages.id, messageId));
-
-    const [confirmMsg] = await db.insert(messages).values({
-      conversationId: convId,
-      role: "assistant",
-      content: `Task created: "${task.title}" (Priority: ${task.priority}). I'll get started on this right away.`,
-      messageType: "status_update",
-      metadata: { progressPercent: 100, progressLabel: "Task created", taskId: task.id },
-    }).returning();
-
-    publishEvent(orgId, "tasks", "task:created", { task });
-    publishEvent(orgId, "conversations", "conversation:message", { conversationId: convId, aiMessage: confirmMsg });
-
-    res.json({ status: "approved", task, message: confirmMsg });
   } catch (error) {
     next(error);
   }
