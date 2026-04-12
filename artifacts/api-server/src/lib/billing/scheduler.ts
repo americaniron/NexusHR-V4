@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
-import { billingSubscriptions, notifications, users } from "@workspace/db";
-import { eq, and, lt, isNotNull } from "drizzle-orm";
+import { billingSubscriptions, billingAlerts, notifications, users } from "@workspace/db";
+import { eq, and, lt, gte, isNotNull } from "drizzle-orm";
 import { logger } from "../logger";
 import { getUsageSummary, checkAllCountBasedLimits } from "./metering";
 import { DUNNING_CONFIG, ALERT_THRESHOLD_PERCENT, isUnlimited, type BillingDimension } from "./plans";
@@ -67,9 +67,30 @@ async function persistAndNotifyAlert(
   used: number,
   limit: number,
 ): Promise<void> {
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const existingAlerts = await db.select({ id: billingAlerts.id })
+    .from(billingAlerts)
+    .where(and(
+      eq(billingAlerts.orgId, orgId),
+      eq(billingAlerts.dimension, dimension),
+      gte(billingAlerts.createdAt, oneDayAgo),
+    ))
+    .limit(1);
+
+  if (existingAlerts.length > 0) return;
+
   const dimensionLabel = dimension.replace(/_/g, " ");
   const title = `Usage alert: ${dimensionLabel} at ${percentage}%`;
   const message = `Your organization has used ${used} of ${limit} ${dimensionLabel} (${percentage}%). Consider upgrading your plan.`;
+
+  await db.insert(billingAlerts).values({
+    orgId,
+    dimension,
+    thresholdPercent: ALERT_THRESHOLD_PERCENT,
+    currentPercent: percentage,
+    planLimit: String(limit),
+    currentUsage: String(used),
+  });
 
   const orgUsers = await db.select({ id: users.id, email: users.email, firstName: users.firstName })
     .from(users)
@@ -149,14 +170,26 @@ async function runDunningSchedule(): Promise<void> {
         }
 
         const scheduleDays = DUNNING_CONFIG.retryScheduleDays;
-        const daysSinceFirstFailure = sub.graceEndsAt
-          ? Math.floor((now.getTime() - (sub.graceEndsAt.getTime() - DUNNING_CONFIG.gracePeriodDays * 86400000)) / 86400000)
-          : 0;
+        const firstFailureTime = sub.graceEndsAt
+          ? sub.graceEndsAt.getTime() - DUNNING_CONFIG.gracePeriodDays * 86400000
+          : now.getTime();
+        const daysSinceFirstFailure = Math.floor((now.getTime() - firstFailureTime) / 86400000);
 
         const currentRetryStep = scheduleDays.findIndex(d => d > daysSinceFirstFailure);
-        const nextRetryDay = currentRetryStep >= 0 ? scheduleDays[currentRetryStep] : null;
+        const activeRetryDay = currentRetryStep > 0 ? scheduleDays[currentRetryStep - 1] : scheduleDays[0];
 
-        if (nextRetryDay !== null && daysSinceFirstFailure >= (scheduleDays[currentRetryStep - 1] ?? 0)) {
+        if (daysSinceFirstFailure >= activeRetryDay) {
+          const recentReminders = await db.select({ id: notifications.id })
+            .from(notifications)
+            .where(and(
+              eq(notifications.orgId, sub.orgId),
+              eq(notifications.type, "payment_retry_reminder"),
+              gte(notifications.createdAt, new Date(now.getTime() - 24 * 60 * 60 * 1000)),
+            ))
+            .limit(1);
+
+          if (recentReminders.length > 0) continue;
+
           const orgUsers = await db.select({ id: users.id, email: users.email, firstName: users.firstName })
             .from(users)
             .where(eq(users.orgId, sub.orgId));
@@ -168,7 +201,7 @@ async function runDunningSchedule(): Promise<void> {
               type: "payment_retry_reminder",
               title: "Payment Retry Scheduled",
               message: `Payment retry attempt ${failCount + 1} is scheduled. Please update your payment method to avoid service interruption.`,
-              data: { failCount, nextRetryDay, upgradeUrl: "/billing" },
+              data: { failCount, retryDay: activeRetryDay, upgradeUrl: "/billing" },
             });
           }
 

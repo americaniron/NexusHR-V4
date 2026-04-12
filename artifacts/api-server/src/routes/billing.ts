@@ -782,10 +782,12 @@ router.post("/billing/webhook", express.raw({ type: "application/json" }), async
             description: `Failed payment for ${sub.plan} plan (attempt ${failCount})`,
           });
 
+          const computedGraceEndsAt = updates.graceEndsAt || sub.graceEndsAt;
+
           publishEvent(sub.orgId, "notifications", "notification:new", {
             type: "payment_failed",
             failCount,
-            graceEndsAt: sub.graceEndsAt,
+            graceEndsAt: computedGraceEndsAt,
           });
         }
 
