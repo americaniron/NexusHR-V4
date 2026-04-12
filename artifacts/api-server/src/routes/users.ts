@@ -6,6 +6,7 @@ import { requireAuth } from "../middlewares/requireAuth";
 import { getAuth } from "@clerk/express";
 import { validate, paginationQuery } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
+import { checkPlanLimit, checkAllCountBasedLimits } from "../lib/billing/metering";
 
 const router = Router();
 
@@ -32,6 +33,20 @@ router.get("/users/me", requireAuth, async (req, res, next) => {
         dbOrgId = org.id;
       }
 
+      if (dbOrgId) {
+        const { allowed, used, limit } = await checkPlanLimit(dbOrgId, "users");
+        if (!allowed) {
+          res.status(403).json({
+            error: "User seat limit reached",
+            code: "PLAN_LIMIT_EXCEEDED",
+            details: { dimension: "users", used, limit },
+            upgradeUrl: "/billing",
+            message: `Your organization has reached its user limit (${used}/${limit}). Upgrade your plan to add more team members.`,
+          });
+          return;
+        }
+      }
+
       const claims = auth?.sessionClaims as Record<string, unknown> | undefined;
       const email = (claims?.email as string)
         || (claims?.primary_email_address as string)
@@ -46,6 +61,10 @@ router.get("/users/me", requireAuth, async (req, res, next) => {
         firstName,
         lastName,
       }).returning();
+
+      if (dbOrgId) {
+        await checkAllCountBasedLimits(dbOrgId);
+      }
     }
 
     res.json(user);

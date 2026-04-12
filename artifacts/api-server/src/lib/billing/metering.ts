@@ -5,6 +5,7 @@ import { type BillingDimension, getPlanLimits, getPlanOverageRates, ALERT_THRESH
 import { getStripeClient } from "./stripe-client";
 import { logger } from "../logger";
 import { publishEvent } from "../websocket";
+import { sendEmail } from "../email";
 
 const MINUTES_TO_HOURS_DIVISOR = 60;
 const MB_TO_GB_DIVISOR = 1024;
@@ -62,24 +63,34 @@ async function reportOverageToStripe(
     const stripe = await getStripeClient();
     if (!stripe || !sub.stripeCustomerId) return;
 
-    const overageQuantity = Math.max(0, used - limit);
+    const previousUsed = used - quantity;
+    const previousOverage = Math.max(0, previousUsed - limit);
+    const currentOverage = Math.max(0, used - limit);
+    const deltaOverage = currentOverage - previousOverage;
+    if (deltaOverage <= 0) return;
+
     const unitAmountCents = Math.round(rate * 100);
+    const periodStart = sub.currentPeriodStart || getDefaultPeriodStart();
+    const idempotencyKey = `overage-${orgId}-${dimension}-${periodStart.toISOString()}-${Date.now()}`;
 
     await stripe.invoiceItems.create({
       customer: sub.stripeCustomerId,
-      amount: overageQuantity * unitAmountCents,
+      amount: Math.round(deltaOverage * unitAmountCents),
       currency: "usd",
-      description: `Overage: ${dimension.replace(/_/g, " ")} — ${overageQuantity} unit(s) over plan limit`,
+      description: `Overage: ${dimension.replace(/_/g, " ")} — ${deltaOverage} unit(s) over plan limit`,
       metadata: {
         orgId: String(orgId),
         dimension,
-        overageQuantity: String(overageQuantity),
+        deltaOverage: String(deltaOverage),
         ratePerUnit: String(rate),
+        periodStart: periodStart.toISOString(),
       },
+    }, {
+      idempotencyKey,
     });
 
     logger.info(
-      { orgId, dimension, overageQuantity, rate, totalChargeCents: overageQuantity * unitAmountCents },
+      { orgId, dimension, deltaOverage, rate, totalChargeCents: Math.round(deltaOverage * unitAmountCents) },
       `Stripe overage invoice item created for ${dimension}`,
     );
   } catch (err) {
@@ -300,15 +311,22 @@ async function dispatchAlertEmail(
     }
 
     const adminEmail = orgUsers[0].email;
+
+    const emailSent = await sendEmail({
+      to: adminEmail,
+      subject: `NexsusHR: ${dimensionLabel} usage at ${percentage}%`,
+      text: `Hi ${orgUsers[0].firstName || "there"},\n\n${message}\n\nVisit your billing page to manage your subscription.\n\n— NexsusHR Team`,
+    });
+
     logger.info(
-      { orgId, to: adminEmail, dimension, percentage, notifiedUsers: orgUsers.length },
+      { orgId, to: adminEmail, dimension, percentage, emailSent, notifiedUsers: orgUsers.length },
       `Usage alert persisted for ${orgUsers.length} user(s): ${title}`,
     );
 
     publishEvent(orgId, "billing", "billing:alert_email", {
       dimension,
       percentage,
-      emailSent: true,
+      emailSent,
       recipient: adminEmail,
       notifiedUsers: orgUsers.length,
     });

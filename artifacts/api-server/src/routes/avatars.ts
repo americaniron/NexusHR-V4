@@ -8,6 +8,8 @@ import { validate, idParam } from "../middlewares/validate";
 import { getAuthContext } from "../lib/auth-helpers";
 import { db, aiEmployees, aiEmployeeRoles } from "@workspace/db";
 import { eq, and, isNotNull, ilike } from "drizzle-orm";
+import { requirePlanLimit } from "../middlewares/planLimits";
+import { recordUsage } from "../lib/billing/metering";
 
 const avatarGenerateLimit = rateLimit({ windowMs: 60_000, max: 10, keyPrefix: "avatar-generate" });
 const avatarRegenerateLimit = rateLimit({ windowMs: 60_000, max: 5, keyPrefix: "avatar-regenerate" });
@@ -169,8 +171,9 @@ router.get("/avatars/branding-presets", async (_req: Request, res: Response, nex
   }
 });
 
-router.post("/avatars/generate", requireAuth, avatarGenerateLimit, validate({ body: generateBody }), async (req: Request, res: Response, next: NextFunction) => {
+router.post("/avatars/generate", requireAuth, requirePlanLimit("avatars"), avatarGenerateLimit, validate({ body: generateBody }), async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const { orgId } = await getAuthContext(req);
     const { roleTitle, industry, seniority, gender, ageRange, ethnicity, attireStyle, seed, brandingPreset } = req.body || {};
 
     let resolvedAttire = attireStyle;
@@ -191,6 +194,10 @@ router.post("/avatars/generate", requireAuth, avatarGenerateLimit, validate({ bo
       attireStyle: resolvedAttire,
       seed,
     });
+
+    if (orgId) {
+      await recordUsage(orgId, "avatars", 1, { roleTitle, industry });
+    }
 
     res.json(result);
   } catch (error) {

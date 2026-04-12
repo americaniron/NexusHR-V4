@@ -512,7 +512,6 @@ router.post("/billing/webhook", express.raw({ type: "application/json" }), async
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
         const status = subscription.status;
-        const subRaw = event.data.object as unknown as Record<string, unknown>;
 
         const updates: Record<string, unknown> = { updatedAt: new Date() };
         if (status === "active") updates.status = "active";
@@ -520,13 +519,12 @@ router.post("/billing/webhook", express.raw({ type: "application/json" }), async
         if (status === "unpaid") updates.status = "unpaid";
         if (subscription.cancel_at_period_end) updates.cancelAtPeriodEnd = true;
 
-        const periodStart = subRaw.current_period_start as number | undefined;
-        const periodEnd = subRaw.current_period_end as number | undefined;
-        if (periodStart) {
-          updates.currentPeriodStart = new Date(periodStart * 1000);
+        const eventJson = JSON.parse(JSON.stringify(event.data.object));
+        if (typeof eventJson.current_period_start === "number") {
+          updates.currentPeriodStart = new Date(eventJson.current_period_start * 1000);
         }
-        if (periodEnd) {
-          updates.currentPeriodEnd = new Date(periodEnd * 1000);
+        if (typeof eventJson.current_period_end === "number") {
+          updates.currentPeriodEnd = new Date(eventJson.current_period_end * 1000);
         }
 
         await db.update(billingSubscriptions).set(updates)

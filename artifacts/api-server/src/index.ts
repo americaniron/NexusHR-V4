@@ -2,6 +2,7 @@ import { createServer } from "http";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { initWebSocket } from "./lib/websocket";
+import { initializeEmailTransport } from "./lib/email";
 
 const rawPort = process.env["PORT"];
 
@@ -20,6 +21,7 @@ if (Number.isNaN(port) || port <= 0) {
 const httpServer = createServer(app);
 
 initWebSocket(httpServer);
+initializeEmailTransport();
 
 httpServer.listen(port, () => {
   logger.info({ port }, "Server listening");
