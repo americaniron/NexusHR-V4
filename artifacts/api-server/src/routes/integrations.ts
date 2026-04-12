@@ -7,7 +7,6 @@ import { getAuthContext } from "../lib/auth-helpers";
 import { z } from "zod/v4";
 import { validate } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
-import { recordUsage } from "../lib/billing/metering";
 import { requirePlanLimit } from "../middlewares/planLimits";
 
 const router = Router();
@@ -72,7 +71,6 @@ router.post("/integrations/:toolId/connect", requireAuth, requirePlanLimit("inte
       orgId, toolId, status: "connected", connectedAt: new Date(),
     }).returning();
 
-    await recordUsage(orgId, "integrations", 1, { toolId });
     res.json(created);
   } catch (error) {
     next(error);

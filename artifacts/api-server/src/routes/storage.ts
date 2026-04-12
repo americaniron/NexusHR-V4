@@ -5,11 +5,13 @@ import { ObjectPermission } from "../lib/objectAcl";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuthContext } from "../lib/auth-helpers";
 import { AppError } from "../middlewares/errorHandler";
+import { recordUsage } from "../lib/billing/metering";
+import { requirePlanLimit } from "../middlewares/planLimits";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
 
-router.post("/storage/uploads/request-url", requireAuth, async (req: Request, res: Response) => {
+router.post("/storage/uploads/request-url", requireAuth, requirePlanLimit("storage_gb"), async (req: Request, res: Response) => {
   const { name, size, contentType } = req.body || {};
   if (!name || !size || !contentType) {
     res.status(400).json({ error: "Missing or invalid required fields" });
@@ -17,8 +19,14 @@ router.post("/storage/uploads/request-url", requireAuth, async (req: Request, re
   }
 
   try {
+    const { orgId } = await getAuthContext(req);
     const uploadURL = await objectStorageService.getObjectEntityUploadURL();
     const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
+
+    const sizeGb = Math.round((Number(size) / (1024 * 1024 * 1024)) * 1000) / 1000;
+    if (orgId && sizeGb > 0) {
+      await recordUsage(orgId, "storage_gb", Math.max(1, Math.round(sizeGb * 1000)), { name, size, contentType });
+    }
 
     res.json({ uploadURL, objectPath, metadata: { name, size, contentType } });
   } catch (error) {

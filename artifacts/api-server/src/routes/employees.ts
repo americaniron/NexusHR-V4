@@ -10,7 +10,6 @@ import { AppError } from "../middlewares/errorHandler";
 import { getDiceBearFallback, type AvatarIdentityPackage } from "../lib/avatars";
 import { publishEvent } from "../lib/websocket";
 import { requirePlanLimit } from "../middlewares/planLimits";
-import { recordUsage } from "../lib/billing/metering";
 
 const router = Router();
 
@@ -112,7 +111,6 @@ router.post("/employees", requireAuth, requirePlanLimit("ai_employees"), validat
       voiceId: voiceId || null,
     }).returning();
 
-    await recordUsage(orgId, "ai_employees", 1, { employeeId: employee.id, roleId: role.id });
     publishEvent(orgId, "employees", "employee:hired", { ...employee, role });
     res.status(201).json({ ...employee, role });
   } catch (error) {

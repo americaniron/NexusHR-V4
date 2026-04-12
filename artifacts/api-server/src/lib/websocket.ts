@@ -12,11 +12,12 @@ export type DomainEvent =
   | "notification:new" | "notification:read"
   | "conversation:message" | "conversation:typing"
   | "workflow:started" | "workflow:completed" | "workflow:failed"
-  | "integration:connected" | "integration:disconnected";
+  | "integration:connected" | "integration:disconnected"
+  | "billing:alert_email" | "billing:plan_changed" | "billing:payment_failed";
 
-export type Room = "tasks" | "employees" | "notifications" | "conversations" | "workflows" | "integrations";
+export type Room = "tasks" | "employees" | "notifications" | "conversations" | "workflows" | "integrations" | "billing";
 
-const VALID_ROOMS: Room[] = ["tasks", "employees", "notifications", "conversations", "workflows", "integrations"];
+const VALID_ROOMS: Room[] = ["tasks", "employees", "notifications", "conversations", "workflows", "integrations", "billing"];
 
 let io: Server | null = null;
 

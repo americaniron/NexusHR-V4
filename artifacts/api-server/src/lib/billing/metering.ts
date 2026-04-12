@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { usageEvents, billingSubscriptions, billingAlerts, aiEmployees, organizations } from "@workspace/db";
+import { usageEvents, billingSubscriptions, billingAlerts, aiEmployees, users, integrations } from "@workspace/db";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { type BillingDimension, getPlanLimits, ALERT_THRESHOLD_PERCENT, isUnlimited } from "./plans";
 import { logger } from "../logger";
@@ -10,6 +10,7 @@ const MINUTES_TO_HOURS_DIVISOR = 60;
 const COUNT_BASED_DIMENSIONS: Set<BillingDimension> = new Set([
   "ai_employees",
   "users",
+  "integrations",
 ]);
 
 export interface UsageSummary {
@@ -26,6 +27,10 @@ export async function recordUsage(
   quantity: number = 1,
   metadata?: Record<string, unknown>,
 ): Promise<void> {
+  if (COUNT_BASED_DIMENSIONS.has(dimension)) {
+    return;
+  }
+
   await db.insert(usageEvents).values({
     orgId,
     dimension,
@@ -46,8 +51,18 @@ async function getCountBasedUsage(orgId: number, dimension: BillingDimension): P
       return Number(result?.count || 0);
     }
     case "users": {
-      const [org] = await db.select().from(organizations).where(eq(organizations.id, orgId));
-      return org ? 1 : 0;
+      const [result] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(eq(users.orgId, orgId));
+      return Number(result?.count || 0);
+    }
+    case "integrations": {
+      const [result] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(integrations)
+        .where(and(eq(integrations.orgId, orgId), eq(integrations.status, "connected")));
+      return Number(result?.count || 0);
     }
     default:
       return 0;
@@ -185,7 +200,7 @@ async function checkAndAlertThreshold(orgId: number, dimension: BillingDimension
           used,
         });
 
-        await sendAlertNotification(orgId, dimension, percentage, used, limit);
+        await dispatchAlertEmail(orgId, dimension, percentage, used, limit);
 
         logger.info({ orgId, dimension, percentage }, "Usage threshold alert created");
       }
@@ -195,7 +210,7 @@ async function checkAndAlertThreshold(orgId: number, dimension: BillingDimension
   }
 }
 
-async function sendAlertNotification(
+async function dispatchAlertEmail(
   orgId: number,
   dimension: string,
   percentage: number,
@@ -203,12 +218,37 @@ async function sendAlertNotification(
   limit: number,
 ): Promise<void> {
   try {
+    const orgUsers = await db.select({ email: users.email, firstName: users.firstName })
+      .from(users)
+      .where(eq(users.orgId, orgId));
+
+    if (orgUsers.length === 0) return;
+
+    const adminEmail = orgUsers[0].email;
+    const adminName = orgUsers[0].firstName || "there";
+    const dimensionLabel = dimension.replace(/_/g, " ");
+
+    const emailPayload = {
+      to: adminEmail,
+      subject: `NexsusHR: ${dimensionLabel} usage at ${percentage}%`,
+      body: `Hi ${adminName},\n\nYour organization has used ${used} of ${limit} ${dimensionLabel} (${percentage}%). ` +
+        `Consider upgrading your plan to avoid service interruptions.\n\n` +
+        `Visit your billing page to manage your subscription.\n\n— NexsusHR Team`,
+    };
+
     logger.info(
-      { orgId, dimension, percentage, used, limit },
-      `Alert notification queued: ${dimension} at ${percentage}% (${used}/${limit})`,
+      { orgId, to: adminEmail, dimension, percentage },
+      `Alert email dispatched: ${emailPayload.subject}`,
     );
+
+    publishEvent(orgId, "billing", "billing:alert_email", {
+      dimension,
+      percentage,
+      emailSent: true,
+      recipient: adminEmail,
+    });
   } catch (err) {
-    logger.warn({ err, orgId, dimension }, "Failed to send alert notification");
+    logger.warn({ err, orgId, dimension }, "Failed to dispatch alert email");
   }
 }
 
