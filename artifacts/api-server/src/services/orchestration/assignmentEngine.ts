@@ -97,9 +97,18 @@ export async function transitionAssignment(
     throw AppError.badRequest(`Invalid transition: ${currentStatus} → ${newStatus}. Allowed: ${allowedNext?.join(", ") || "none"}`);
   }
 
+  const existingHistory = (assignment.transitionHistory as Array<{ from: string; to: string; timestamp: string; metadata?: unknown }>) || [];
+  const transitionEntry = {
+    from: currentStatus,
+    to: newStatus,
+    timestamp: new Date().toISOString(),
+    ...(metadata ? { metadata } : {}),
+  };
+
   const updates: Record<string, unknown> = {
     status: newStatus,
     updatedAt: new Date(),
+    transitionHistory: [...existingHistory, transitionEntry],
   };
 
   switch (newStatus) {

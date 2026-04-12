@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { taskAssignments } from "@workspace/db/schema";
 import { eq, and, sql, isNull, lt } from "drizzle-orm";
 import { AppError } from "../../middlewares/errorHandler";
+import { transitionAssignment } from "./assignmentEngine";
 
 interface ProgressUpdate {
   currentPhase?: string;
@@ -34,6 +35,7 @@ interface StallAlert {
   stallDurationMs: number;
   lastUpdatedAt: Date;
   escalationLevel: number;
+  escalated: boolean;
 }
 
 export async function updateProgress(
@@ -164,13 +166,26 @@ export async function detectStalls(
       updatedAt: new Date(),
     }).where(eq(taskAssignments.id, assignment.id));
 
+    const currentLevel = assignment.escalationLevel || 0;
+    let escalated = false;
+
+    try {
+      await transitionAssignment(assignment.id, orgId, "escalated", {
+        escalationReason: `Stall detected: no updates for ${Math.round((Date.now() - new Date(assignment.updatedAt).getTime()) / 60000)} minutes`,
+      });
+      escalated = true;
+    } catch {
+      escalated = false;
+    }
+
     alerts.push({
       assignmentId: assignment.id,
       taskId: assignment.taskId,
       aiEmployeeId: assignment.aiEmployeeId,
       stallDurationMs: Date.now() - new Date(assignment.updatedAt).getTime(),
       lastUpdatedAt: assignment.updatedAt,
-      escalationLevel: assignment.escalationLevel || 0,
+      escalationLevel: escalated ? currentLevel + 1 : currentLevel,
+      escalated,
     });
   }
 

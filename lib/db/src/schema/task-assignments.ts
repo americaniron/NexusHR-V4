@@ -22,6 +22,7 @@ export const taskAssignments = pgTable("task_assignments", {
   escalationLevel: integer("escalation_level").default(0),
   capacityReserved: integer("capacity_reserved").default(1),
   executionPhases: jsonb("execution_phases"),
+  transitionHistory: jsonb("transition_history").default([]),
   result: jsonb("result"),
   acceptedAt: timestamp("accepted_at"),
   startedAt: timestamp("started_at"),

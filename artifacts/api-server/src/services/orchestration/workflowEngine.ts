@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { workflows, workflowSteps, workflowInstances, aiEmployees, aiEmployeeRoles } from "@workspace/db/schema";
+import { workflows, workflowSteps, workflowInstances, aiEmployees, aiEmployeeRoles, tasks } from "@workspace/db/schema";
 import { eq, and, asc } from "drizzle-orm";
 import { routeTask } from "./taskRouter";
 import { createAssignment, transitionAssignment } from "./assignmentEngine";
@@ -148,23 +148,33 @@ export async function executeNextStep(
         currentResult.aiEmployeeId = routingResult.selectedEmployee.employeeId;
         currentResult.aiEmployeeName = routingResult.selectedEmployee.employeeName;
 
-        try {
-          const assignment = await createAssignment({
-            orgId,
-            taskId: instance.workflowId,
-            aiEmployeeId: routingResult.selectedEmployee.employeeId,
-            routingScore: routingResult.selectedEmployee.score,
-            routingFactors: routingResult.selectedEmployee.factors,
-            executionPhases: ["processing"],
-          });
-          currentResult.assignmentId = assignment.id;
+        const [stepTask] = await db.insert(tasks).values({
+          orgId,
+          title: `[Workflow Step] ${currentStep.name}`,
+          description: `Workflow instance #${instanceId}, step #${currentStep.id} (${currentStep.type})`,
+          status: "queued",
+          priority: "medium",
+          category: role.category,
+          metadata: {
+            workflowInstanceId: instanceId,
+            workflowId: instance.workflowId,
+            stepId: currentStep.id,
+            stepOrder: currentStep.stepOrder,
+          },
+        }).returning();
 
-          await transitionAssignment(assignment.id, orgId, "accepted");
-          await transitionAssignment(assignment.id, orgId, "in_progress");
-        } catch {
-          // Assignment creation may fail if no matching task record exists for workflowId;
-          // step still proceeds with routing info recorded in stepResults
-        }
+        const assignment = await createAssignment({
+          orgId,
+          taskId: stepTask.id,
+          aiEmployeeId: routingResult.selectedEmployee.employeeId,
+          routingScore: routingResult.selectedEmployee.score,
+          routingFactors: routingResult.selectedEmployee.factors,
+          executionPhases: ["processing"],
+        });
+        currentResult.assignmentId = assignment.id;
+
+        await transitionAssignment(assignment.id, orgId, "accepted");
+        await transitionAssignment(assignment.id, orgId, "in_progress");
       }
     }
   }
@@ -222,10 +232,7 @@ export async function completeStep(
   currentResult.output = stepOutput;
 
   if (currentResult.assignmentId) {
-    try {
-      await transitionAssignment(currentResult.assignmentId, orgId, "completed", { result: stepOutput });
-    } catch {
-    }
+    await transitionAssignment(currentResult.assignmentId, orgId, "completed", { result: stepOutput });
   }
 
   return advanceToNextStep(instance, steps, stepResults, currentStepIdx, orgId);
@@ -259,10 +266,7 @@ export async function failStep(
     currentResult.error = error;
 
     if (currentResult.assignmentId) {
-      try {
-        await transitionAssignment(currentResult.assignmentId, orgId, "failed");
-      } catch {
-      }
+      await transitionAssignment(currentResult.assignmentId, orgId, "failed");
     }
   }
 
