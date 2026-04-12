@@ -8,6 +8,7 @@ import { z } from "zod/v4";
 import { validate, paginationQuery, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
 import { getDiceBearFallback, type AvatarIdentityPackage } from "../lib/avatars";
+import { publishEvent } from "../lib/websocket";
 
 const router = Router();
 
@@ -109,6 +110,7 @@ router.post("/employees", requireAuth, validate({ body: createEmployeeBody }), a
       voiceId: voiceId || null,
     }).returning();
 
+    publishEvent(orgId, "employees", "employee:hired", { ...employee, role });
     res.status(201).json({ ...employee, role });
   } catch (error) {
     next(error);
@@ -168,6 +170,7 @@ router.patch("/employees/:id", requireAuth, validate({ params: idParam, body: up
 
     const [updated] = await db.update(aiEmployees).set(updates).where(eq(aiEmployees.id, id)).returning();
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, updated.roleId));
+    publishEvent(orgId, "employees", "employee:updated", { ...updated, role });
     res.json({ ...updated, role });
   } catch (error) {
     next(error);
@@ -187,6 +190,7 @@ router.delete("/employees/:id", requireAuth, validate({ params: idParam }), asyn
       .set({ status: "inactive", updatedAt: new Date() })
       .where(eq(aiEmployees.id, id))
       .returning();
+    publishEvent(orgId, "employees", "employee:deactivated", updated);
     res.json(updated);
   } catch (error) {
     next(error);

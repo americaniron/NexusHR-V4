@@ -7,6 +7,7 @@ import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
 import { z } from "zod/v4";
 import { validate, paginationQuery, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
+import { publishEvent } from "../lib/websocket";
 
 const router = Router();
 
@@ -97,6 +98,7 @@ router.post("/tasks", requireAuth, validate({ body: createTaskBody }), async (re
       dueDate: dueDate ? new Date(dueDate) : null,
     }).returning();
 
+    publishEvent(orgId, "tasks", "task:created", task);
     res.status(201).json(task);
   } catch (error) {
     next(error);
@@ -146,6 +148,7 @@ router.patch("/tasks/:id", requireAuth, validate({ params: idParam, body: update
     if (deliverable !== undefined) updates.deliverable = deliverable;
 
     const [updated] = await db.update(tasks).set(updates).where(eq(tasks.id, id)).returning();
+    publishEvent(orgId, "tasks", "task:updated", updated);
     res.json(updated);
   } catch (error) {
     next(error);
@@ -162,6 +165,7 @@ router.delete("/tasks/:id", requireAuth, validate({ params: idParam }), async (r
     if (!existing) throw AppError.notFound("Task not found");
 
     await db.delete(tasks).where(eq(tasks.id, id));
+    publishEvent(orgId, "tasks", "task:deleted", { id });
     res.json({ success: true });
   } catch (error) {
     next(error);

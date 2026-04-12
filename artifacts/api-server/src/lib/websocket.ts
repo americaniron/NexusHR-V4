@@ -1,6 +1,10 @@
 import { Server as HttpServer } from "http";
 import { Server, Socket } from "socket.io";
+import { verifyToken } from "@clerk/express";
 import { logger } from "./logger";
+import { db } from "@workspace/db";
+import { organizations } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 
 export type DomainEvent =
   | "task:created" | "task:updated" | "task:deleted" | "task:assigned"
@@ -23,8 +27,8 @@ function getAllowedOrigins(): string[] {
   const frontendUrl = process.env["FRONTEND_URL"];
 
   if (devDomain) origins.push(`https://${devDomain}`);
-  if (deployUrl) origins.push(deployUrl);
-  if (frontendUrl) origins.push(frontendUrl);
+  if (deployUrl) origins.push(deployUrl.replace(/\/$/, ""));
+  if (frontendUrl) origins.push(frontendUrl.replace(/\/$/, ""));
 
   return origins;
 }
@@ -38,7 +42,7 @@ export function initWebSocket(httpServer: HttpServer): Server {
       origin: isDev
         ? true
         : (origin, callback) => {
-            if (!origin || allowedOrigins.some((o) => origin.startsWith(o))) {
+            if (!origin || allowedOrigins.includes(origin)) {
               callback(null, true);
             } else {
               callback(new Error("Origin not allowed"));
@@ -51,26 +55,57 @@ export function initWebSocket(httpServer: HttpServer): Server {
     transports: ["websocket", "polling"],
   });
 
-  io.use((socket, next) => {
-    const orgId = socket.handshake.auth?.orgId;
-    const userId = socket.handshake.auth?.userId;
+  io.use(async (socket, next) => {
+    const token = socket.handshake.auth?.token;
 
-    if (!orgId || !userId) {
-      return next(new Error("Authentication required: orgId and userId must be provided"));
+    if (!token) {
+      return next(new Error("Authentication required: token missing"));
     }
 
-    socket.data.orgId = orgId;
-    socket.data.userId = userId;
-    next();
+    try {
+      const secretKey = process.env["CLERK_SECRET_KEY"];
+      if (!secretKey) {
+        return next(new Error("Server misconfiguration: CLERK_SECRET_KEY not set"));
+      }
+
+      const payload = await verifyToken(token, {
+        secretKey,
+      });
+
+      const clerkUserId = payload.sub;
+      const clerkOrgId = payload.org_id || null;
+
+      socket.data.clerkUserId = clerkUserId;
+      socket.data.clerkOrgId = clerkOrgId;
+
+      if (clerkOrgId) {
+        const [org] = await db.select({ id: organizations.id }).from(organizations).where(eq(organizations.clerkOrgId, clerkOrgId));
+        socket.data.orgId = org?.id ?? null;
+      } else {
+        socket.data.orgId = null;
+      }
+
+      next();
+    } catch (err) {
+      logger.warn({ err }, "WebSocket auth failed");
+      next(new Error("Authentication failed: invalid token"));
+    }
   });
 
   io.on("connection", (socket: Socket) => {
     const orgId = socket.data.orgId;
-    logger.info({ socketId: socket.id, orgId }, "WebSocket client connected");
+    const clerkUserId = socket.data.clerkUserId;
+    logger.info({ socketId: socket.id, orgId, clerkUserId }, "WebSocket client connected");
 
-    socket.join(`org:${orgId}`);
+    if (orgId) {
+      socket.join(`org:${orgId}`);
+    }
 
     socket.on("subscribe", (rooms: string[]) => {
+      if (!orgId) {
+        socket.emit("error", { message: "Cannot subscribe: no organization context" });
+        return;
+      }
       const validRooms = rooms.filter((r): r is Room => VALID_ROOMS.includes(r as Room));
       validRooms.forEach((room) => {
         socket.join(`org:${orgId}:${room}`);
@@ -80,6 +115,7 @@ export function initWebSocket(httpServer: HttpServer): Server {
     });
 
     socket.on("unsubscribe", (rooms: string[]) => {
+      if (!orgId) return;
       const validRooms = rooms.filter((r): r is Room => VALID_ROOMS.includes(r as Room));
       validRooms.forEach((room) => {
         socket.leave(`org:${orgId}:${room}`);

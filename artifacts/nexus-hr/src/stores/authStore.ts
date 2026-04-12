@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface OrgContext {
   id: number | null;
@@ -22,33 +23,47 @@ interface AuthState {
 
 const initialOrg: OrgContext = { id: null, name: null, clerkOrgId: null };
 
-export const useAuthStore = create<AuthState>()((set) => ({
-  userId: null,
-  email: null,
-  fullName: null,
-  imageUrl: null,
-  org: initialOrg,
-  isInitialized: false,
-
-  setUser: (user) =>
-    set({
-      userId: user.userId,
-      email: user.email,
-      fullName: user.fullName,
-      imageUrl: user.imageUrl,
-    }),
-
-  setOrg: (org) => set({ org }),
-
-  clearAuth: () =>
-    set({
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
       userId: null,
       email: null,
       fullName: null,
       imageUrl: null,
       org: initialOrg,
       isInitialized: false,
-    }),
 
-  setInitialized: (initialized) => set({ isInitialized: initialized }),
-}));
+      setUser: (user) =>
+        set({
+          userId: user.userId,
+          email: user.email,
+          fullName: user.fullName,
+          imageUrl: user.imageUrl,
+        }),
+
+      setOrg: (org) => set({ org }),
+
+      clearAuth: () =>
+        set({
+          userId: null,
+          email: null,
+          fullName: null,
+          imageUrl: null,
+          org: initialOrg,
+          isInitialized: false,
+        }),
+
+      setInitialized: (initialized) => set({ isInitialized: initialized }),
+    }),
+    {
+      name: "nexushr-auth",
+      partialize: (state) => ({
+        userId: state.userId,
+        email: state.email,
+        fullName: state.fullName,
+        imageUrl: state.imageUrl,
+        org: state.org,
+      }),
+    },
+  ),
+);

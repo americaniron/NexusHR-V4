@@ -5,8 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 type Room = "tasks" | "employees" | "notifications" | "conversations" | "workflows" | "integrations";
 
 interface SocketOptions {
-  orgId: string | number | null;
-  userId?: string | null;
+  getToken: () => Promise<string | null>;
   rooms?: Room[];
   enabled?: boolean;
 }
@@ -26,7 +25,7 @@ const ROOM_TO_QUERY_KEYS: Record<Room, string[]> = {
   integrations: ["/api/integrations"],
 };
 
-export function useSocket({ orgId, userId, rooms = [], enabled = true }: SocketOptions) {
+export function useSocket({ getToken, rooms = [], enabled = true }: SocketOptions) {
   const socketRef = useRef<Socket | null>(null);
   const queryClient = useQueryClient();
   const [connected, setConnected] = useState(false);
@@ -42,57 +41,73 @@ export function useSocket({ orgId, userId, rooms = [], enabled = true }: SocketO
   }, []);
 
   useEffect(() => {
-    if (!enabled || !orgId) return;
+    if (!enabled) return;
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-    const socket = io(baseUrl, {
-      auth: { orgId, userId },
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 10000,
-      autoConnect: true,
-    });
+    let cancelled = false;
 
-    socketRef.current = socket;
+    async function connect() {
+      const token = await getToken();
+      if (cancelled || !token) return;
 
-    socket.on("connect", () => {
-      setConnected(true);
-      if (rooms.length > 0) {
-        socket.emit("subscribe", rooms);
-      }
-      flushOfflineQueue();
-    });
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+      const socket = io(baseUrl, {
+        auth: { token },
+        transports: ["websocket", "polling"],
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 10000,
+        autoConnect: true,
+      });
 
-    socket.on("disconnect", () => {
-      setConnected(false);
-    });
+      socketRef.current = socket;
 
-    socket.on("connect_error", () => {
-      setConnected(false);
-    });
+      socket.on("connect", () => {
+        setConnected(true);
+        if (rooms.length > 0) {
+          socket.emit("subscribe", rooms);
+        }
+        flushOfflineQueue();
+      });
 
-    rooms.forEach((room) => {
-      const queryKeys = ROOM_TO_QUERY_KEYS[room] || [];
-      const eventPatterns = getEventsForRoom(room);
+      socket.on("disconnect", () => {
+        setConnected(false);
+      });
 
-      eventPatterns.forEach((eventName) => {
-        socket.on(eventName, () => {
-          queryKeys.forEach((key) => {
-            queryClient.invalidateQueries({ queryKey: [key] });
+      socket.on("connect_error", async () => {
+        setConnected(false);
+        const freshToken = await getToken();
+        if (freshToken && socket.auth) {
+          (socket.auth as Record<string, string>).token = freshToken;
+        }
+      });
+
+      rooms.forEach((room) => {
+        const queryKeys = ROOM_TO_QUERY_KEYS[room] || [];
+        const eventPatterns = getEventsForRoom(room);
+
+        eventPatterns.forEach((eventName) => {
+          socket.on(eventName, () => {
+            queryKeys.forEach((key) => {
+              queryClient.invalidateQueries({ queryKey: [key] });
+            });
           });
         });
       });
-    });
+    }
+
+    connect();
 
     return () => {
-      socket.removeAllListeners();
-      socket.disconnect();
-      socketRef.current = null;
+      cancelled = true;
+      if (socketRef.current) {
+        socketRef.current.removeAllListeners();
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
       setConnected(false);
     };
-  }, [orgId, userId, enabled, rooms.join(","), queryClient, flushOfflineQueue]);
+  }, [enabled, rooms.join(","), queryClient, getToken, flushOfflineQueue]);
 
   const emit = useCallback((event: string, data: unknown) => {
     if (socketRef.current?.connected) {

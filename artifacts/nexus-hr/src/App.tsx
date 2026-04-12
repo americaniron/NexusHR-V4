@@ -1,5 +1,5 @@
-import { useEffect, useRef, lazy, Suspense } from "react";
-import { ClerkProvider, Show, useClerk } from '@clerk/react';
+import { useEffect, useRef, useCallback, lazy, Suspense } from "react";
+import { ClerkProvider, Show, useClerk, useSession } from '@clerk/react';
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from 'wouter';
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 
@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { createQueryClient } from "@/lib/queryClient";
 
 import { AppLayout } from "@/components/layout/app-layout";
+import { useSocket } from "@/hooks/useSocket";
 import LandingPage from "@/pages/landing";
 import SignInPage from "@/pages/auth/sign-in";
 import SignUpPage from "@/pages/auth/sign-up";
@@ -90,6 +91,22 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   );
 }
 
+function SocketInitializer() {
+  const { session } = useSession();
+  const getToken = useCallback(async () => {
+    if (!session) return null;
+    return session.getToken() ?? null;
+  }, [session]);
+
+  useSocket({
+    getToken,
+    rooms: ["tasks", "employees", "notifications", "conversations", "workflows", "integrations"],
+    enabled: !!session,
+  });
+
+  return null;
+}
+
 function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk();
   const queryClient = useQueryClient();
@@ -124,6 +141,7 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
+        <SocketInitializer />
         <TooltipProvider>
           <Switch>
             <Route path="/" component={HomeRedirect} />
