@@ -9,6 +9,7 @@ import { createQueryClient } from "@/lib/queryClient";
 
 import { AppLayout } from "@/components/layout/app-layout";
 import { useSocket } from "@/hooks/useSocket";
+import { useAuthStore } from "@/stores/authStore";
 import LandingPage from "@/pages/landing";
 import SignInPage from "@/pages/auth/sign-in";
 import SignUpPage from "@/pages/auth/sign-up";
@@ -111,10 +112,24 @@ function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk();
   const queryClient = useQueryClient();
   const prevUserIdRef = useRef<string | null | undefined>(undefined);
+  const { setUser, clearAuth, setInitialized } = useAuthStore();
 
   useEffect(() => {
     const unsubscribe = addListener(({ user }) => {
       const userId = user?.id ?? null;
+
+      if (user) {
+        setUser({
+          userId: user.id,
+          email: user.primaryEmailAddress?.emailAddress || "",
+          fullName: user.fullName || "",
+          imageUrl: user.imageUrl || null,
+        });
+        setInitialized(true);
+      } else if (prevUserIdRef.current && !userId) {
+        clearAuth();
+      }
+
       if (
         prevUserIdRef.current !== undefined &&
         prevUserIdRef.current !== userId
@@ -124,7 +139,7 @@ function ClerkQueryClientCacheInvalidator() {
       prevUserIdRef.current = userId;
     });
     return unsubscribe;
-  }, [addListener, queryClient]);
+  }, [addListener, queryClient, setUser, clearAuth, setInitialized]);
 
   return null;
 }
