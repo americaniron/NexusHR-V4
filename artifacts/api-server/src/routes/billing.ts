@@ -16,6 +16,7 @@ import {
   DUNNING_CONFIG,
   TRIAL_DURATION_DAYS,
   type PlanId,
+  type BillingDimension,
 } from "../lib/billing/plans";
 import { getUsageSummary } from "../lib/billing/metering";
 import { publishEvent } from "../lib/websocket";
@@ -37,6 +38,70 @@ function computeUnitAmount(planDef: (typeof PLAN_DEFINITIONS)[PlanId], billingCy
 
 function stripeInterval(billingCycle: string): "year" | "month" {
   return billingCycle === "annual" ? "year" : "month";
+}
+
+const stripePriceCache = new Map<string, string>();
+
+function getConfiguredStripePriceId(plan: string, billingCycle: string): string | null {
+  const envKey = `STRIPE_PRICE_${plan.toUpperCase()}_${billingCycle.toUpperCase()}`;
+  return process.env[envKey] || null;
+}
+
+async function resolveStripePriceId(
+  stripe: Stripe,
+  plan: PlanId,
+  billingCycle: string,
+): Promise<string> {
+  const configuredId = getConfiguredStripePriceId(plan, billingCycle);
+  if (configuredId) return configuredId;
+
+  const cacheKey = `${plan}-${billingCycle}`;
+  const cachedId = stripePriceCache.get(cacheKey);
+  if (cachedId) return cachedId;
+
+  const planDef = PLAN_DEFINITIONS[plan];
+  const unitAmount = computeUnitAmount(planDef, billingCycle);
+  const interval = stripeInterval(billingCycle);
+
+  let product: Stripe.Product;
+  const existingProducts = await stripe.products.list({ limit: 100 });
+  const found = existingProducts.data.find(
+    (p) => p.metadata?.nexushr_plan === plan && p.active,
+  );
+  if (found) {
+    product = found;
+  } else {
+    product = await stripe.products.create({
+      name: `NexsusHR ${planDef.name}`,
+      description: planDef.description,
+      metadata: { nexushr_plan: plan },
+    });
+  }
+
+  const existingPrices = await stripe.prices.list({
+    product: product.id,
+    active: true,
+    limit: 20,
+  });
+  const matchingPrice = existingPrices.data.find(
+    (p) => p.unit_amount === unitAmount && p.recurring?.interval === interval,
+  );
+  if (matchingPrice) {
+    stripePriceCache.set(cacheKey, matchingPrice.id);
+    return matchingPrice.id;
+  }
+
+  const newPrice = await stripe.prices.create({
+    product: product.id,
+    currency: "usd",
+    unit_amount: unitAmount,
+    recurring: { interval },
+    metadata: { nexushr_plan: plan, billingCycle },
+  });
+
+  stripePriceCache.set(cacheKey, newPrice.id);
+  logger.info({ plan, billingCycle, priceId: newPrice.id }, "Created Stripe price for plan tier");
+  return newPrice.id;
 }
 
 router.get("/billing/plans", requireAuth, async (_req, res, next) => {
@@ -129,9 +194,6 @@ router.post("/billing/checkout", requireAuth, validate({ body: checkoutBody }), 
       return res.json({ type: "activated", subscription: result });
     }
 
-    const planDef = PLAN_DEFINITIONS[plan as PlanId];
-    const unitAmount = computeUnitAmount(planDef, billingCycle);
-
     let [sub] = await db.select().from(billingSubscriptions).where(eq(billingSubscriptions.orgId, orgId));
     let customerId = sub?.stripeCustomerId;
 
@@ -158,20 +220,12 @@ router.post("/billing/checkout", requireAuth, validate({ body: checkoutBody }), 
       }
     }
 
+    const priceId = await resolveStripePriceId(stripe, plan as PlanId, billingCycle);
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            unit_amount: unitAmount,
-            recurring: { interval: stripeInterval(billingCycle) },
-            product_data: { name: `NexsusHR ${planDef.name} Plan` },
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${getFrontendUrl()}/billing?success=true`,
       cancel_url: `${getFrontendUrl()}/billing?canceled=true`,
       metadata: { orgId: String(orgId), plan, billingCycle },
@@ -208,19 +262,12 @@ router.post("/billing/change-plan", requireAuth, validate({ body: changePlanBody
     }
 
     const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
-    const planDef = PLAN_DEFINITIONS[newPlan as PlanId];
     const cycle = billingCycle || sub.billingCycle || "monthly";
-    const unitAmount = computeUnitAmount(planDef, cycle);
 
-    const price = await stripe.prices.create({
-      currency: "usd",
-      unit_amount: unitAmount,
-      recurring: { interval: stripeInterval(cycle) },
-      product_data: { name: `NexsusHR ${planDef.name} Plan` },
-    });
+    const priceId = await resolveStripePriceId(stripe, newPlan as PlanId, cycle);
 
     await stripe.subscriptions.update(sub.stripeSubscriptionId, {
-      items: [{ id: stripeSub.items.data[0].id, price: price.id }],
+      items: [{ id: stripeSub.items.data[0].id, price: priceId }],
       proration_behavior: "create_prorations",
       metadata: { orgId: String(orgId), plan: newPlan, billingCycle: cycle },
     });
@@ -346,6 +393,122 @@ router.get("/billing/invoices", requireAuth, async (req, res, next) => {
       .limit(24);
 
     res.json({ data: localInvoices });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const ADD_ON_CATALOG: Record<string, { name: string; description: string; priceCents: number; dimension: BillingDimension; quantity: number }> = {
+  extra_ai_employees_5: {
+    name: "5 Additional AI Employees",
+    description: "Add 5 more AI employee slots to your plan",
+    priceCents: 49900,
+    dimension: "ai_employees",
+    quantity: 5,
+  },
+  extra_voice_hours_20: {
+    name: "20 Extra Voice Hours",
+    description: "Add 20 hours of voice interaction",
+    priceCents: 3900,
+    dimension: "voice_hours",
+    quantity: 20,
+  },
+  extra_storage_50gb: {
+    name: "50 GB Extra Storage",
+    description: "Add 50 GB of storage to your plan",
+    priceCents: 4900,
+    dimension: "storage_gb",
+    quantity: 50,
+  },
+  extra_workflows_25: {
+    name: "25 Additional Workflows",
+    description: "Add 25 extra workflow slots",
+    priceCents: 19900,
+    dimension: "workflows",
+    quantity: 25,
+  },
+};
+
+router.get("/billing/add-ons", requireAuth, async (_req, res, next) => {
+  try {
+    const addOns = Object.entries(ADD_ON_CATALOG).map(([id, addon]) => ({
+      id,
+      name: addon.name,
+      description: addon.description,
+      price: addon.priceCents / 100,
+      dimension: addon.dimension,
+      quantity: addon.quantity,
+    }));
+    res.json({ data: addOns });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const purchaseAddOnBody = z.object({
+  addOnId: z.string().max(100),
+});
+
+router.post("/billing/add-ons/purchase", requireAuth, validate({ body: purchaseAddOnBody }), async (req, res, next) => {
+  try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) throw AppError.badRequest("No organization");
+
+    const { addOnId } = req.body;
+    const addOn = ADD_ON_CATALOG[addOnId];
+    if (!addOn) throw AppError.notFound("Add-on not found");
+
+    const [sub] = await db.select().from(billingSubscriptions).where(eq(billingSubscriptions.orgId, orgId));
+    if (!sub || sub.status !== "active") throw AppError.badRequest("Active subscription required");
+
+    const stripe = await getStripeClient();
+    if (!stripe || !sub.stripeCustomerId) {
+      throw AppError.badRequest("Payment processing unavailable");
+    }
+
+    await stripe.invoiceItems.create({
+      customer: sub.stripeCustomerId,
+      amount: addOn.priceCents,
+      currency: "usd",
+      description: addOn.name,
+      metadata: {
+        orgId: String(orgId),
+        addOnId,
+        dimension: addOn.dimension,
+        quantity: String(addOn.quantity),
+        type: "add_on",
+      },
+    });
+
+    const invoice = await stripe.invoices.create({
+      customer: sub.stripeCustomerId,
+      auto_advance: true,
+      metadata: {
+        orgId: String(orgId),
+        type: "add_on",
+        addOnId,
+      },
+    });
+
+    await stripe.invoices.pay(invoice.id);
+
+    await db.insert(billingInvoices).values({
+      orgId,
+      stripeInvoiceId: invoice.id,
+      amountDue: addOn.priceCents,
+      amountPaid: addOn.priceCents,
+      currency: "usd",
+      status: "paid",
+      description: `Add-on: ${addOn.name}`,
+    });
+
+    logger.info({ orgId, addOnId, amount: addOn.priceCents }, "Add-on purchased");
+
+    res.json({
+      type: "purchased",
+      addOn: { id: addOnId, name: addOn.name, dimension: addOn.dimension, quantity: addOn.quantity },
+      invoice: { id: invoice.id, amount: addOn.priceCents / 100 },
+    });
   } catch (error) {
     next(error);
   }

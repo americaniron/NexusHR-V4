@@ -6,7 +6,7 @@ import { requireAuth } from "../middlewares/requireAuth";
 import { getAuth } from "@clerk/express";
 import { validate, paginationQuery } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
-import { checkPlanLimit, checkAllCountBasedLimits } from "../lib/billing/metering";
+import { checkPlanLimit, checkAllCountBasedLimits, recordUsage } from "../lib/billing/metering";
 
 const router = Router();
 
@@ -63,6 +63,7 @@ router.get("/users/me", requireAuth, async (req, res, next) => {
       }).returning();
 
       if (dbOrgId) {
+        await recordUsage(dbOrgId, "users", 1, { clerkUserId, email });
         await checkAllCountBasedLimits(dbOrgId);
       }
     }
