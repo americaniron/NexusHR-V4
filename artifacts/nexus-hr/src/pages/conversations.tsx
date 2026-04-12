@@ -51,7 +51,7 @@ export default function ConversationsPage() {
                       {conv.aiEmployee?.name || "AI Person"}
                     </span>
                     <span className="text-[10px] text-muted-foreground shrink-0">
-                      {(conv as any).updatedAt ? new Date((conv as any).updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                      {"updatedAt" in conv && conv.updatedAt ? new Date(String(conv.updatedAt)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground truncate">
