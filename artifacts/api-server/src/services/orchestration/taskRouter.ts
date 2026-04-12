@@ -144,7 +144,7 @@ export async function routeTask(request: RoutingRequest): Promise<RoutingResult>
     .from(taskAssignments)
     .where(and(
       eq(taskAssignments.orgId, orgId),
-      sql`${taskAssignments.status} IN ('queued', 'accepted', 'in_progress', 'paused')`
+      sql`${taskAssignments.status} IN ('queued', 'accepted', 'in_progress', 'paused', 'waiting_dependency')`
     ))
     .groupBy(taskAssignments.aiEmployeeId);
 
@@ -254,7 +254,7 @@ export async function getCapabilityMap(orgId: number) {
     .from(taskAssignments)
     .where(and(
       eq(taskAssignments.orgId, orgId),
-      sql`${taskAssignments.status} IN ('queued', 'accepted', 'in_progress', 'paused')`
+      sql`${taskAssignments.status} IN ('queued', 'accepted', 'in_progress', 'paused', 'waiting_dependency')`
     ))
     .groupBy(taskAssignments.aiEmployeeId);
 

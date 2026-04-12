@@ -108,6 +108,10 @@ export async function executeNextStep(
 
   if (!currentResult) throw AppError.notFound("Step result record not found");
 
+  if (currentResult.status === "in_progress" && currentResult.assignmentId) {
+    throw AppError.badRequest(`Step is already in progress with assignment ${currentResult.assignmentId}. Complete or fail the current step before re-executing.`);
+  }
+
   let effectiveInput = stepInput;
   if (effectiveInput === undefined && currentStepIdx > 0) {
     const prevResult = stepResults.find(r => r.stepId === steps[currentStepIdx - 1].id);
