@@ -293,4 +293,42 @@ All Phase 1 requirements verified complete:
   - `POST /workflows/:id/fail-step` — fail current step
   - `GET /workflows/:id/status` — instance status with step results
 
+## Phase 14: Secure Tool Access Framework (Complete)
+
+- **Schema**: Enhanced `integrations.ts` with `toolRegistry` (provider, healthEndpoint, documentationUrl, metadata, updatedAt), `integrations` (connectionConfig, updatedAt), `toolAuditLogs` (resultData, permissionDetails, executionDurationMs, errorMessage, requestId). New `tool-permissions.ts` with RBAC tables (toolRoles, toolRoleAssignments, toolPermissionOverrides with temporal constraints and rate limit overrides).
+- **Seed**: 10 integrations (Google Workspace, Microsoft 365, Slack, HubSpot, Salesforce, Zendesk, QuickBooks, Stripe, Notion, Asana) + 6 system roles (admin, manager, operator, data-analyst, finance, support) with granular per-tool permission matrices.
+- **Permission Engine** (`services/tools/permissionEngine.ts`): Multi-level RBAC evaluation
+  - 3-tier check: permission overrides → role-based evaluation → deny by default
+  - Temporal constraints: day-of-week and hour-range access windows
+  - In-memory sliding window rate limiter: per-minute and per-day counters with automatic cleanup
+  - Role assignment/removal, employee permission summary
+- **Execution Engine** (`services/tools/executionEngine.ts`): Secure tool invocation
+  - 5-minute execution timeout with `executeWithTimeout` wrapper
+  - Pre-flight checks: permission evaluation → rate limit → org connection verification
+  - Full audit trail on every execution (success, denied, error, timeout, rate_limited)
+  - Request validation with operation whitelist
+- **Audit Logger** (`services/tools/auditLogger.ts`): Query + summary endpoints
+  - Filterable log queries (orgId, aiEmployeeId, toolId, operation, result, date range)
+  - Summary aggregations by result, tool, and employee
+- **Security Hardening** (post code review):
+  - IDOR prevention: `verifyEmployeeOwnership()` validates aiEmployeeId belongs to caller's org on all mutating endpoints
+  - Org-scoped queries: all connection/override operations filtered by orgId from auth context
+- **Tool Access API Routes** (all under `/api/tools/`):
+  - `GET /registry` — list active tools
+  - `GET /registry/:id` — tool detail
+  - `POST /connections` — connect org to tool
+  - `DELETE /connections/:id` — disconnect
+  - `GET /connections` — list org connections
+  - `POST /connections/:id/health` — health check
+  - `GET /roles` — list tool roles
+  - `POST /role-assignments` — assign role to AI employee
+  - `DELETE /role-assignments` — remove role assignment
+  - `GET /permissions/:aiEmployeeId` — employee permission summary
+  - `POST /permissions/check` — evaluate specific permission
+  - `POST /permission-overrides` — create override
+  - `DELETE /permission-overrides/:id` — remove override
+  - `POST /execute` — execute tool with full security pipeline
+  - `GET /audit-logs` — query audit logs
+  - `GET /audit-summary` — aggregated audit summary
+
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
