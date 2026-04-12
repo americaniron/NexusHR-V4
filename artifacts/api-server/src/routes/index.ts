@@ -19,6 +19,7 @@ import avatarsRouter from "./avatars";
 import voiceRouter from "./voice";
 import personalityRouter from "./personality";
 import promptsRouter from "./prompts";
+import orchestrationRouter from "./orchestration";
 
 const router: IRouter = Router();
 
@@ -42,5 +43,6 @@ router.use(avatarsRouter);
 router.use(voiceRouter);
 router.use(personalityRouter);
 router.use(promptsRouter);
+router.use(orchestrationRouter);
 
 export default router;

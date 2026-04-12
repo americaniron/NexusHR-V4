@@ -237,4 +237,60 @@ All Phase 1 requirements verified complete:
   - `GET /api/prompts/audit-logs` — list audit logs (filter by aiEmployeeId)
   - `GET /api/prompts/audit-logs/:id` — get audit log detail
 
+## Phase 13: AI Orchestration Layer (Complete)
+
+- **Schema**: `task_assignments` table — assignment tracking with routing decisions, SLA, capacity, progress, checkpoints
+- **Task Router** (`services/orchestration/taskRouter.ts`): Multi-factor scoring engine
+  - 3-stage routing: filter (active employees) → rank (weighted scoring) → assign (top candidate)
+  - Scoring factors: skill match (0.45), capacity (0.30), performance history (0.25)
+  - Skill matching: term overlap between task description and role skills/category
+  - Capacity: tracks concurrent active tasks per employee (max 5)
+  - Performance: success rate weighted by confidence (task history volume)
+  - Capability map: full availability matrix for all org AI employees
+- **Assignment Engine** (`services/orchestration/assignmentEngine.ts`): State machine lifecycle
+  - States: QUEUED → ACCEPTED → IN_PROGRESS → PAUSED → WAITING_DEPENDENCY → COMPLETED / FAILED / ESCALATED / CANCELLED
+  - Enforced transition validation — only valid state changes allowed
+  - Capacity reservation on assign, release on complete/fail/cancel
+  - SLA deadline tracking with status (on_track/at_risk/breached)
+  - Syncs assignment status → task status automatically
+- **Progress Tracker** (`services/orchestration/progressTracker.ts`): Real-time execution monitoring
+  - Execution phases (default: initialization → processing → validation → delivery)
+  - Per-phase progress (0-100%), automatic phase advancement on completion
+  - Named checkpoints with timestamps and data
+  - Stall detection: configurable timeout (default 30min), marks stallDetectedAt
+  - SLA monitoring: remaining time, at-risk (< 1hr), breached
+  - Active assignment dashboard with overall progress calculation
+- **Dependency Manager** (`services/orchestration/dependencyManager.ts`): Task sequencing
+  - Topological sort with layer-based parallel execution groups
+  - Blocking status: which tasks block/are blocked by a given task
+  - Automatic unblocking: when a task completes, transitions dependents from waiting_dependency → in_progress
+- **Workflow Execution Engine** (`services/orchestration/workflowEngine.ts`): Multi-step automation
+  - Sequential step execution through workflow_steps (ordered by stepOrder)
+  - Output passing: step N output available as input to step N+1
+  - Conditional branch evaluation (skipIf conditions on step config)
+  - Per-step status tracking in workflow_instances.stepResults
+  - Automatic AI employee routing per step via assigneeRoleId
+  - Instance lifecycle: running → completed / failed
+- **Orchestration API Routes** (all under `/api/orchestration/`):
+  - `POST /route` — route a task to best AI employee
+  - `GET /capability-map` — full employee availability matrix
+  - `POST /auto-assign` — route + assign in one call
+  - `POST /assignments` — create assignment
+  - `GET /assignments` — list by taskId or aiEmployeeId
+  - `GET /assignments/:id` — get assignment
+  - `PATCH /assignments/:id/transition` — state machine transition
+  - `GET /assignments/:id/transitions` — valid next states
+  - `PATCH /assignments/:id/progress` — update progress/phase/checkpoint
+  - `GET /assignments/:id/progress` — full progress snapshot
+  - `GET /progress` — all active assignment progress
+  - `POST /stalls/detect` — detect stalled assignments
+  - `POST /dependencies/resolve` — topological sort task set
+  - `GET /dependencies/:id` — blocking status for task
+  - `POST /dependencies/:id/unblock` — unblock dependents
+  - `POST /workflows/start` — start workflow instance
+  - `POST /workflows/:id/execute-step` — execute next step
+  - `POST /workflows/:id/complete-step` — complete current step with output
+  - `POST /workflows/:id/fail-step` — fail current step
+  - `GET /workflows/:id/status` — instance status with step results
+
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

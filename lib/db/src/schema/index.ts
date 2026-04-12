@@ -13,3 +13,4 @@ export * from "./notifications";
 export * from "./relational-memory";
 export * from "./prompt-templates";
 export * from "./prompt-audit-logs";
+export * from "./task-assignments";
