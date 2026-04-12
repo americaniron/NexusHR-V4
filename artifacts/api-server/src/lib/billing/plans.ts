@@ -30,6 +30,7 @@ export interface OverageRate {
   messages: number;
   workflows: number;
   tasks: number;
+  integrations: number;
   storage_gb: number;
   ai_memory_gb: number;
   avatars: number;
@@ -72,7 +73,7 @@ export const PLAN_DEFINITIONS: Record<PlanId, PlanDefinition> = {
     },
     overageRates: {
       ai_employees: 0, voice_hours: 0, messages: 0, workflows: 0, tasks: 0,
-      storage_gb: 0, ai_memory_gb: 0, avatars: 0, users: 0,
+      integrations: 0, storage_gb: 0, ai_memory_gb: 0, avatars: 0, users: 0,
     },
     features: ["Basic AI employees", "Standard voices", "Email support"],
     sla: "48hr",
@@ -99,7 +100,7 @@ export const PLAN_DEFINITIONS: Record<PlanId, PlanDefinition> = {
     },
     overageRates: {
       ai_employees: 149, voice_hours: 2.50, messages: 0.008, workflows: 15,
-      tasks: 0.05, storage_gb: 2, ai_memory_gb: 3, avatars: 25, users: 29,
+      tasks: 0.05, integrations: 49, storage_gb: 2, ai_memory_gb: 3, avatars: 25, users: 29,
     },
     features: ["Basic AI employees", "Standard voices", "Email support", "48hr SLA"],
     sla: "48hr",
@@ -126,7 +127,7 @@ export const PLAN_DEFINITIONS: Record<PlanId, PlanDefinition> = {
     },
     overageRates: {
       ai_employees: 99, voice_hours: 1.80, messages: 0.005, workflows: 10,
-      tasks: 0.03, storage_gb: 1.50, ai_memory_gb: 2, avatars: 20, users: 25,
+      tasks: 0.03, integrations: 39, storage_gb: 1.50, ai_memory_gb: 2, avatars: 20, users: 25,
     },
     features: [
       "Premium voices", "Bidirectional integrations", "Priority email support",
@@ -156,7 +157,7 @@ export const PLAN_DEFINITIONS: Record<PlanId, PlanDefinition> = {
     },
     overageRates: {
       ai_employees: 79, voice_hours: 1.20, messages: 0, workflows: 8,
-      tasks: 0.02, storage_gb: 1, ai_memory_gb: 1.50, avatars: 15, users: 20,
+      tasks: 0.02, integrations: 0, storage_gb: 1, ai_memory_gb: 1.50, avatars: 15, users: 20,
     },
     features: [
       "Orchestration", "Conditional workflows", "API access", "Phone support",
@@ -186,7 +187,7 @@ export const PLAN_DEFINITIONS: Record<PlanId, PlanDefinition> = {
     },
     overageRates: {
       ai_employees: 0, voice_hours: 0, messages: 0, workflows: 0, tasks: 0,
-      storage_gb: 0, ai_memory_gb: 0, avatars: 0, users: 0,
+      integrations: 0, storage_gb: 0, ai_memory_gb: 0, avatars: 0, users: 0,
     },
     features: [
       "Custom voice cloning", "White-label", "Dedicated support", "Custom SLA",

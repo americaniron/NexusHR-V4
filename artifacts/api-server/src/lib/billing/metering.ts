@@ -6,6 +6,7 @@ import { logger } from "../logger";
 import { publishEvent } from "../websocket";
 
 const MINUTES_TO_HOURS_DIVISOR = 60;
+const MB_TO_GB_DIVISOR = 1024;
 
 const COUNT_BASED_DIMENSIONS: Set<BillingDimension> = new Set([
   "ai_employees",
@@ -27,10 +28,6 @@ export async function recordUsage(
   quantity: number = 1,
   metadata?: Record<string, unknown>,
 ): Promise<void> {
-  if (COUNT_BASED_DIMENSIONS.has(dimension)) {
-    return;
-  }
-
   await db.insert(usageEvents).values({
     orgId,
     dimension,
@@ -98,6 +95,9 @@ export async function getUsageSummary(orgId: number): Promise<UsageSummary[]> {
       if (dimension === "voice_hours") {
         used = Math.round((used / MINUTES_TO_HOURS_DIVISOR) * 100) / 100;
       }
+      if (dimension === "storage_gb") {
+        used = Math.round((used / MB_TO_GB_DIVISOR) * 100) / 100;
+      }
     }
 
     const unlimited = isUnlimited(limit);
@@ -144,6 +144,9 @@ export async function getDimensionUsage(
     if (dimension === "voice_hours") {
       used = Math.round((used / MINUTES_TO_HOURS_DIVISOR) * 100) / 100;
     }
+    if (dimension === "storage_gb") {
+      used = Math.round((used / MB_TO_GB_DIVISOR) * 100) / 100;
+    }
   }
 
   return {
@@ -161,6 +164,12 @@ export async function checkPlanLimit(
   const { used, limit, remaining } = await getDimensionUsage(orgId, dimension);
   const allowed = isUnlimited(limit) || used + additionalQuantity <= limit;
   return { allowed, used, limit, remaining };
+}
+
+export async function checkAllCountBasedLimits(orgId: number): Promise<void> {
+  for (const dimension of COUNT_BASED_DIMENSIONS) {
+    await checkAndAlertThreshold(orgId, dimension);
+  }
 }
 
 async function checkAndAlertThreshold(orgId: number, dimension: BillingDimension): Promise<void> {

@@ -8,6 +8,7 @@ import { z } from "zod/v4";
 import { validate } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
 import { requirePlanLimit } from "../middlewares/planLimits";
+import { recordUsage, checkAllCountBasedLimits } from "../lib/billing/metering";
 
 const router = Router();
 
@@ -71,6 +72,8 @@ router.post("/integrations/:toolId/connect", requireAuth, requirePlanLimit("inte
       orgId, toolId, status: "connected", connectedAt: new Date(),
     }).returning();
 
+    await recordUsage(orgId, "integrations", 1, { toolId, action: "connect" });
+    await checkAllCountBasedLimits(orgId);
     res.json(created);
   } catch (error) {
     next(error);
