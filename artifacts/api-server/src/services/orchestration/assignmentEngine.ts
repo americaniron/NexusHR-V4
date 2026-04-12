@@ -18,7 +18,7 @@ type AssignmentStatus =
 
 const VALID_TRANSITIONS: Record<AssignmentStatus, AssignmentStatus[]> = {
   queued: ["accepted", "cancelled"],
-  accepted: ["in_progress", "cancelled"],
+  accepted: ["in_progress", "cancelled", "escalated"],
   in_progress: ["paused", "waiting_dependency", "completed", "failed", "escalated", "cancelled"],
   paused: ["in_progress", "cancelled", "escalated"],
   waiting_dependency: ["in_progress", "cancelled", "escalated"],

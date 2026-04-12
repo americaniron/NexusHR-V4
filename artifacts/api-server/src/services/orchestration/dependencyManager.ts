@@ -136,6 +136,16 @@ export async function getBlockingStatus(taskId: number, orgId: number): Promise<
 }
 
 export async function unblockDependents(taskId: number, orgId: number): Promise<number[]> {
+  const [triggeringTask] = await db
+    .select()
+    .from(tasks)
+    .where(and(eq(tasks.id, taskId), eq(tasks.orgId, orgId)));
+
+  if (!triggeringTask) throw AppError.notFound(`Task ${taskId} not found`);
+  if (triggeringTask.status !== "completed") {
+    throw AppError.badRequest(`Cannot unblock dependents: task ${taskId} is not completed (status: ${triggeringTask.status})`);
+  }
+
   const allOrgTasks = await db
     .select()
     .from(tasks)
