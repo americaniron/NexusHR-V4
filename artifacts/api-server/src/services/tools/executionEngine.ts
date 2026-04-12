@@ -38,19 +38,6 @@ export async function executeToolAccess(request: ToolExecutionRequest): Promise<
     .where(eq(toolRegistry.name, toolName));
 
   if (!tool) {
-    await logToolAccess({
-      orgId,
-      aiEmployeeId,
-      toolId: 0,
-      operation,
-      parameters,
-      result: "error",
-      permissionDecision: "denied",
-      permissionDetails: { reason: "Tool not found" },
-      executionDurationMs: Date.now() - startTime,
-      errorMessage: `Tool '${toolName}' not found`,
-      requestId,
-    });
     throw AppError.notFound(`Tool '${toolName}' not found in registry`);
   }
 

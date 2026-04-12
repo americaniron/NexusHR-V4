@@ -275,6 +275,9 @@ router.post("/tools/permission-overrides", requireAuth, validate({ body: overrid
     const { aiEmployeeId, toolId, ...rest } = req.body;
     await verifyEmployeeOwnership(orgId, aiEmployeeId);
 
+    const [tool] = await db.select({ id: toolRegistry.id }).from(toolRegistry).where(eq(toolRegistry.id, toolId));
+    if (!tool) throw AppError.notFound("Tool not found");
+
     const [override] = await db.insert(toolPermissionOverrides).values({
       orgId,
       aiEmployeeId,
