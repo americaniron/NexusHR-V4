@@ -46,7 +46,7 @@ NexsusHR is a production-grade AI workforce management platform. Businesses hire
 - `workflows` — multi-step workflow automation with steps
 - `conversations` — real-time chat between users and AI employees
 - `integrations` — tool registry (20 tools: Google Workspace, Slack, HubSpot, Jira, GitHub, Mailchimp, SendGrid, Freshdesk, Zoom, Trello, Dropbox, Pipedrive, BambooHR, etc.) and org connections
-- `billing` — subscription plans (trial/starter/growth/business/enterprise) and usage tracking
+- `billing` — subscription plans (starter/growth/business/enterprise), usage tracking, billing_alerts (80% threshold), billing_invoices, dunning fields (failedPaymentCount, graceEndsAt, lastPaymentError)
 - `support` — support tickets and knowledge base articles
 - `notifications` — user notifications
 - `relational-memory` — AI employee relational memories (preferences, context, interaction patterns)
@@ -81,9 +81,14 @@ NexsusHR is a production-grade AI workforce management platform. Businesses hire
 - `/api/billing/plans` — available plan pricing
 - `/api/billing/subscription` — subscription info
 - `/api/billing/checkout` — Stripe checkout session creation (falls back to direct activation without Stripe)
+- `/api/billing/change-plan` — upgrade/downgrade with proration
+- `/api/billing/cancel` — cancel subscription at period end
 - `/api/billing/portal` — Stripe customer portal
-- `/api/billing/webhook` — Stripe webhook handler
-- `/api/billing/usage` — usage dimensions
+- `/api/billing/invoices` — invoice history (Stripe + local)
+- `/api/billing/alerts` — 80% allocation threshold alerts
+- `/api/billing/usage` — current usage summary across all dimensions
+- `/api/billing/payment-method` — current payment method info
+- `/api/billing/webhook` — Stripe webhook handler (dunning, invoice events)
 - `/api/voices` — ElevenLabs voice list (with 12 preset fallbacks)
 - `/api/notifications` — list, mark read, mark all read
 - `/api/support/tickets` — list/create support tickets

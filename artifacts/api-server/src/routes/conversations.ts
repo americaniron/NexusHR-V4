@@ -11,6 +11,7 @@ import { validate, paginationQuery, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
 import { logger } from "../lib/logger";
 import { publishEvent } from "../lib/websocket";
+import { recordUsage } from "../lib/billing/metering";
 
 const router = Router();
 
@@ -149,6 +150,12 @@ Be helpful, professional, and demonstrate expertise in your role. Keep responses
     }).returning();
 
     await db.update(conversations).set({ lastMessageAt: new Date() }).where(eq(conversations.id, convId));
+
+    await recordUsage(orgId, "messages", 2, { conversationId: convId });
+    if (audioUrl) {
+      const estimatedMinutes = Math.ceil(aiResponse.length / 800);
+      await recordUsage(orgId, "voice_hours", estimatedMinutes, { conversationId: convId, type: "tts" });
+    }
 
     publishEvent(orgId, "conversations", "conversation:message", { conversationId: convId, userMessage: userMsg, aiMessage: aiMsg });
     res.json({ userMessage: userMsg, aiMessage: aiMsg });

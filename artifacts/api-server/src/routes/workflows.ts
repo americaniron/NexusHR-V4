@@ -7,6 +7,8 @@ import { getAuthContext, emptyPagination } from "../lib/auth-helpers";
 import { z } from "zod/v4";
 import { validate, paginationQuery, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
+import { requirePlanLimit } from "../middlewares/planLimits";
+import { recordUsage } from "../lib/billing/metering";
 
 const router = Router();
 
@@ -49,7 +51,7 @@ router.get("/workflows", requireAuth, validate({ query: paginationQuery }), asyn
   }
 });
 
-router.post("/workflows", requireAuth, validate({ body: createWorkflowBody }), async (req, res, next) => {
+router.post("/workflows", requireAuth, requirePlanLimit("workflows"), validate({ body: createWorkflowBody }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.badRequest("No organization");
@@ -60,6 +62,7 @@ router.post("/workflows", requireAuth, validate({ body: createWorkflowBody }), a
       orgId, name, description, triggerType,
     }).returning();
 
+    await recordUsage(orgId, "workflows", 1, { workflowId: workflow.id });
     res.status(201).json({ ...workflow, steps: [] });
   } catch (error) {
     next(error);

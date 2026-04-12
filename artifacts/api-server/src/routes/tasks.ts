@@ -8,6 +8,8 @@ import { z } from "zod/v4";
 import { validate, paginationQuery, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
 import { publishEvent } from "../lib/websocket";
+import { requirePlanLimit } from "../middlewares/planLimits";
+import { recordUsage } from "../lib/billing/metering";
 
 const router = Router();
 
@@ -76,7 +78,7 @@ router.get("/tasks", requireAuth, validate({ query: listTasksQuery }), async (re
   }
 });
 
-router.post("/tasks", requireAuth, validate({ body: createTaskBody }), async (req, res, next) => {
+router.post("/tasks", requireAuth, requirePlanLimit("tasks"), validate({ body: createTaskBody }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.badRequest("No organization");
@@ -98,6 +100,7 @@ router.post("/tasks", requireAuth, validate({ body: createTaskBody }), async (re
       dueDate: dueDate ? new Date(dueDate) : null,
     }).returning();
 
+    await recordUsage(orgId, "tasks", 1, { taskId: task.id });
     publishEvent(orgId, "tasks", "task:created", task);
     res.status(201).json(task);
   } catch (error) {

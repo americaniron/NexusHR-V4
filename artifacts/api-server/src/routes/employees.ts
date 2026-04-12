@@ -9,6 +9,8 @@ import { validate, paginationQuery, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
 import { getDiceBearFallback, type AvatarIdentityPackage } from "../lib/avatars";
 import { publishEvent } from "../lib/websocket";
+import { requirePlanLimit } from "../middlewares/planLimits";
+import { recordUsage } from "../lib/billing/metering";
 
 const router = Router();
 
@@ -72,7 +74,7 @@ router.get("/employees", requireAuth, validate({ query: listEmployeesQuery }), a
   }
 });
 
-router.post("/employees", requireAuth, validate({ body: createEmployeeBody }), async (req, res, next) => {
+router.post("/employees", requireAuth, requirePlanLimit("ai_employees"), validate({ body: createEmployeeBody }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.badRequest("No organization");
@@ -110,6 +112,7 @@ router.post("/employees", requireAuth, validate({ body: createEmployeeBody }), a
       voiceId: voiceId || null,
     }).returning();
 
+    await recordUsage(orgId, "ai_employees", 1, { employeeId: employee.id, roleId: role.id });
     publishEvent(orgId, "employees", "employee:hired", { ...employee, role });
     res.status(201).json({ ...employee, role });
   } catch (error) {
