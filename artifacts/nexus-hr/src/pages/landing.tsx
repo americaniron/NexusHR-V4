@@ -94,6 +94,7 @@ const FAQ = [
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [roleIdx, setRoleIdx] = useState(0);
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background selection:bg-primary/30">
@@ -324,13 +325,26 @@ export default function LandingPage() {
 
         <section id="pricing" className="py-24">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="text-center max-w-3xl mx-auto mb-10">
               <Badge variant="outline" className="mb-4">Pricing</Badge>
               <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Simple, Transparent Pricing</h2>
               <p className="mt-4 text-muted-foreground text-lg">Start free, scale as you grow. No hidden fees.</p>
             </div>
+            <div className="flex items-center justify-center gap-3 mb-12">
+              <span className={`text-sm font-medium ${billingCycle === "monthly" ? "text-foreground" : "text-muted-foreground"}`}>Monthly</span>
+              <button
+                onClick={() => setBillingCycle(billingCycle === "monthly" ? "annual" : "monthly")}
+                className={`relative inline-flex h-7 w-14 items-center rounded-full border transition-colors ${billingCycle === "annual" ? "bg-primary border-primary" : "bg-muted border-border"}`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${billingCycle === "annual" ? "translate-x-8" : "translate-x-1"}`} />
+              </button>
+              <span className={`text-sm font-medium ${billingCycle === "annual" ? "text-foreground" : "text-muted-foreground"}`}>Annual</span>
+              {billingCycle === "annual" && <Badge className="bg-green-500/10 text-green-500 border-green-500/30">Save 20%</Badge>}
+            </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
-              {PLANS.map((plan) => (
+              {PLANS.map((plan) => {
+                const displayPrice = plan.price ? (billingCycle === "annual" ? Math.round(plan.price * 0.8) : plan.price) : null;
+                return (
                 <Card key={plan.id} className={`relative bg-card flex flex-col ${plan.popular ? "border-primary shadow-lg scale-[1.02]" : "border-border"}`}>
                   {plan.popular && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -346,10 +360,13 @@ export default function LandingPage() {
                       <p className="text-xs text-muted-foreground mt-1">{plan.desc}</p>
                     </div>
                     <div className="mb-6">
-                      {plan.price ? (
+                      {displayPrice ? (
                         <div className="flex items-baseline gap-1">
-                          <span className="text-4xl font-extrabold text-foreground">${plan.price}</span>
+                          <span className="text-4xl font-extrabold text-foreground">${displayPrice}</span>
                           <span className="text-sm text-muted-foreground">/mo</span>
+                          {billingCycle === "annual" && plan.price && (
+                            <span className="text-sm text-muted-foreground/60 line-through ml-1">${plan.price}</span>
+                          )}
                         </div>
                       ) : (
                         <div className="text-2xl font-bold text-foreground">Custom</div>
@@ -371,7 +388,8 @@ export default function LandingPage() {
                     </Link>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>

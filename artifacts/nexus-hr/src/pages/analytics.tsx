@@ -22,6 +22,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  ReferenceLine,
 } from "recharts";
 import {
   TrendingUp,
@@ -154,6 +155,7 @@ export default function AnalyticsPage() {
                   <XAxis type="number" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis dataKey="department" type="category" stroke="var(--foreground)" fontSize={12} tickLine={false} axisLine={false} width={100} />
                   <Tooltip {...tooltipStyle} cursor={{ fill: "var(--muted)" }} />
+                  <ReferenceLine x={80} stroke="hsl(var(--destructive))" strokeDasharray="4 4" label={{ value: "Plan Limit", fill: "hsl(var(--destructive))", fontSize: 10, position: "top" }} />
                   <Bar dataKey="utilization" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
                 </RechartsBarChart>
               </ResponsiveContainer>

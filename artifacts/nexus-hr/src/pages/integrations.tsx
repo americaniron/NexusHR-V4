@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useMemo } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plug, Search, CheckCircle2, XCircle, ExternalLink, Zap } from "lucide-react";
 
 export default function IntegrationsPage() {
@@ -17,6 +18,7 @@ export default function IntegrationsPage() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categoryTab, setCategoryTab] = useState<string>("all");
 
   const handleToggle = async (toolId: number, currentlyConnected: boolean) => {
     try {
@@ -33,6 +35,13 @@ export default function IntegrationsPage() {
     }
   };
 
+  const categoryList = useMemo(() => {
+    if (!integrations?.data) return [];
+    const cats = new Set<string>();
+    integrations.data.forEach((t) => cats.add(t.category || "Other"));
+    return Array.from(cats).sort();
+  }, [integrations]);
+
   const filtered = useMemo(() => {
     if (!integrations?.data) return [];
     return integrations.data.filter((tool) => {
@@ -42,20 +51,10 @@ export default function IntegrationsPage() {
       const matchesStatus = statusFilter === "all" ||
         (statusFilter === "connected" && tool.isConnected) ||
         (statusFilter === "disconnected" && !tool.isConnected);
-      return matchesSearch && matchesStatus;
+      const matchesCategory = categoryTab === "all" || (tool.category || "Other") === categoryTab;
+      return matchesSearch && matchesStatus && matchesCategory;
     });
-  }, [integrations, search, statusFilter]);
-
-  const categories = useMemo(() => {
-    if (!integrations?.data) return {};
-    const cats: Record<string, typeof integrations.data> = {};
-    filtered.forEach((tool) => {
-      const cat = tool.category || "Other";
-      if (!cats[cat]) cats[cat] = [];
-      cats[cat].push(tool);
-    });
-    return cats;
-  }, [filtered, integrations]);
+  }, [integrations, search, statusFilter, categoryTab]);
 
   const connectedCount = integrations?.data?.filter(t => t.isConnected).length || 0;
   const totalCount = integrations?.data?.length || 0;
@@ -101,69 +100,71 @@ export default function IntegrationsPage() {
         </Select>
       </div>
 
+      <Tabs value={categoryTab} onValueChange={setCategoryTab}>
+        <TabsList className="bg-muted border border-border flex-wrap h-auto py-1">
+          <TabsTrigger value="all">All</TabsTrigger>
+          {categoryList.map((cat) => (
+            <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-52 w-full rounded-xl" />)}
         </div>
-      ) : Object.keys(categories).length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="py-12 text-center text-muted-foreground border border-dashed rounded-xl bg-card/50">
           <Plug className="h-8 w-8 mx-auto mb-3 text-muted-foreground/30" />
           <p className="font-medium">No integrations found</p>
           <p className="text-sm mt-1">Try adjusting your search or filters.</p>
         </div>
       ) : (
-        Object.entries(categories).map(([category, tools]) => (
-          <div key={category} className="space-y-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-foreground">{category}</h2>
-              <Badge variant="secondary" className="text-xs">{tools.length}</Badge>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {tools.map((tool) => (
-                <Card key={tool.id} className={`bg-card flex flex-col transition-colors ${tool.isConnected ? "border-green-500/30" : "border-border"}`}>
-                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                    <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center border border-border">
-                      {tool.iconUrl ? (
-                        <img src={tool.iconUrl} alt={tool.name} className="h-6 w-6" />
-                      ) : (
-                        <Plug className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <Switch
-                      checked={tool.isConnected}
-                      onCheckedChange={() => handleToggle(tool.id, tool.isConnected)}
-                      disabled={connectTool.isPending || disconnectTool.isPending}
-                    />
-                  </CardHeader>
-                  <CardContent className="flex-1">
-                    <CardTitle className="text-base mb-1">{tool.displayName}</CardTitle>
-                    <CardDescription className="line-clamp-2 text-xs">{tool.description}</CardDescription>
-                  </CardContent>
-                  <CardFooter className="pt-3 border-t border-border/50 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-xs">
-                      {tool.isConnected ? (
-                        <>
-                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                          <span className="text-green-600">Connected</span>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-muted-foreground">Not connected</span>
-                        </>
-                      )}
-                    </div>
-                    {tool.isConnected && (
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground">
-                        <ExternalLink className="h-3 w-3 mr-1" /> Configure
-                      </Button>
-                    )}
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          </div>
-        ))
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filtered.map((tool) => (
+            <Card key={tool.id} className={`bg-card flex flex-col transition-colors ${tool.isConnected ? "border-green-500/30" : "border-border"}`}>
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center border border-border">
+                  {tool.iconUrl ? (
+                    <img src={tool.iconUrl} alt={tool.name} className="h-6 w-6" />
+                  ) : (
+                    <Plug className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+                <Switch
+                  checked={tool.isConnected}
+                  onCheckedChange={() => handleToggle(tool.id, tool.isConnected)}
+                  disabled={connectTool.isPending || disconnectTool.isPending}
+                />
+              </CardHeader>
+              <CardContent className="flex-1">
+                <CardTitle className="text-base mb-1">{tool.displayName}</CardTitle>
+                <CardDescription className="line-clamp-2 text-xs">{tool.description}</CardDescription>
+                <Badge variant="secondary" className="text-[10px] mt-2">{tool.category || "Other"}</Badge>
+              </CardContent>
+              <CardFooter className="pt-3 border-t border-border/50 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs">
+                  {tool.isConnected ? (
+                    <>
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                      <span className="text-green-600">Connected</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Not connected</span>
+                    </>
+                  )}
+                </div>
+                {tool.isConnected && (
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground">
+                    <ExternalLink className="h-3 w-3 mr-1" /> Configure
+                  </Button>
+                )}
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
       )}
 
       <Card className="bg-primary/5 border-primary/20">
