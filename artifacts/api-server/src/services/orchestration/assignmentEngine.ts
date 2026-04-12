@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { taskAssignments, tasks } from "@workspace/db/schema";
+import { taskAssignments, tasks, aiEmployees } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { AppError } from "../../middlewares/errorHandler";
 
@@ -39,6 +39,18 @@ interface CreateAssignmentInput {
 }
 
 export async function createAssignment(input: CreateAssignmentInput) {
+  const [task] = await db
+    .select()
+    .from(tasks)
+    .where(and(eq(tasks.id, input.taskId), eq(tasks.orgId, input.orgId)));
+  if (!task) throw AppError.notFound("Task not found or does not belong to this organization");
+
+  const [employee] = await db
+    .select()
+    .from(aiEmployees)
+    .where(and(eq(aiEmployees.id, input.aiEmployeeId), eq(aiEmployees.orgId, input.orgId)));
+  if (!employee) throw AppError.notFound("AI employee not found or does not belong to this organization");
+
   const [assignment] = await db.insert(taskAssignments).values({
     orgId: input.orgId,
     taskId: input.taskId,
@@ -58,7 +70,7 @@ export async function createAssignment(input: CreateAssignmentInput) {
     assigneeId: input.aiEmployeeId,
     status: "queued",
     updatedAt: new Date(),
-  }).where(eq(tasks.id, input.taskId));
+  }).where(and(eq(tasks.id, input.taskId), eq(tasks.orgId, input.orgId)));
 
   return assignment;
 }

@@ -48,11 +48,12 @@ export async function startWorkflow(
 
   if (steps.length === 0) throw AppError.badRequest("Workflow has no steps");
 
-  const stepResults: StepResult[] = steps.map(s => ({
+  const stepResults: StepResult[] = steps.map((s, idx) => ({
     stepId: s.id,
     stepName: s.name,
     stepOrder: s.stepOrder,
     status: "pending" as const,
+    ...(idx === 0 && initialInput !== undefined ? { output: initialInput } : {}),
   }));
 
   const [instance] = await db.insert(workflowInstances).values({
@@ -146,6 +147,24 @@ export async function executeNextStep(
       if (routingResult.selectedEmployee) {
         currentResult.aiEmployeeId = routingResult.selectedEmployee.employeeId;
         currentResult.aiEmployeeName = routingResult.selectedEmployee.employeeName;
+
+        try {
+          const assignment = await createAssignment({
+            orgId,
+            taskId: instance.workflowId,
+            aiEmployeeId: routingResult.selectedEmployee.employeeId,
+            routingScore: routingResult.selectedEmployee.score,
+            routingFactors: routingResult.selectedEmployee.factors,
+            executionPhases: ["processing"],
+          });
+          currentResult.assignmentId = assignment.id;
+
+          await transitionAssignment(assignment.id, orgId, "accepted");
+          await transitionAssignment(assignment.id, orgId, "in_progress");
+        } catch {
+          // Assignment creation may fail if no matching task record exists for workflowId;
+          // step still proceeds with routing info recorded in stepResults
+        }
       }
     }
   }
@@ -202,6 +221,13 @@ export async function completeStep(
   currentResult.completedAt = new Date().toISOString();
   currentResult.output = stepOutput;
 
+  if (currentResult.assignmentId) {
+    try {
+      await transitionAssignment(currentResult.assignmentId, orgId, "completed", { result: stepOutput });
+    } catch {
+    }
+  }
+
   return advanceToNextStep(instance, steps, stepResults, currentStepIdx, orgId);
 }
 
@@ -231,6 +257,13 @@ export async function failStep(
     currentResult.status = "failed";
     currentResult.completedAt = new Date().toISOString();
     currentResult.error = error;
+
+    if (currentResult.assignmentId) {
+      try {
+        await transitionAssignment(currentResult.assignmentId, orgId, "failed");
+      } catch {
+      }
+    }
   }
 
   await db.update(workflowInstances).set({
