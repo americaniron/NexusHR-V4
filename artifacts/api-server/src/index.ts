@@ -3,6 +3,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { initWebSocket } from "./lib/websocket";
 import { initializeEmailTransport } from "./lib/email";
+import { startBillingScheduler } from "./lib/billing/scheduler";
 
 const rawPort = process.env["PORT"];
 
@@ -22,6 +23,7 @@ const httpServer = createServer(app);
 
 initWebSocket(httpServer);
 initializeEmailTransport();
+startBillingScheduler();
 
 httpServer.listen(port, () => {
   logger.info({ port }, "Server listening");

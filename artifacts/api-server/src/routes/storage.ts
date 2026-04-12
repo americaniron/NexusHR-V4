@@ -10,6 +10,15 @@ import { recordUsage } from "../lib/billing/metering";
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
 
+const pendingUploads = new Map<string, { orgId: number; name: string; estimatedSizeMb: number; contentType: string; createdAt: number }>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of pendingUploads) {
+    if (now - val.createdAt > 15 * 60 * 1000) pendingUploads.delete(key);
+  }
+}, 5 * 60 * 1000);
+
 router.post("/storage/uploads/request-url", requireAuth, async (req: Request, res: Response) => {
   const { name, size, contentType } = req.body || {};
   if (!name || !size || !contentType) {
@@ -43,13 +52,48 @@ router.post("/storage/uploads/request-url", requireAuth, async (req: Request, re
     const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
 
     if (orgId) {
-      await recordUsage(orgId, "storage_gb", sizeMb, { name, size: sizeBytes, contentType });
+      pendingUploads.set(objectPath, { orgId, name, estimatedSizeMb: sizeMb, contentType, createdAt: Date.now() });
     }
 
     res.json({ uploadURL, objectPath, metadata: { name, size, contentType } });
   } catch (error) {
     console.error("[Storage] Error generating upload URL:", error);
     res.status(500).json({ error: "Failed to generate upload URL" });
+  }
+});
+
+router.post("/storage/uploads/confirm", requireAuth, async (req: Request, res: Response) => {
+  const { objectPath, actualSize } = req.body || {};
+  if (!objectPath) {
+    res.status(400).json({ error: "Missing objectPath" });
+    return;
+  }
+
+  try {
+    const { orgId } = await getAuthContext(req);
+    const pending = pendingUploads.get(objectPath);
+
+    if (!pending || !orgId) {
+      res.json({ confirmed: true });
+      return;
+    }
+
+    const verifiedSizeMb = actualSize
+      ? Math.max(1, Math.ceil(Number(actualSize) / (1024 * 1024)))
+      : pending.estimatedSizeMb;
+
+    await recordUsage(orgId, "storage_gb", verifiedSizeMb, {
+      name: pending.name,
+      size: verifiedSizeMb * 1024 * 1024,
+      contentType: pending.contentType,
+      objectPath,
+    });
+
+    pendingUploads.delete(objectPath);
+    res.json({ confirmed: true, recordedSizeMb: verifiedSizeMb });
+  } catch (error) {
+    console.error("[Storage] Error confirming upload:", error);
+    res.status(500).json({ error: "Failed to confirm upload" });
   }
 });
 
