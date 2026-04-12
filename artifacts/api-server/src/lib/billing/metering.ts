@@ -41,10 +41,16 @@ export async function recordUsage(
   await reportOverageToStripe(orgId, dimension, quantity);
 }
 
+function normalizeQuantity(dimension: BillingDimension, rawQuantity: number): number {
+  if (dimension === "voice_hours") return rawQuantity / MINUTES_TO_HOURS_DIVISOR;
+  if (dimension === "storage_gb") return rawQuantity / MB_TO_GB_DIVISOR;
+  return rawQuantity;
+}
+
 async function reportOverageToStripe(
   orgId: number,
   dimension: BillingDimension,
-  quantity: number,
+  rawQuantity: number,
 ): Promise<void> {
   try {
     if (COUNT_BASED_DIMENSIONS.has(dimension)) return;
@@ -63,7 +69,8 @@ async function reportOverageToStripe(
     const stripe = await getStripeClient();
     if (!stripe || !sub.stripeCustomerId) return;
 
-    const previousUsed = used - quantity;
+    const normalizedQty = normalizeQuantity(dimension, rawQuantity);
+    const previousUsed = used - normalizedQty;
     const previousOverage = Math.max(0, previousUsed - limit);
     const currentOverage = Math.max(0, used - limit);
     const deltaOverage = currentOverage - previousOverage;
@@ -71,7 +78,15 @@ async function reportOverageToStripe(
 
     const unitAmountCents = Math.round(rate * 100);
     const periodStart = sub.currentPeriodStart || getDefaultPeriodStart();
-    const idempotencyKey = `overage-${orgId}-${dimension}-${periodStart.toISOString()}-${Date.now()}`;
+
+    const [latestEvent] = await db
+      .select({ id: usageEvents.id })
+      .from(usageEvents)
+      .where(and(eq(usageEvents.orgId, orgId), eq(usageEvents.dimension, dimension)))
+      .orderBy(sql`${usageEvents.id} DESC`)
+      .limit(1);
+    const eventId = latestEvent?.id ?? Date.now();
+    const idempotencyKey = `overage-${orgId}-${dimension}-${periodStart.toISOString()}-evt${eventId}`;
 
     await stripe.invoiceItems.create({
       customer: sub.stripeCustomerId,
@@ -84,13 +99,14 @@ async function reportOverageToStripe(
         deltaOverage: String(deltaOverage),
         ratePerUnit: String(rate),
         periodStart: periodStart.toISOString(),
+        usageEventId: String(eventId),
       },
     }, {
       idempotencyKey,
     });
 
     logger.info(
-      { orgId, dimension, deltaOverage, rate, totalChargeCents: Math.round(deltaOverage * unitAmountCents) },
+      { orgId, dimension, deltaOverage, rate, totalChargeCents: Math.round(deltaOverage * unitAmountCents), eventId },
       `Stripe overage invoice item created for ${dimension}`,
     );
   } catch (err) {
