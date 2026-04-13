@@ -4,7 +4,7 @@ import helmet from "helmet";
 import compression from "compression";
 import pinoHttp from "pino-http";
 import { randomUUID } from "crypto";
-import { clerkMiddleware } from "@clerk/express";
+import { clerkMiddleware, getAuth } from "@clerk/express";
 import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -13,15 +13,12 @@ import { rateLimit } from "./middlewares/rateLimit";
 
 const app: Express = express();
 
-app.use((req: Request, _res: Response, next: NextFunction) => {
-  (req as any).id = randomUUID();
-  next();
-});
+app.set("trust proxy", 1);
 
 app.use(
   pinoHttp({
     logger,
-    genReqId: (req) => (req as any).id,
+    genReqId: () => randomUUID(),
     serializers: {
       req(req) {
         return {
