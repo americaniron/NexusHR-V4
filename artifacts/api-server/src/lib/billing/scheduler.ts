@@ -3,7 +3,7 @@ import { billingSubscriptions, billingAlerts, notifications, users } from "@work
 import { eq, and, lt, lte, gte, isNotNull } from "drizzle-orm";
 import { logger } from "../logger";
 import { getUsageSummary, checkAllCountBasedLimits } from "./metering";
-import { DUNNING_CONFIG, ALERT_THRESHOLD_PERCENT, isUnlimited, type BillingDimension } from "./plans";
+import { DUNNING_CONFIG, ALERT_THRESHOLD_PERCENT, TRIAL_DATA_RETENTION_DAYS, isUnlimited, type BillingDimension } from "./plans";
 import { publishEvent } from "../websocket";
 import { sendEmail } from "../email";
 
@@ -12,11 +12,12 @@ const DUNNING_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 let monitorTimer: ReturnType<typeof setInterval> | null = null;
 let dunningTimer: ReturnType<typeof setInterval> | null = null;
+let trialTimer: ReturnType<typeof setInterval> | null = null;
 
 export function startBillingScheduler(): void {
   monitorTimer = setInterval(runAllocationMonitor, MONITOR_INTERVAL_MS);
   dunningTimer = setInterval(runDunningSchedule, DUNNING_CHECK_INTERVAL_MS);
-  setInterval(runTrialExpirationCheck, MONITOR_INTERVAL_MS);
+  trialTimer = setInterval(runTrialExpirationCheck, MONITOR_INTERVAL_MS);
   logger.info("Billing scheduler started (allocation monitor every 1h, dunning check every 6h, trial expiry every 1h)");
 
   setTimeout(runAllocationMonitor, 30_000);
@@ -26,8 +27,10 @@ export function startBillingScheduler(): void {
 export function stopBillingScheduler(): void {
   if (monitorTimer) clearInterval(monitorTimer);
   if (dunningTimer) clearInterval(dunningTimer);
+  if (trialTimer) clearInterval(trialTimer);
   monitorTimer = null;
   dunningTimer = null;
+  trialTimer = null;
 }
 
 async function runAllocationMonitor(): Promise<void> {
@@ -152,8 +155,8 @@ async function runTrialExpirationCheck(): Promise<void> {
           userId: user.id,
           type: "trial_expired",
           title: "Your Free Trial Has Ended",
-          message: "Your 14-day free trial has expired. Upgrade to a paid plan to keep your AI workforce running. Your data will be retained for 30 days.",
-          data: { upgradeUrl: "/billing", dataRetentionDays: 30 },
+          message: `Your 14-day free trial has expired. Upgrade to a paid plan to keep your AI workforce running. Your data will be retained for ${TRIAL_DATA_RETENTION_DAYS} days.`,
+          data: { upgradeUrl: "/billing", dataRetentionDays: TRIAL_DATA_RETENTION_DAYS },
         });
       }
 
@@ -165,7 +168,7 @@ async function runTrialExpirationCheck(): Promise<void> {
         });
       }
 
-      publishEvent(sub.orgId, "billing", "billing:trial_expired", { dataRetentionDays: 30 });
+      publishEvent(sub.orgId, "billing", "billing:trial_expired", { dataRetentionDays: TRIAL_DATA_RETENTION_DAYS });
       expired++;
     }
 
