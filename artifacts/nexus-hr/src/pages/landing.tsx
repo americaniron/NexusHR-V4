@@ -35,32 +35,119 @@ import {
   UserCheck,
   Video,
   Target,
+  Mic,
+  Sparkles,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 
+const BASE = import.meta.env.BASE_URL;
+
+const AI_TEAM = [
+  {
+    name: "Sarah Chen",
+    role: "Customer Support Lead",
+    department: "Customer Service",
+    avatar: `${BASE}ai-team/sarah-chen.png`,
+    status: "online",
+    specialty: "Handles 200+ customer tickets daily with 98.7% satisfaction",
+    personality: "Warm, empathetic, patient",
+  },
+  {
+    name: "Marcus Wright",
+    role: "Senior Data Analyst",
+    department: "Analytics",
+    avatar: `${BASE}ai-team/marcus-wright.png`,
+    status: "online",
+    specialty: "Processes 50TB of data weekly, builds real-time dashboards",
+    personality: "Precise, methodical, insightful",
+  },
+  {
+    name: "Priya Patel",
+    role: "Financial Analyst",
+    department: "Finance",
+    avatar: `${BASE}ai-team/priya-patel.png`,
+    status: "online",
+    specialty: "Forecasting, P&L analysis, and board-ready reporting",
+    personality: "Detail-oriented, strategic, composed",
+  },
+  {
+    name: "James Morrison",
+    role: "Project Manager",
+    department: "Operations",
+    avatar: `${BASE}ai-team/james-morrison.png`,
+    status: "online",
+    specialty: "Orchestrates cross-team workflows and sprint planning",
+    personality: "Decisive, organized, collaborative",
+  },
+  {
+    name: "Elena Vasquez",
+    role: "Content Strategy Director",
+    department: "Marketing",
+    avatar: `${BASE}ai-team/elena-vasquez.png`,
+    status: "online",
+    specialty: "SEO content, editorial calendars, brand voice",
+    personality: "Creative, articulate, trend-savvy",
+  },
+  {
+    name: "Alex Kim",
+    role: "DevOps Engineer",
+    department: "Engineering",
+    avatar: `${BASE}ai-team/alex-kim.png`,
+    status: "online",
+    specialty: "CI/CD pipelines, infrastructure monitoring, incident response",
+    personality: "Analytical, focused, proactive",
+  },
+  {
+    name: "Dr. Amara Okafor",
+    role: "Healthcare Ops Manager",
+    department: "Healthcare",
+    avatar: `${BASE}ai-team/dr-amara-okafor.png`,
+    status: "online",
+    specialty: "Patient flow optimization, HIPAA compliance, staffing",
+    personality: "Compassionate, thorough, evidence-based",
+  },
+  {
+    name: "Ryan Brooks",
+    role: "Sales Development Rep",
+    department: "Sales",
+    avatar: `${BASE}ai-team/ryan-brooks.png`,
+    status: "online",
+    specialty: "Lead qualification, outbound prospecting, CRM management",
+    personality: "Energetic, persuasive, goal-driven",
+  },
+];
+
+const FEATURED_CONVERSATION = {
+  employee: AI_TEAM[0],
+  messages: [
+    { from: "user", text: "Sarah, can you handle the incoming support queue while I focus on the product launch?" },
+    { from: "ai", text: "Absolutely! I've already triaged 47 tickets this morning. 12 high-priority issues resolved, 8 escalated to engineering with full context. I'll keep the response time under 3 minutes. Want me to send you a summary at end of day?" },
+    { from: "user", text: "Perfect. Also loop in Marcus to pull the customer satisfaction trends." },
+    { from: "ai", text: "Done — I've briefed Marcus on the Q4 satisfaction data request. He'll have the dashboard ready by 2 PM. Anything else before I dive back in?" },
+  ],
+};
+
 const STATS = [
-  { value: "2,400+", label: "Companies Served" },
   { value: "105+", label: "AI Roles Available" },
-  { value: "99.9%", label: "Uptime SLA" },
+  { value: "24/7", label: "Always Working" },
+  { value: "< 3s", label: "Response Time" },
   { value: "40–70%", label: "Cost Savings" },
 ];
 
 const FEATURES = [
-  { icon: UserCheck, title: "Autonomous AI Professionals", desc: "Hire AI professionals that plan, execute, and deliver results independently — no hand-holding required." },
-  { icon: Zap, title: "Instant Hiring", desc: "No training period. Your AI professionals are productive from second one with deep role-specific expertise." },
-  { icon: Shield, title: "Enterprise Security", desc: "SOC2 Type II, GDPR, ISO 27001 compliant with 256-bit encryption, audit logs, and data residency controls." },
-  { icon: BarChart3, title: "Command Center", desc: "Real-time oversight of tasks, engagement, and performance across your entire AI workforce in one dashboard." },
-  { icon: MessageSquare, title: "Natural Conversations", desc: "Chat or use voice mode with your AI colleagues. Real LLM-powered dialogue — never scripted responses." },
-  { icon: Brain, title: "Personality Tuning", desc: "Adjust warmth, formality, humor, and 4 other personality axes to match your company culture precisely." },
+  { icon: UserCheck, title: "Autonomous AI Professionals", desc: "Real colleagues that plan, execute, and deliver results independently — not scripted chatbots." },
+  { icon: Zap, title: "Instant Hiring", desc: "No training period. Productive from second one with deep role-specific expertise across 105+ specializations." },
+  { icon: Mic, title: "Voice Conversations", desc: "Chat or use voice mode with your AI colleagues. Real LLM-powered dialogue — as natural as talking to a human." },
+  { icon: Brain, title: "Personality Tuning", desc: "Adjust warmth, formality, humor, and 4 other personality axes so each hire matches your company culture." },
   { icon: Workflow, title: "Multi-Professional Workflows", desc: "Chain AI professionals into automated pipelines. One colleague's output becomes another's input seamlessly." },
-  { icon: Globe, title: "Tool Integrations", desc: "Connect Slack, GitHub, Jira, Salesforce, and 20+ tools so AI professionals operate in your existing stack." },
+  { icon: Shield, title: "Enterprise Security", desc: "SOC2 Type II, GDPR, ISO 27001 compliant. 256-bit encryption, audit logs, and data residency controls." },
 ];
 
 const HOW_IT_WORKS = [
-  { step: "01", title: "Browse the Talent Hub", desc: "Explore 105+ specialized AI professionals across engineering, marketing, finance, HR, legal, and more." },
-  { step: "02", title: "Customize & Hire", desc: "Name your AI professional, choose a voice, generate an avatar, and tune personality axes to match your culture." },
-  { step: "03", title: "Go Live Instantly", desc: "Your new colleague is ready immediately. Assign tasks, start conversations, or add them to automated workflows." },
-  { step: "04", title: "Scale Without Limits", desc: "Hire more professionals as you grow. Pay only for what you use with transparent, predictable billing." },
+  { step: "01", title: "Browse the Talent Hub", desc: "Explore 105+ specialized AI professionals across engineering, marketing, finance, HR, legal, and more.", image: AI_TEAM[1].avatar },
+  { step: "02", title: "Customize & Hire", desc: "Name your AI professional, choose a voice, generate an avatar, and tune personality axes to match your culture.", image: AI_TEAM[4].avatar },
+  { step: "03", title: "Go Live Instantly", desc: "Your new colleague is ready immediately. Assign tasks, start conversations, or add them to automated workflows.", image: AI_TEAM[3].avatar },
+  { step: "04", title: "Scale Without Limits", desc: "Hire more professionals as you grow. Pay only for what you use with transparent, predictable billing.", image: AI_TEAM[5].avatar },
 ];
 
 const PLANS = [
@@ -118,159 +205,59 @@ const TESTIMONIALS = [
   { name: "Dr. Priya Sharma", role: "CTO, MedAI Solutions", quote: "Personality tuning lets us match our company culture exactly. Our AI customer success colleagues feel like natural extensions of our team.", rating: 5 },
 ];
 
-const PROBLEMS = [
-  { icon: Clock, title: "Months-Long Hiring Cycles", desc: "Traditional hiring takes 3–6 months per role. Interviews, negotiations, onboarding — time you don't have." },
-  { icon: DollarSign, title: "Skyrocketing Labor Costs", desc: "Salaries, benefits, office space, equipment. Every new hire adds $80K+ in annual overhead." },
-  { icon: XCircle, title: "Scaling Bottlenecks", desc: "Need 10 analysts by Friday? Good luck. Human talent pipelines can't match the pace of modern business." },
-];
-
-const DIFFERENTIATION = [
-  {
-    category: "Traditional Chatbots",
-    traits: [
-      { feature: "Autonomous Task Execution", us: true, them: false },
-      { feature: "Persistent Memory & Context", us: true, them: false },
-      { feature: "Multi-Step Workflows", us: true, them: false },
-      { feature: "Role-Specific Expertise", us: true, them: false },
-      { feature: "Personality Customization", us: true, them: false },
-      { feature: "Voice Conversations", us: true, them: false },
-    ],
-  },
-  {
-    category: "Virtual Assistants",
-    traits: [
-      { feature: "Deep Domain Expertise", us: true, them: false },
-      { feature: "Cross-Role Collaboration", us: true, them: false },
-      { feature: "Autonomous Decision Making", us: true, them: false },
-      { feature: "Emotional Intelligence", us: true, them: false },
-    ],
-  },
-  {
-    category: "RPA Tools",
-    traits: [
-      { feature: "Natural Language Interface", us: true, them: false },
-      { feature: "Adaptive Learning", us: true, them: false },
-      { feature: "Complex Reasoning", us: true, them: false },
-      { feature: "Creative Problem Solving", us: true, them: false },
-    ],
-  },
-  {
-    category: "AI Copilots",
-    traits: [
-      { feature: "Fully Autonomous Execution", us: true, them: false },
-      { feature: "Multi-Tool Orchestration", us: true, them: false },
-      { feature: "Workforce Management", us: true, them: false },
-      { feature: "Performance Analytics", us: true, them: false },
-    ],
-  },
-  {
-    category: "Avatar Platforms",
-    traits: [
-      { feature: "Real Work Output", us: true, them: false },
-      { feature: "Enterprise Integrations", us: true, them: false },
-      { feature: "Billing & Metering", us: true, them: false },
-      { feature: "Role-Based Access Control", us: true, them: false },
-    ],
-  },
-];
-
 const INDUSTRY_VERTICALS = [
   {
     id: "healthcare",
     name: "Healthcare",
     icon: Stethoscope,
-    tier: 1,
     headline: "AI Professionals for Healthcare Organizations",
     description: "HIPAA-compliant AI professionals that handle patient scheduling, medical coding, clinical documentation, and compliance reporting.",
-    roles: [
-      { title: "Medical Coder", desc: "Processes ICD-10 and CPT codes with 99% accuracy" },
-      { title: "Patient Coordinator", desc: "Manages scheduling, follow-ups, and patient communications" },
-      { title: "Compliance Analyst", desc: "Monitors regulatory adherence and generates audit reports" },
-    ],
+    featuredEmployee: AI_TEAM[6],
     stat: "62% reduction in administrative overhead",
   },
   {
     id: "financial",
     name: "Financial Services",
     icon: TrendingUp,
-    tier: 1,
     headline: "AI Professionals for Financial Services",
     description: "SOX-compliant AI professionals for financial analysis, risk assessment, regulatory reporting, and client communications.",
-    roles: [
-      { title: "Financial Analyst", desc: "Builds forecasts, analyzes P&L, monitors cash flow" },
-      { title: "Risk Analyst", desc: "Evaluates portfolio risk, generates compliance reports" },
-      { title: "Client Relations", desc: "Manages client communications and quarterly reviews" },
-    ],
+    featuredEmployee: AI_TEAM[2],
     stat: "55% faster financial reporting cycles",
   },
   {
     id: "technology",
     name: "Technology",
     icon: Cpu,
-    tier: 1,
     headline: "AI Professionals for Technology Companies",
     description: "AI professionals that handle code reviews, DevOps, QA, technical writing, and project management for engineering teams.",
-    roles: [
-      { title: "DevOps Engineer", desc: "Manages CI/CD, infrastructure, and incident response" },
-      { title: "QA Engineer", desc: "Writes test suites, tracks bugs, validates releases" },
-      { title: "Technical Writer", desc: "Creates API docs, guides, and internal knowledge bases" },
-    ],
+    featuredEmployee: AI_TEAM[5],
     stat: "70% reduction in DevOps ticket backlog",
   },
   {
     id: "legal",
     name: "Legal",
     icon: Scale,
-    tier: 1,
     headline: "AI Professionals for Legal Firms",
     description: "AI professionals for contract review, legal research, case management, and client intake with attorney-client privilege awareness.",
-    roles: [
-      { title: "Legal Researcher", desc: "Analyzes case law, statutes, and regulatory precedents" },
-      { title: "Contract Analyst", desc: "Reviews contracts, flags risks, suggests redlines" },
-      { title: "Paralegal Assistant", desc: "Manages filings, deadlines, and client communications" },
-    ],
+    featuredEmployee: AI_TEAM[3],
     stat: "48% faster contract review turnaround",
   },
   {
     id: "retail",
     name: "Retail & E-Commerce",
     icon: ShoppingCart,
-    tier: 2,
     headline: "AI Professionals for Retail",
     description: "AI professionals for inventory management, customer support, demand forecasting, and marketing automation.",
-    roles: [
-      { title: "Demand Planner", desc: "Forecasts inventory needs and optimizes stock levels" },
-      { title: "Customer Support", desc: "Handles returns, inquiries, and order tracking 24/7" },
-      { title: "Marketing Specialist", desc: "Creates campaigns, manages social, and tracks ROI" },
-    ],
+    featuredEmployee: AI_TEAM[0],
     stat: "40% improvement in customer response times",
-  },
-  {
-    id: "manufacturing",
-    name: "Manufacturing",
-    icon: Factory,
-    tier: 2,
-    headline: "AI Professionals for Manufacturing",
-    description: "AI professionals for supply chain management, quality control reporting, maintenance scheduling, and vendor management.",
-    roles: [
-      { title: "Supply Chain Analyst", desc: "Optimizes procurement and tracks vendor performance" },
-      { title: "Quality Inspector", desc: "Monitors QC metrics and generates compliance reports" },
-      { title: "Maintenance Planner", desc: "Schedules preventive maintenance and tracks equipment" },
-    ],
-    stat: "45% reduction in supply chain disruptions",
   },
   {
     id: "education",
     name: "Education",
     icon: GraduationCap,
-    tier: 2,
     headline: "AI Professionals for Education",
     description: "AI professionals for student support, curriculum development, administrative tasks, and enrollment management.",
-    roles: [
-      { title: "Student Advisor", desc: "Guides students on courses, careers, and resources" },
-      { title: "Curriculum Developer", desc: "Creates course materials and assessment rubrics" },
-      { title: "Admissions Coordinator", desc: "Manages applications, reviews, and communications" },
-    ],
+    featuredEmployee: AI_TEAM[4],
     stat: "50% faster enrollment processing",
   },
 ];
@@ -295,13 +282,10 @@ const FAQ = [
   { q: "How does NexsusHR differ from RPA or automation tools?", a: "RPA tools follow rigid, pre-programmed rules. NexsusHR AI professionals understand natural language, reason about complex problems, adapt to new situations, and collaborate with your team through conversation — just like a human colleague would." },
 ];
 
-const COMPARISON_TABS = DIFFERENTIATION.map((d) => d.category);
-
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("annual");
   const [activeIndustry, setActiveIndustry] = useState(0);
-  const [comparisonTab, setComparisonTab] = useState(0);
   const [demoEmail, setDemoEmail] = useState("");
   const [demoSubmitted, setDemoSubmitted] = useState(false);
   const [emailSignup, setEmailSignup] = useState("");
@@ -355,14 +339,14 @@ export default function LandingPage() {
     <div className="flex min-h-[100dvh] flex-col bg-background selection:bg-primary/30">
       <header className="sticky top-0 z-50 flex h-20 items-center justify-between border-b border-border/40 px-6 backdrop-blur-md bg-background/80">
         <div className="flex items-center gap-2.5">
-          <img src={`${import.meta.env.BASE_URL}nexushr-logo.png`} alt="NexsusHR" className="h-10 w-10 object-contain" />
+          <img src={`${BASE}nexushr-logo.png`} alt="NexsusHR" className="h-10 w-10 object-contain" />
           <span className="text-xl font-bold tracking-tight text-foreground">NexsusHR</span>
         </div>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
+          <a href="#team" className="hover:text-foreground transition-colors">Meet the Team</a>
           <a href="#features" className="hover:text-foreground transition-colors">Features</a>
           <a href="#industries" className="hover:text-foreground transition-colors">Industries</a>
           <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
-          <a href="#roi" className="hover:text-foreground transition-colors">ROI Calculator</a>
           <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
         </nav>
         <div className="flex items-center gap-2 sm:gap-4">
@@ -379,44 +363,102 @@ export default function LandingPage() {
       </header>
 
       <main className="flex-1">
-        <section className="relative overflow-hidden pt-24 pb-32">
+
+        <section className="relative overflow-hidden pt-16 pb-24">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/20 via-background to-background" />
           <div className="absolute top-20 left-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl" />
-          <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm text-primary mb-8">
-              <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
-              14-Day Free Trial — No Credit Card Required
+          <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div>
+                <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm text-primary mb-6">
+                  <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
+                  8 AI Professionals Online Now
+                </div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl leading-[1.1]">
+                  Meet Your New<br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-amber-400">AI Workforce.</span>
+                </h1>
+                <p className="mt-6 max-w-xl text-lg text-muted-foreground leading-relaxed">
+                  Real AI professionals with names, faces, personalities, and deep expertise. They plan, execute, and deliver — like human colleagues, at a fraction of the cost.
+                </p>
+                <div className="mt-8 flex flex-col sm:flex-row items-start gap-3">
+                  <Link href="/sign-up">
+                    <Button size="lg" className="h-12 px-8 text-base bg-primary text-primary-foreground hover:bg-primary/90">
+                      Hire Your First AI Professional <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <a href="#team">
+                    <Button size="lg" variant="outline" className="h-12 px-8 text-base border-border bg-background hover:bg-accent">
+                      Meet the Team
+                    </Button>
+                  </a>
+                </div>
+                <p className="mt-4 text-sm text-muted-foreground">14-day free trial. No credit card required.</p>
+              </div>
+
+              <div className="relative">
+                <div className="grid grid-cols-3 gap-3">
+                  {AI_TEAM.slice(0, 6).map((member, i) => (
+                    <div
+                      key={member.name}
+                      className="group relative rounded-2xl border border-border/60 bg-card/80 p-3 backdrop-blur-sm hover:border-primary/50 hover:bg-card transition-all duration-300"
+                      style={{ animationDelay: `${i * 150}ms` }}
+                    >
+                      <div className="relative mx-auto w-16 h-16 sm:w-20 sm:h-20 mb-2">
+                        <img
+                          src={member.avatar}
+                          alt={member.name}
+                          className="w-full h-full rounded-full object-cover border-2 border-primary/20 group-hover:border-primary/50 transition-colors"
+                        />
+                        <div className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-card" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs sm:text-sm font-semibold text-foreground truncate">{member.name}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{member.role}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 flex justify-center gap-3">
+                  {AI_TEAM.slice(6).map((member) => (
+                    <div
+                      key={member.name}
+                      className="group relative rounded-2xl border border-border/60 bg-card/80 p-3 backdrop-blur-sm hover:border-primary/50 hover:bg-card transition-all duration-300 w-[calc(33.333%-0.5rem)]"
+                    >
+                      <div className="relative mx-auto w-16 h-16 sm:w-20 sm:h-20 mb-2">
+                        <img
+                          src={member.avatar}
+                          alt={member.name}
+                          className="w-full h-full rounded-full object-cover border-2 border-primary/20 group-hover:border-primary/50 transition-colors"
+                        />
+                        <div className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-card" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs sm:text-sm font-semibold text-foreground truncate">{member.name}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{member.role}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-3 flex flex-col items-center justify-center w-[calc(33.333%-0.5rem)]">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-primary/10 border-2 border-dashed border-primary/30 flex items-center justify-center mb-2">
+                      <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-primary/60" />
+                    </div>
+                    <p className="text-xs sm:text-sm font-semibold text-primary">+97 More</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Roles Available</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <h1 className="mx-auto max-w-4xl text-3xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-7xl">
-              Hire AI Professionals.<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-amber-400">Save 40–70% on Workforce Costs.</span>
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
-              NexsusHR is the operating system for the AI-powered enterprise. Hire fully autonomous AI professionals that plan, execute, and deliver — at a fraction of the cost of traditional hires.
-            </p>
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-              <Link href="/sign-up">
-                <Button size="lg" className="h-12 px-6 sm:px-8 text-sm sm:text-base bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto">
-                  Start Your 14-Day Free Trial <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <a href="#demo">
-                <Button size="lg" variant="outline" className="h-12 px-6 sm:px-8 text-sm sm:text-base border-border bg-background hover:bg-accent hover:text-accent-foreground w-full sm:w-auto">
-                  <Play className="mr-2 h-4 w-4" /> Watch Demo
-                </Button>
-              </a>
-            </div>
-            <p className="mt-4 text-sm text-muted-foreground">No credit card required. Full Growth-tier access for 14 days.</p>
           </div>
         </section>
 
-        <section className="py-16 border-y border-border/40 bg-card/30">
+        <section className="py-12 border-y border-border/40 bg-card/30">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {STATS.map((stat) => (
                 <div key={stat.label} className="text-center">
-                  <div className="text-4xl font-extrabold text-foreground">{stat.value}</div>
+                  <div className="text-3xl sm:text-4xl font-extrabold text-foreground">{stat.value}</div>
                   <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
                 </div>
               ))}
@@ -424,7 +466,123 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="py-10 border-b border-border/40 bg-muted/30">
+        <section id="team" className="py-20">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <Badge variant="outline" className="mb-4 border-primary/30 text-primary">Your AI Workforce</Badge>
+              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Meet the Professionals</h2>
+              <p className="mt-4 text-muted-foreground text-lg">
+                Each AI professional has a unique identity, personality, and deep expertise. They're not tools — they're colleagues.
+              </p>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
+              {AI_TEAM.map((member) => (
+                <Card key={member.name} className="group bg-card border-border hover:border-primary/50 transition-all duration-300 overflow-hidden">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="relative mb-4">
+                        <img
+                          src={member.avatar}
+                          alt={member.name}
+                          className="w-24 h-24 rounded-full object-cover border-3 border-primary/20 group-hover:border-primary/40 transition-colors shadow-lg"
+                        />
+                        <div className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-card" />
+                      </div>
+                      <h3 className="text-lg font-bold text-foreground">{member.name}</h3>
+                      <p className="text-sm text-primary font-medium">{member.role}</p>
+                      <Badge variant="secondary" className="mt-2 text-[10px]">{member.department}</Badge>
+                      <p className="mt-3 text-xs text-muted-foreground leading-relaxed">{member.specialty}</p>
+                      <div className="mt-3 flex items-center gap-1.5">
+                        <Brain className="h-3 w-3 text-primary/60" />
+                        <span className="text-[10px] text-muted-foreground italic">{member.personality}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="text-center mt-10">
+              <Link href="/sign-up">
+                <Button size="lg" variant="outline" className="border-primary/30 text-primary hover:bg-primary/10">
+                  Browse All 105+ Roles <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20 bg-card/30 border-y border-border/40">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-3xl mx-auto mb-10">
+              <Badge variant="outline" className="mb-4 border-primary/30 text-primary">Live Interaction</Badge>
+              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">This Is How They Work</h2>
+              <p className="mt-4 text-muted-foreground text-lg">
+                Real conversations. Real collaboration. See how {FEATURED_CONVERSATION.employee.name} handles a typical workday.
+              </p>
+            </div>
+            <div className="max-w-3xl mx-auto">
+              <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-xl">
+                <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/30">
+                  <img
+                    src={FEATURED_CONVERSATION.employee.avatar}
+                    alt={FEATURED_CONVERSATION.employee.name}
+                    className="w-10 h-10 rounded-full object-cover border-2 border-primary/30"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{FEATURED_CONVERSATION.employee.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-2 w-2 rounded-full bg-green-500" />
+                      <span className="text-xs text-muted-foreground">{FEATURED_CONVERSATION.employee.role} — Online</span>
+                    </div>
+                  </div>
+                  <div className="ml-auto flex items-center gap-2">
+                    <Badge variant="secondary" className="text-[10px]">
+                      <Mic className="h-3 w-3 mr-1" /> Voice Ready
+                    </Badge>
+                  </div>
+                </div>
+                <div className="p-6 space-y-4 min-h-[240px]">
+                  {FEATURED_CONVERSATION.messages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                        msg.from === "user"
+                          ? "bg-primary text-primary-foreground rounded-br-md"
+                          : "bg-muted text-foreground rounded-bl-md"
+                      }`}>
+                        {msg.text}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="features" className="py-20">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <Badge variant="outline" className="mb-4 border-primary/30 text-primary">Capabilities</Badge>
+              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Not Chatbots. Not Assistants. <span className="text-primary">Professionals.</span></h2>
+              <p className="mt-4 text-muted-foreground text-lg">Every AI professional comes with deep, role-specific expertise and real autonomy.</p>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
+              {FEATURES.map((f, i) => (
+                <Card key={i} className="bg-card border-border hover:border-primary/30 transition-colors">
+                  <CardContent className="p-6">
+                    <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+                      <f.icon className="h-6 w-6" />
+                    </div>
+                    <h3 className="text-lg font-bold text-foreground mb-2">{f.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-10 border-y border-border/40 bg-muted/30">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-center gap-6 sm:gap-8 flex-wrap">
               {TRUST_BADGES.map((label) => (
@@ -437,248 +595,112 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <section id="how-it-works" className="py-20">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <Badge variant="outline" className="mb-4 border-primary/30 text-primary">Getting Started</Badge>
+              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Hire in 4 Simple Steps</h2>
+            </div>
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
+              {HOW_IT_WORKS.map((step) => (
+                <div key={step.step} className="text-center">
+                  <div className="relative mx-auto w-20 h-20 mb-4">
+                    <img
+                      src={step.image}
+                      alt={step.title}
+                      className="w-full h-full rounded-full object-cover border-2 border-primary/20 opacity-80"
+                    />
+                    <div className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-lg">
+                      {step.step}
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-bold text-foreground mb-2">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="industries" className="py-20 bg-card/30 border-y border-border/40">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <Badge variant="outline" className="mb-4 border-primary/30 text-primary">Industry Solutions</Badge>
+              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Built for Your Industry</h2>
+              <p className="mt-4 text-muted-foreground text-lg">Specialized AI professionals with domain expertise and compliance awareness.</p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2 mb-10">
+              {INDUSTRY_VERTICALS.map((v, i) => (
+                <Button
+                  key={v.id}
+                  variant={activeIndustry === i ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveIndustry(i)}
+                  className="text-xs"
+                >
+                  <v.icon className="h-3.5 w-3.5 mr-1.5" />
+                  {v.name}
+                </Button>
+              ))}
+            </div>
+            <div className="max-w-4xl mx-auto">
+              <Card className="bg-card border-border overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="grid md:grid-cols-[280px_1fr]">
+                    <div className="bg-muted/30 p-8 flex flex-col items-center justify-center border-r border-border">
+                      <img
+                        src={activeVertical.featuredEmployee.avatar}
+                        alt={activeVertical.featuredEmployee.name}
+                        className="w-28 h-28 rounded-full object-cover border-3 border-primary/30 shadow-lg mb-4"
+                      />
+                      <p className="text-base font-bold text-foreground">{activeVertical.featuredEmployee.name}</p>
+                      <p className="text-sm text-primary">{activeVertical.featuredEmployee.role}</p>
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <span className="text-xs text-muted-foreground">Active in {activeVertical.name}</span>
+                      </div>
+                    </div>
+                    <div className="p-8">
+                      <h3 className="text-xl font-bold text-foreground mb-3">{activeVertical.headline}</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed mb-6">{activeVertical.description}</p>
+                      <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 flex items-center gap-3">
+                        <BarChart3 className="h-8 w-8 text-primary flex-shrink-0" />
+                        <div>
+                          <p className="text-2xl font-bold text-primary">{activeVertical.stat.split(" ")[0]}</p>
+                          <p className="text-xs text-muted-foreground">{activeVertical.stat.split(" ").slice(1).join(" ")}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
         <section className="py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto mb-14">
-              <Badge variant="outline" className="mb-4 border-destructive/30 text-destructive">The Problem</Badge>
-              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Hiring Is Broken. AI Fixes It.</h2>
-              <p className="mt-4 text-muted-foreground text-lg">Every company faces the same crushing bottlenecks when trying to scale their workforce.</p>
+              <Badge variant="outline" className="mb-4 border-primary/30 text-primary">Testimonials</Badge>
+              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">What Our Clients Say</h2>
             </div>
             <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
-              {PROBLEMS.map((p, i) => (
-                <Card key={i} className="bg-card border-destructive/10 hover:border-destructive/20 transition-colors">
-                  <CardContent className="p-6">
-                    <div className="h-12 w-12 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center mb-4">
-                      <p.icon className="h-6 w-6" />
-                    </div>
-                    <h3 className="text-lg font-bold text-foreground mb-2">{p.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            <div className="text-center mt-8">
-              <Link href="/sign-up">
-                <Button variant="outline" size="lg">
-                  See How NexsusHR Solves This <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        <section id="features" className="py-24 bg-card/50 border-y border-border/40">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <Badge variant="outline" className="mb-4">Platform Capabilities</Badge>
-              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Everything You Need to Lead Your AI Workforce</h2>
-              <p className="mt-4 text-muted-foreground text-lg">From hiring to performance management, NexsusHR provides the complete operating system for your AI professionals.</p>
-            </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {FEATURES.map((feature, i) => (
-                <div key={i} className="flex flex-col rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-md hover:border-primary/30 transition-all">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <feature.icon className="h-6 w-6" />
-                  </div>
-                  <h3 className="text-lg font-bold text-foreground mb-2">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-24">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <Badge variant="outline" className="mb-4">
-                <Target className="h-3 w-3 mr-1" /> How We Compare
-              </Badge>
-              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Not a Chatbot. Not an Assistant. A Colleague.</h2>
-              <p className="mt-4 text-muted-foreground text-lg">See how NexsusHR AI professionals compare to other solutions on the market.</p>
-            </div>
-            <div className="max-w-3xl mx-auto">
-              <div className="flex flex-wrap gap-2 mb-8 justify-center">
-                {COMPARISON_TABS.map((tab, i) => (
-                  <button
-                    key={tab}
-                    onClick={() => setComparisonTab(i)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      comparisonTab === i
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    vs {tab}
-                  </button>
-                ))}
-              </div>
-              <Card className="bg-card border-border overflow-hidden">
-                <CardContent className="p-0">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/50">
-                        <th className="text-left px-6 py-3 font-medium text-muted-foreground">Feature</th>
-                        <th className="text-center px-6 py-3 font-medium text-primary">NexsusHR</th>
-                        <th className="text-center px-6 py-3 font-medium text-muted-foreground">{COMPARISON_TABS[comparisonTab]}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {DIFFERENTIATION[comparisonTab].traits.map((trait, i) => (
-                        <tr key={i} className="border-b border-border/50 last:border-0">
-                          <td className="px-6 py-3 text-foreground">{trait.feature}</td>
-                          <td className="px-6 py-3 text-center">
-                            <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" />
-                          </td>
-                          <td className="px-6 py-3 text-center">
-                            <XCircle className="h-5 w-5 text-muted-foreground/40 mx-auto" />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        <section id="industries" className="py-24 bg-card/50 border-y border-border/40">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <Badge variant="outline" className="mb-4">
-                <Building2 className="h-3 w-3 mr-1" /> Industry Solutions
-              </Badge>
-              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Purpose-Built for Your Industry</h2>
-              <p className="mt-4 text-muted-foreground text-lg">AI professionals with domain expertise tailored to the specific needs and compliance requirements of your industry.</p>
-            </div>
-            <div className="flex flex-wrap gap-2 justify-center mb-10">
-              {INDUSTRY_VERTICALS.map((v, i) => (
-                <button
-                  key={v.id}
-                  onClick={() => setActiveIndustry(i)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeIndustry === i
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <v.icon className="h-4 w-4" />
-                  {v.name}
-                </button>
-              ))}
-            </div>
-            <div className="max-w-4xl mx-auto">
-              <Card className="bg-card border-border">
-                <CardContent className="p-8">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <activeVertical.icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-foreground">{activeVertical.headline}</h3>
-                      {activeVertical.tier === 1 && <Badge variant="secondary" className="mt-1">Priority Tier</Badge>}
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground leading-relaxed mb-6">{activeVertical.description}</p>
-                  <div className="grid gap-4 md:grid-cols-3 mb-6">
-                    {activeVertical.roles.map((role) => (
-                      <div key={role.title} className="rounded-xl border border-border bg-background p-4">
-                        <h4 className="font-semibold text-foreground mb-1">{role.title}</h4>
-                        <p className="text-xs text-muted-foreground">{role.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between pt-4 border-t border-border">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-green-500" />
-                      <span className="text-sm font-medium text-green-500">{activeVertical.stat}</span>
-                    </div>
-                    <Link href="/sign-up">
-                      <Button size="sm">
-                        Hire {activeVertical.name} Professionals <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        <section id="how-it-works" className="py-24">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <Badge variant="outline" className="mb-4">Getting Started</Badge>
-              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Hire Your AI Workforce in Minutes</h2>
-              <p className="mt-4 text-muted-foreground text-lg">Four simple steps from sign-up to a fully operational AI workforce. No credit card required.</p>
-            </div>
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-              {HOW_IT_WORKS.map((item) => (
-                <div key={item.step} className="relative">
-                  <div className="text-6xl font-extrabold text-primary/10 mb-4">{item.step}</div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-            <div className="text-center mt-12">
-              <Link href="/sign-up">
-                <Button size="lg" className="h-12 px-8">
-                  Start Your Free Trial <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        <section id="demo" className="py-24 bg-card/50 border-y border-border/40">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <Badge variant="outline" className="mb-4">
-                <Video className="h-3 w-3 mr-1" /> Product Demo
-              </Badge>
-              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">See NexsusHR in Action</h2>
-              <p className="mt-4 text-muted-foreground text-lg">Watch how teams hire, manage, and scale their AI workforce in under 2 minutes.</p>
-            </div>
-            <div className="max-w-4xl mx-auto">
-              <div className="relative aspect-video rounded-2xl border border-border bg-card overflow-hidden flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-card to-amber-500/5" />
-                <div className="relative text-center">
-                  <div className="h-20 w-20 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center mx-auto mb-4 cursor-pointer hover:bg-primary/20 transition-colors">
-                    <Play className="h-8 w-8 text-primary ml-1" />
-                  </div>
-                  <p className="text-muted-foreground text-sm">Product demo coming soon</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-24">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <Badge variant="outline" className="mb-4">Testimonials</Badge>
-              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Trusted by Forward-Thinking Leaders</h2>
-              <p className="mt-4 text-muted-foreground text-lg">Join 2,400+ companies already using NexsusHR to scale operations with autonomous AI professionals.</p>
-            </div>
-            <div className="grid gap-6 md:grid-cols-3">
               {TESTIMONIALS.map((t, i) => (
                 <Card key={i} className="bg-card border-border">
                   <CardContent className="p-6">
-                    <div className="flex gap-1 mb-4">
+                    <div className="flex gap-1 mb-3">
                       {Array.from({ length: t.rating }).map((_, j) => (
-                        <Star key={j} className="h-4 w-4 fill-primary text-primary" />
+                        <Star key={j} className="h-4 w-4 text-amber-400 fill-amber-400" />
                       ))}
                     </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed italic mb-6">"{t.quote}"</p>
-                    <div className="flex items-center gap-3 pt-4 border-t border-border">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                        {t.name.split(" ").map((n) => n[0]).join("")}
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-4">"{t.quote}"</p>
+                    <div className="flex items-center gap-3 border-t border-border pt-4">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-sm font-bold text-primary">{t.name.split(" ").map(w => w[0]).join("")}</span>
                       </div>
                       <div>
-                        <div className="text-sm font-semibold text-foreground">{t.name}</div>
-                        <div className="text-xs text-muted-foreground">{t.role}</div>
+                        <p className="text-sm font-semibold text-foreground">{t.name}</p>
+                        <p className="text-xs text-muted-foreground">{t.role}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -688,193 +710,146 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="pricing" className="py-24 bg-card/50 border-y border-border/40">
+        <section id="pricing" className="py-20 bg-card/30 border-y border-border/40">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto mb-10">
-              <Badge variant="outline" className="mb-4">Pricing</Badge>
-              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Price-to-Value: Pay a Fraction of What You'd Spend on Human Hires</h2>
-              <p className="mt-4 text-muted-foreground text-lg">Every plan includes a 14-day free trial with full Growth-tier access. No credit card required.</p>
-            </div>
-            <div className="flex items-center justify-center gap-3 mb-12">
-              <span className={`text-sm font-medium ${billingCycle === "monthly" ? "text-foreground" : "text-muted-foreground"}`}>Monthly</span>
-              <button
-                onClick={() => setBillingCycle(billingCycle === "monthly" ? "annual" : "monthly")}
-                className={`relative inline-flex h-7 w-14 items-center rounded-full border transition-colors ${billingCycle === "annual" ? "bg-primary border-primary" : "bg-muted border-border"}`}
-              >
-                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${billingCycle === "annual" ? "translate-x-8" : "translate-x-1"}`} />
-              </button>
-              <span className={`text-sm font-medium ${billingCycle === "annual" ? "text-foreground" : "text-muted-foreground"}`}>Annual</span>
-              {billingCycle === "annual" && <Badge className="bg-green-500/10 text-green-500 border-green-500/30">Save up to $4,800/yr</Badge>}
+              <Badge variant="outline" className="mb-4 border-primary/30 text-primary">Pricing</Badge>
+              <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Scale Your AI Workforce</h2>
+              <p className="mt-4 text-muted-foreground text-lg">Transparent pricing. No hidden fees. Start free and scale as you grow.</p>
+              <div className="mt-6 inline-flex items-center rounded-full border border-border p-1 bg-muted/30">
+                <button
+                  onClick={() => setBillingCycle("monthly")}
+                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${billingCycle === "monthly" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >Monthly</button>
+                <button
+                  onClick={() => setBillingCycle("annual")}
+                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${billingCycle === "annual" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >Annual <span className="text-xs opacity-80">(Save 20%)</span></button>
+              </div>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
               {PLANS.map((plan) => {
-                const displayPrice = billingCycle === "annual" ? plan.annualPrice : plan.monthlyPrice;
+                const price = billingCycle === "annual" ? plan.annualPrice : plan.monthlyPrice;
                 return (
-                  <Card key={plan.id} className={`relative bg-card flex flex-col ${plan.popular ? "border-primary shadow-lg scale-[1.02]" : "border-border"}`}>
-                    {plan.popular && (
+                  <Card key={plan.id} className={`bg-card border-border relative flex flex-col ${(plan as any).popular ? "border-primary ring-1 ring-primary/30" : ""}`}>
+                    {(plan as any).popular && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
+                        <Badge className="bg-primary text-primary-foreground text-[10px] px-3"><Crown className="h-3 w-3 mr-1" /> Most Popular</Badge>
                       </div>
                     )}
                     <CardContent className="p-6 flex flex-col flex-1">
-                      <div className="mb-4">
-                        <h3 className="font-bold text-lg flex items-center gap-2 text-foreground">
-                          {plan.id === "enterprise" && <Crown className="h-4 w-4 text-primary" />}
-                          {plan.name}
-                        </h3>
-                        <p className="text-xs text-muted-foreground mt-1">{plan.desc}</p>
-                      </div>
-                      <div className="mb-4">
-                        {displayPrice ? (
-                          <>
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-4xl font-extrabold text-foreground">${displayPrice}</span>
-                              <span className="text-sm text-muted-foreground">/mo</span>
-                            </div>
-                            {billingCycle === "annual" && plan.annualSavings && (
-                              <div className="mt-1 flex items-center gap-2">
-                                <span className="text-sm text-muted-foreground/60 line-through">${plan.monthlyPrice}/mo</span>
-                                <Badge variant="outline" className="text-green-500 border-green-500/30 bg-green-500/10 text-xs">
-                                  Save ${plan.annualSavings}/yr
-                                </Badge>
-                              </div>
-                            )}
-                            {billingCycle === "annual" && plan.annualTotal && (
-                              <p className="text-xs text-muted-foreground mt-1">${plan.annualTotal}/yr billed annually</p>
-                            )}
-                          </>
+                      <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
+                      <p className="text-xs text-muted-foreground mt-1">{plan.desc}</p>
+                      <div className="my-4">
+                        {price !== null ? (
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-extrabold text-foreground">${price}</span>
+                            <span className="text-sm text-muted-foreground">/mo</span>
+                          </div>
                         ) : (
-                          <div className="text-2xl font-bold text-foreground">Custom</div>
+                          <span className="text-3xl font-extrabold text-foreground">Custom</span>
+                        )}
+                        {billingCycle === "annual" && plan.annualSavings && (
+                          <p className="text-xs text-green-500 mt-1">Save ${plan.annualSavings}/year</p>
                         )}
                       </div>
-                      {plan.trialNote && (
-                        <p className="text-xs text-primary font-medium mb-3">{plan.trialNote}</p>
-                      )}
-                      <div className="space-y-3 flex-1 mb-6">
+                      <ul className="space-y-2 mb-6 flex-1">
                         {plan.features.map((f) => (
-                          <div key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                            {f}
-                          </div>
+                          <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                            <span>{f}</span>
+                          </li>
                         ))}
-                      </div>
+                      </ul>
                       <Link href={plan.id === "enterprise" ? "#contact" : "/sign-up"}>
-                        <Button className="w-full" variant={plan.popular ? "default" : "outline"}>
+                        <Button className={`w-full ${(plan as any).popular ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}`} variant={(plan as any).popular ? "default" : "outline"}>
                           {plan.cta}
-                          <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                       </Link>
+                      {(plan as any).trialNote && (
+                        <p className="text-[10px] text-muted-foreground text-center mt-2">{(plan as any).trialNote}</p>
+                      )}
                     </CardContent>
                   </Card>
                 );
               })}
             </div>
-            <p className="text-center text-sm text-muted-foreground mt-8">
-              All plans include a 14-day free trial with Growth-tier access. No credit card required. Cancel anytime.
-            </p>
           </div>
         </section>
 
-        <section id="roi" className="py-24">
+        <section id="roi" className="py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <Badge variant="outline" className="mb-4">
-                <Calculator className="h-3 w-3 mr-1" /> ROI Calculator
-              </Badge>
+            <div className="text-center max-w-3xl mx-auto mb-10">
+              <Badge variant="outline" className="mb-4 border-primary/30 text-primary"><Calculator className="h-3.5 w-3.5 mr-1 inline" /> ROI Calculator</Badge>
               <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Calculate Your Savings</h2>
-              <p className="mt-4 text-muted-foreground text-lg">See how much you could save by replacing or augmenting traditional hires with NexsusHR AI professionals.</p>
+              <p className="mt-4 text-muted-foreground text-lg">See how much you save by hiring AI professionals instead of traditional employees.</p>
             </div>
             <div className="max-w-4xl mx-auto">
               <Card className="bg-card border-border">
                 <CardContent className="p-8">
-                  <div className="grid gap-8 md:grid-cols-2">
-                    <div className="space-y-6">
-                      <h3 className="text-lg font-bold text-foreground">Your Current Team</h3>
+                  <div className="grid md:grid-cols-2 gap-8">
+                    <div>
+                      <div className="mb-6">
+                        <Label className="text-sm font-medium">Select Plan</Label>
+                        <div className="flex gap-2 mt-2">
+                          {(["starter", "growth", "business"] as const).map((p) => (
+                            <Button key={p} variant={roiPlan === p ? "default" : "outline"} size="sm" onClick={() => setRoiPlan(p)} className="capitalize text-xs flex-1">{p}</Button>
+                          ))}
+                        </div>
+                      </div>
                       <div className="space-y-3">
-                        <Label className="text-sm font-medium text-foreground">Roles to Replace/Augment</Label>
-                        {roiRoles.map((r, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Roles to Replace</Label>
+                          <Button size="sm" variant="ghost" className="text-xs h-7 text-primary" onClick={addRoiRole}>+ Add Role</Button>
+                        </div>
+                        {roiRoles.map((r, i) => (
+                          <div key={i} className="flex gap-2 items-center">
                             <select
+                              className="flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
                               value={r.role}
-                              onChange={(e) => updateRoiRole(idx, "role", e.target.value)}
-                              className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                              onChange={(e) => updateRoiRole(i, "role", e.target.value)}
                             >
-                              {["Data Analyst", "Content Writer", "Customer Support", "Financial Analyst", "DevOps Engineer", "Recruiter", "Marketing Specialist", "Legal Researcher", "Project Manager", "QA Engineer"].map((role) => (
-                                <option key={role} value={role}>{role}</option>
-                              ))}
+                              {Object.keys({
+                                "Data Analyst": 0, "Content Writer": 0, "Customer Support": 0,
+                                "Financial Analyst": 0, "DevOps Engineer": 0, "Recruiter": 0,
+                                "Marketing Specialist": 0, "Legal Researcher": 0, "Project Manager": 0, "QA Engineer": 0,
+                              }).map((role) => <option key={role} value={role}>{role}</option>)}
                             </select>
                             <Input
                               type="number"
                               min={1}
-                              max={50}
+                              max={10}
+                              className="w-16 text-center"
                               value={r.count}
-                              onChange={(e) => updateRoiRole(idx, "count", parseInt(e.target.value) || 1)}
-                              className="w-20 text-center"
+                              onChange={(e) => updateRoiRole(i, "count", parseInt(e.target.value) || 1)}
                             />
                             {roiRoles.length > 1 && (
-                              <button
-                                onClick={() => removeRoiRole(idx)}
-                                className="text-muted-foreground hover:text-destructive text-sm px-2"
-                              >
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => removeRoiRole(i)}>
                                 <XCircle className="h-4 w-4" />
-                              </button>
+                              </Button>
                             )}
                           </div>
                         ))}
-                        <button
-                          onClick={addRoiRole}
-                          className="text-sm text-primary hover:text-primary/80 font-medium"
-                        >
-                          + Add another role
-                        </button>
-                        <p className="text-xs text-muted-foreground">Salaries auto-populated by role (we add 30% for benefits)</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-foreground">NexsusHR Plan</Label>
-                        <div className="flex gap-2 mt-2">
-                          {(["starter", "growth", "business"] as const).map((p) => (
-                            <button
-                              key={p}
-                              onClick={() => setRoiPlan(p)}
-                              className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
-                                roiPlan === p
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-muted text-muted-foreground hover:text-foreground"
-                              }`}
-                            >
-                              {p}
-                            </button>
-                          ))}
-                        </div>
                       </div>
                     </div>
-                    <div className="space-y-6">
-                      <h3 className="text-lg font-bold text-foreground">Your Savings</h3>
-                      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6">
-                        <div className="text-center mb-6">
-                          <div className="text-5xl font-extrabold text-primary">{roiCalc.savingsPercent}%</div>
-                          <p className="text-sm text-muted-foreground mt-1">Annual Cost Reduction</p>
+                    <div className="flex flex-col justify-center">
+                      <div className="rounded-xl bg-gradient-to-br from-primary/10 to-amber-500/10 border border-primary/20 p-6">
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Traditional Cost</p>
+                            <p className="text-lg font-bold text-foreground">${roiCalc.totalHumanCost.toLocaleString()}<span className="text-xs font-normal text-muted-foreground">/yr</span></p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">NexsusHR Cost</p>
+                            <p className="text-lg font-bold text-primary">${roiCalc.annualPlatformCost.toLocaleString()}<span className="text-xs font-normal text-muted-foreground">/yr</span></p>
+                          </div>
                         </div>
-                        <div className="space-y-3">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Current workforce cost</span>
-                            <span className="font-semibold text-foreground">${roiCalc.totalHumanCost.toLocaleString()}/yr</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">NexsusHR cost ({roiCalc.maxPros} AI professionals)</span>
-                            <span className="font-semibold text-primary">${roiCalc.annualPlatformCost.toLocaleString()}/yr</span>
-                          </div>
-                          <div className="border-t border-primary/20 pt-3 flex justify-between text-sm">
-                            <span className="font-semibold text-foreground">Annual savings</span>
-                            <span className="font-bold text-green-500 text-lg">${roiCalc.savings.toLocaleString()}/yr</span>
-                          </div>
+                        <div className="border-t border-primary/20 pt-4">
+                          <p className="text-xs text-muted-foreground">Your Annual Savings</p>
+                          <p className="text-3xl font-extrabold text-green-500">${roiCalc.savings.toLocaleString()}</p>
+                          <p className="text-sm text-muted-foreground mt-1">That's <span className="font-bold text-green-500">{roiCalc.savingsPercent}%</span> savings vs. traditional hiring</p>
                         </div>
                       </div>
-                      <Link href="/sign-up">
-                        <Button className="w-full" size="lg">
-                          Start Saving Today <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </Link>
                     </div>
                   </div>
                 </CardContent>
@@ -883,25 +858,28 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="faq" className="py-24 bg-card/50 border-y border-border/40">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl">
-            <div className="text-center mb-16">
-              <Badge variant="outline" className="mb-4">FAQ</Badge>
+        <section id="faq" className="py-20 bg-card/30 border-y border-border/40">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <Badge variant="outline" className="mb-4 border-primary/30 text-primary">FAQ</Badge>
               <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Frequently Asked Questions</h2>
             </div>
-            <div className="space-y-3">
-              {FAQ.map((item, i) => (
-                <div key={i} className="border border-border rounded-xl bg-card overflow-hidden">
+            <div className="max-w-3xl mx-auto space-y-3">
+              {FAQ.map((faq, i) => (
+                <div
+                  key={i}
+                  className="rounded-xl border border-border bg-card overflow-hidden"
+                >
                   <button
-                    className="w-full flex items-center justify-between p-5 text-left"
                     onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="w-full flex items-center justify-between p-5 text-left"
                   >
-                    <span className="font-medium text-foreground pr-4">{item.q}</span>
-                    <ChevronDown className={`h-5 w-5 text-muted-foreground shrink-0 transition-transform ${openFaq === i ? "rotate-180" : ""}`} />
+                    <span className="text-sm font-semibold text-foreground pr-4">{faq.q}</span>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground flex-shrink-0 transition-transform ${openFaq === i ? "rotate-180" : ""}`} />
                   </button>
                   {openFaq === i && (
-                    <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-border/50 pt-4">
-                      {item.a}
+                    <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-border pt-4">
+                      {faq.a}
                     </div>
                   )}
                 </div>
@@ -910,110 +888,75 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="py-16 border-b border-border/40">
+        <section id="contact" className="py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-xl mx-auto text-center">
-              <h3 className="text-xl font-bold text-foreground mb-2">Stay in the Loop</h3>
-              <p className="text-sm text-muted-foreground mb-4">Get product updates, AI workforce insights, and early access to new features.</p>
-              {emailSignupSubmitted ? (
-                <div className="flex items-center justify-center gap-2 py-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  <span className="text-sm font-medium text-green-500">Check your inbox to confirm your subscription.</span>
-                </div>
-              ) : (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setEmailSignupSubmitted(true);
-                  }}
-                  className="flex gap-2"
-                >
-                  <Input
-                    type="email"
-                    placeholder="you@company.com"
-                    value={emailSignup}
-                    onChange={(e) => setEmailSignup(e.target.value)}
-                    required
-                    className="flex-1"
-                  />
-                  <Button type="submit">
-                    <Mail className="mr-2 h-4 w-4" /> Subscribe
-                  </Button>
-                </form>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section id="contact" className="py-24">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-3xl mx-auto">
-              <div className="grid gap-8 md:grid-cols-2">
-                <div className="bg-gradient-to-br from-primary/10 via-card to-amber-500/10 rounded-3xl p-10 border border-primary/20 flex flex-col justify-center">
-                  <h2 className="text-3xl font-bold text-foreground mb-4">Ready to Hire Your AI Workforce?</h2>
-                  <p className="text-muted-foreground mb-6">Join 2,400+ companies already using NexsusHR. Start your 14-day free trial today — no credit card required.</p>
-                  <div className="space-y-3">
-                    <Link href="/sign-up">
-                      <Button size="lg" className="w-full h-12 text-base">
-                        Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Link href="/sign-in">
-                      <Button size="lg" variant="outline" className="w-full h-12 text-base">
-                        Log In
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-                <div className="rounded-3xl border border-border bg-card p-8">
-                  <h3 className="text-xl font-bold text-foreground mb-2">Request a Demo</h3>
-                  <p className="text-sm text-muted-foreground mb-6">For Mid-Market and Enterprise organizations. Get a personalized walkthrough with our team.</p>
-                  {demoSubmitted ? (
-                    <div className="text-center py-8">
-                      <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                      <h4 className="text-lg font-bold text-foreground mb-2">Request Received!</h4>
-                      <p className="text-sm text-muted-foreground">We'll reach out within 24 hours to schedule your personalized demo.</p>
+            <div className="max-w-4xl mx-auto">
+              <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-card to-amber-500/5 border border-primary/20 overflow-hidden">
+                <div className="grid md:grid-cols-2">
+                  <div className="p-10 flex flex-col justify-center">
+                    <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Ready to Build<br />Your AI Team?</h2>
+                    <p className="mt-4 text-muted-foreground leading-relaxed">
+                      Join thousands of companies who've transformed their workforce with NexsusHR AI professionals.
+                    </p>
+                    <div className="mt-6 flex flex-wrap gap-4">
+                      <div className="flex -space-x-3">
+                        {AI_TEAM.slice(0, 5).map((member) => (
+                          <img
+                            key={member.name}
+                            src={member.avatar}
+                            alt={member.name}
+                            className="w-10 h-10 rounded-full border-2 border-card object-cover"
+                          />
+                        ))}
+                      </div>
+                      <div className="flex flex-col justify-center">
+                        <p className="text-sm font-medium text-foreground">105+ AI Professionals</p>
+                        <p className="text-xs text-muted-foreground">Ready to join your team</p>
+                      </div>
                     </div>
-                  ) : (
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        setDemoSubmitted(true);
-                      }}
-                      className="space-y-4"
-                    >
-                      <div>
-                        <Label htmlFor="demo-email" className="text-sm font-medium">Work Email</Label>
-                        <Input
-                          id="demo-email"
-                          type="email"
-                          placeholder="you@company.com"
-                          value={demoEmail}
-                          onChange={(e) => setDemoEmail(e.target.value)}
-                          required
-                          className="mt-1"
-                        />
+                    <div className="mt-8">
+                      <Link href="/sign-up">
+                        <Button size="lg" className="h-12 px-8 bg-primary text-primary-foreground hover:bg-primary/90">
+                          Start Your 14-Day Free Trial <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <p className="mt-3 text-xs text-muted-foreground">No credit card required. Full Growth-tier access.</p>
+                    </div>
+                  </div>
+                  <div className="p-10 bg-card/50 border-l border-border/40">
+                    <h3 className="text-xl font-bold text-foreground mb-6">Or Get a Demo</h3>
+                    {demoSubmitted ? (
+                      <div className="text-center py-8">
+                        <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                        <p className="text-lg font-bold text-foreground">Request Received!</p>
+                        <p className="text-sm text-muted-foreground mt-2">We'll be in touch within 24 hours.</p>
                       </div>
-                      <div>
-                        <Label htmlFor="demo-company" className="text-sm font-medium">Company Name</Label>
-                        <Input id="demo-company" type="text" placeholder="Your Company" className="mt-1" />
-                      </div>
-                      <div>
-                        <Label htmlFor="demo-size" className="text-sm font-medium">Company Size</Label>
-                        <select id="demo-size" className="w-full mt-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground">
-                          <option value="">Select...</option>
-                          <option value="1-50">1–50 employees</option>
-                          <option value="51-200">51–200 employees</option>
-                          <option value="201-1000">201–1,000 employees</option>
-                          <option value="1000+">1,000+ employees</option>
-                        </select>
-                      </div>
-                      <Button type="submit" className="w-full" size="lg">
-                        <Mail className="mr-2 h-4 w-4" />
-                        Request Demo
-                      </Button>
-                    </form>
-                  )}
+                    ) : (
+                      <form onSubmit={(e) => { e.preventDefault(); setDemoSubmitted(true); }} className="space-y-4">
+                        <div>
+                          <Label htmlFor="demo-name" className="text-sm font-medium">Full Name</Label>
+                          <Input id="demo-name" placeholder="Your name" className="mt-1" required />
+                        </div>
+                        <div>
+                          <Label htmlFor="demo-email" className="text-sm font-medium">Work Email</Label>
+                          <Input id="demo-email" type="email" placeholder="you@company.com" className="mt-1" required value={demoEmail} onChange={(e) => setDemoEmail(e.target.value)} />
+                        </div>
+                        <div>
+                          <Label htmlFor="demo-size" className="text-sm font-medium">Company Size</Label>
+                          <select id="demo-size" className="w-full mt-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground">
+                            <option value="">Select...</option>
+                            <option value="1-50">1-50 employees</option>
+                            <option value="51-200">51-200 employees</option>
+                            <option value="201-1000">201-1,000 employees</option>
+                            <option value="1000+">1,000+ employees</option>
+                          </select>
+                        </div>
+                        <Button type="submit" className="w-full" size="lg">
+                          <Mail className="mr-2 h-4 w-4" /> Request Demo
+                        </Button>
+                      </form>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1026,24 +969,29 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <img src={`${import.meta.env.BASE_URL}nexushr-logo.png`} alt="NexsusHR" className="h-8 w-8 object-contain" />
+                <img src={`${BASE}nexushr-logo.png`} alt="NexsusHR" className="h-8 w-8 object-contain" />
                 <span className="text-lg font-bold text-foreground">NexsusHR</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">The operating system for the AI-powered enterprise.</p>
+              <div className="flex -space-x-2 mt-4">
+                {AI_TEAM.slice(0, 4).map((m) => (
+                  <img key={m.name} src={m.avatar} alt={m.name} className="w-7 h-7 rounded-full border border-card object-cover" />
+                ))}
+              </div>
             </div>
             <div>
               <h4 className="font-semibold text-foreground mb-4 text-sm">Product</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
+                <a href="#team" className="block hover:text-foreground transition-colors">Meet the Team</a>
                 <a href="#features" className="block hover:text-foreground transition-colors">Features</a>
                 <a href="#pricing" className="block hover:text-foreground transition-colors">Pricing</a>
-                <a href="#roi" className="block hover:text-foreground transition-colors">ROI Calculator</a>
                 <a href="#industries" className="block hover:text-foreground transition-colors">Industries</a>
               </div>
             </div>
             <div>
               <h4 className="font-semibold text-foreground mb-4 text-sm">Resources</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <a href="#demo" className="block hover:text-foreground transition-colors">Watch Demo</a>
+                <a href="#roi" className="block hover:text-foreground transition-colors">ROI Calculator</a>
                 <a href="#faq" className="block hover:text-foreground transition-colors">FAQ</a>
                 <a href="#contact" className="block hover:text-foreground transition-colors">Request Demo</a>
                 <a href="#how-it-works" className="block hover:text-foreground transition-colors">How It Works</a>

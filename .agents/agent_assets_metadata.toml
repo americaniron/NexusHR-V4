@@ -1,0 +1,50 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "DY-_yOpl0vEorb6uKWonY"
+uri = "file://artifacts/nexus-hr/public/ai-team/sarah-chen.png"
+type = "image"
+title = "AI customer support professional"
+
+[[generated]]
+id = "GwS6GF-DXimXbFEpXOFKY"
+uri = "file://artifacts/nexus-hr/public/ai-team/marcus-wright.png"
+type = "image"
+title = "AI data analyst professional"
+
+[[generated]]
+id = "erfGx5Lt_Rj3EBD4Un3sY"
+uri = "file://artifacts/nexus-hr/public/ai-team/priya-patel.png"
+type = "image"
+title = "AI financial analyst professional"
+
+[[generated]]
+id = "JXAUegSN_QsS_9auUbzBj"
+uri = "file://artifacts/nexus-hr/public/ai-team/james-morrison.png"
+type = "image"
+title = "AI project manager professional"
+
+[[generated]]
+id = "jqclCjxI9GAJOqrkec9fs"
+uri = "file://artifacts/nexus-hr/public/ai-team/elena-vasquez.png"
+type = "image"
+title = "AI content writer professional"
+
+[[generated]]
+id = "ZBmzw3amQgIQn3VZI09Zp"
+uri = "file://artifacts/nexus-hr/public/ai-team/alex-kim.png"
+type = "image"
+title = "AI DevOps engineer professional"
+
+[[generated]]
+id = "GCQybqbMv24WI1iCeqg3x"
+uri = "file://artifacts/nexus-hr/public/ai-team/dr-amara-okafor.png"
+type = "image"
+title = "AI healthcare operations professional"
+
+[[generated]]
+id = "qzH7mb3yuYjU4UugrLfuK"
+uri = "file://artifacts/nexus-hr/public/ai-team/ryan-brooks.png"
+type = "image"
+title = "AI sales development professional"
