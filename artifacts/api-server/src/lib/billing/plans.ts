@@ -56,28 +56,28 @@ export const PLAN_DEFINITIONS: Record<PlanId, PlanDefinition> = {
   trial: {
     id: "trial",
     name: "Free Trial",
-    description: "14-day trial with Starter-level features",
+    description: "14-day trial with Growth-tier features — no credit card required",
     monthly: 0,
     annual: 0,
     allocations: {
-      ai_employees: 2,
-      voice_hours: 40,
-      messages: 5_000,
-      workflows: 10,
-      tasks: 2_000,
-      integrations: 3,
-      storage_gb: 10,
-      ai_memory_gb: 5,
-      avatars: 2,
-      users: 3,
+      ai_employees: 10,
+      voice_hours: 200,
+      messages: 25_000,
+      workflows: 50,
+      tasks: 15_000,
+      integrations: 7,
+      storage_gb: 50,
+      ai_memory_gb: 25,
+      avatars: 10,
+      users: 10,
     },
     overageRates: {
       ai_employees: 0, voice_hours: 0, messages: 0, workflows: 0, tasks: 0,
       integrations: 0, storage_gb: 0, ai_memory_gb: 0, avatars: 0, users: 0,
     },
-    features: ["Basic AI employees", "Standard voices", "Email support"],
-    sla: "48hr",
-    supportLevel: "email",
+    features: ["Growth-tier AI professionals", "Premium voices", "Priority email support", "Advanced analytics", "All usage metered, not billed"],
+    sla: "24hr",
+    supportLevel: "premium_email",
   },
 
   starter: {
@@ -232,3 +232,4 @@ export const DUNNING_CONFIG = {
 };
 
 export const TRIAL_DURATION_DAYS = 14;
+export const TRIAL_DATA_RETENTION_DAYS = 30;

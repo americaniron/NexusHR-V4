@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import {
   ArrowRight,
   Zap,
@@ -68,10 +67,10 @@ const PLANS = [
   {
     id: "starter",
     name: "Starter",
-    monthlyPrice: 49,
-    annualPrice: 39,
-    annualTotal: 468,
-    annualSavings: 120,
+    monthlyPrice: 299,
+    annualPrice: 249,
+    annualTotal: 2988,
+    annualSavings: 600,
     desc: "For small teams getting started with AI workforce",
     features: ["2 AI Professionals", "40 Voice Hours/mo", "5,000 Messages/mo", "10 Workflows", "5 Integrations", "Email Support", "Basic Analytics"],
     cta: "Start Free Trial",
@@ -79,23 +78,23 @@ const PLANS = [
   {
     id: "growth",
     name: "Growth",
-    monthlyPrice: 149,
-    annualPrice: 119,
-    annualTotal: 1428,
-    annualSavings: 360,
+    monthlyPrice: 799,
+    annualPrice: 649,
+    annualTotal: 7788,
+    annualSavings: 1800,
     desc: "For growing organizations scaling their AI workforce",
     features: ["10 AI Professionals", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "15 Integrations", "Priority Chat Support", "Advanced Analytics", "Custom Personalities"],
     popular: true,
     cta: "Start Free Trial",
-    trialNote: "14-day free trial included",
+    trialNote: "14-day free trial with Growth-tier access",
   },
   {
     id: "business",
     name: "Business",
-    monthlyPrice: 499,
-    annualPrice: 399,
-    annualTotal: 4788,
-    annualSavings: 1200,
+    monthlyPrice: 1999,
+    annualPrice: 1599,
+    annualTotal: 19188,
+    annualSavings: 4800,
     desc: "For scaling enterprises with advanced needs",
     features: ["50 AI Professionals", "1,000 Voice Hours/mo", "Unlimited Messages", "200 Workflows", "Unlimited Integrations", "Dedicated CSM", "Full Analytics Suite", "Custom Workflows", "API Access"],
     cta: "Start Free Trial",
@@ -305,18 +304,29 @@ export default function LandingPage() {
   const [comparisonTab, setComparisonTab] = useState(0);
   const [demoEmail, setDemoEmail] = useState("");
   const [demoSubmitted, setDemoSubmitted] = useState(false);
-  const [roiTeamSize, setRoiTeamSize] = useState(5);
-  const [roiAvgSalary, setRoiAvgSalary] = useState(75000);
+  const [emailSignup, setEmailSignup] = useState("");
+  const [emailSignupSubmitted, setEmailSignupSubmitted] = useState(false);
+  const [roiRoles, setRoiRoles] = useState<{ role: string; count: number }[]>([
+    { role: "Data Analyst", count: 2 },
+    { role: "Customer Support", count: 2 },
+    { role: "Content Writer", count: 1 },
+  ]);
   const [roiPlan, setRoiPlan] = useState<"starter" | "growth" | "business">("growth");
 
   const roiCalc = useMemo(() => {
-    const planPrices = { starter: 49, growth: 149, business: 499 };
+    const planPrices = { starter: 299, growth: 799, business: 1999 };
     const planMaxPros = { starter: 2, growth: 10, business: 50 };
+    const roleSalaries: Record<string, number> = {
+      "Data Analyst": 75000, "Content Writer": 60000, "Customer Support": 45000,
+      "Financial Analyst": 85000, "DevOps Engineer": 120000, "Recruiter": 65000,
+      "Marketing Specialist": 70000, "Legal Researcher": 90000, "Project Manager": 95000,
+      "QA Engineer": 90000,
+    };
+    const totalSalary = roiRoles.reduce((sum, r) => sum + (roleSalaries[r.role] || 70000) * r.count, 0);
     const monthlyPlatformCost = planPrices[roiPlan];
     const annualPlatformCost = monthlyPlatformCost * 12;
-    const annualHumanCost = roiTeamSize * roiAvgSalary;
     const benefitsMultiplier = 1.3;
-    const totalHumanCost = annualHumanCost * benefitsMultiplier;
+    const totalHumanCost = totalSalary * benefitsMultiplier;
     const savings = totalHumanCost - annualPlatformCost;
     const savingsPercent = Math.round((savings / totalHumanCost) * 100);
     const maxPros = planMaxPros[roiPlan];
@@ -327,7 +337,17 @@ export default function LandingPage() {
       savingsPercent: Math.max(0, Math.min(99, savingsPercent)),
       maxPros,
     };
-  }, [roiTeamSize, roiAvgSalary, roiPlan]);
+  }, [roiRoles, roiPlan]);
+
+  const addRoiRole = () => {
+    setRoiRoles([...roiRoles, { role: "Data Analyst", count: 1 }]);
+  };
+  const removeRoiRole = (idx: number) => {
+    setRoiRoles(roiRoles.filter((_, i) => i !== idx));
+  };
+  const updateRoiRole = (idx: number, field: "role" | "count", value: string | number) => {
+    setRoiRoles(roiRoles.map((r, i) => i === idx ? { ...r, [field]: value } : r));
+  };
 
   const activeVertical = INDUSTRY_VERTICALS[activeIndustry];
 
@@ -684,7 +704,7 @@ export default function LandingPage() {
                 <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${billingCycle === "annual" ? "translate-x-8" : "translate-x-1"}`} />
               </button>
               <span className={`text-sm font-medium ${billingCycle === "annual" ? "text-foreground" : "text-muted-foreground"}`}>Annual</span>
-              {billingCycle === "annual" && <Badge className="bg-green-500/10 text-green-500 border-green-500/30">Save up to $1,200/yr</Badge>}
+              {billingCycle === "annual" && <Badge className="bg-green-500/10 text-green-500 border-green-500/30">Save up to $4,800/yr</Badge>}
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
               {PLANS.map((plan) => {
@@ -770,60 +790,61 @@ export default function LandingPage() {
                   <div className="grid gap-8 md:grid-cols-2">
                     <div className="space-y-6">
                       <h3 className="text-lg font-bold text-foreground">Your Current Team</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="team-size" className="text-sm font-medium text-foreground">
-                            Team Size to Replace/Augment
-                          </Label>
-                          <div className="flex items-center gap-4 mt-2">
-                            <Slider
-                              id="team-size"
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-foreground">Roles to Replace/Augment</Label>
+                        {roiRoles.map((r, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <select
+                              value={r.role}
+                              onChange={(e) => updateRoiRole(idx, "role", e.target.value)}
+                              className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                            >
+                              {["Data Analyst", "Content Writer", "Customer Support", "Financial Analyst", "DevOps Engineer", "Recruiter", "Marketing Specialist", "Legal Researcher", "Project Manager", "QA Engineer"].map((role) => (
+                                <option key={role} value={role}>{role}</option>
+                              ))}
+                            </select>
+                            <Input
+                              type="number"
                               min={1}
                               max={50}
-                              step={1}
-                              value={[roiTeamSize]}
-                              onValueChange={(v) => setRoiTeamSize(v[0])}
-                              className="flex-1"
+                              value={r.count}
+                              onChange={(e) => updateRoiRole(idx, "count", parseInt(e.target.value) || 1)}
+                              className="w-20 text-center"
                             />
-                            <span className="text-2xl font-bold text-foreground w-12 text-right">{roiTeamSize}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">Number of roles you'd replace with AI professionals</p>
-                        </div>
-                        <div>
-                          <Label htmlFor="avg-salary" className="text-sm font-medium text-foreground">
-                            Average Annual Salary
-                          </Label>
-                          <div className="flex items-center gap-4 mt-2">
-                            <Slider
-                              id="avg-salary"
-                              min={30000}
-                              max={200000}
-                              step={5000}
-                              value={[roiAvgSalary]}
-                              onValueChange={(v) => setRoiAvgSalary(v[0])}
-                              className="flex-1"
-                            />
-                            <span className="text-lg font-bold text-foreground w-24 text-right">${(roiAvgSalary / 1000).toFixed(0)}K</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">Average salary per role (we add 30% for benefits)</p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-medium text-foreground">NexsusHR Plan</Label>
-                          <div className="flex gap-2 mt-2">
-                            {(["starter", "growth", "business"] as const).map((p) => (
+                            {roiRoles.length > 1 && (
                               <button
-                                key={p}
-                                onClick={() => setRoiPlan(p)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
-                                  roiPlan === p
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted text-muted-foreground hover:text-foreground"
-                                }`}
+                                onClick={() => removeRoiRole(idx)}
+                                className="text-muted-foreground hover:text-destructive text-sm px-2"
                               >
-                                {p}
+                                <XCircle className="h-4 w-4" />
                               </button>
-                            ))}
+                            )}
                           </div>
+                        ))}
+                        <button
+                          onClick={addRoiRole}
+                          className="text-sm text-primary hover:text-primary/80 font-medium"
+                        >
+                          + Add another role
+                        </button>
+                        <p className="text-xs text-muted-foreground">Salaries auto-populated by role (we add 30% for benefits)</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-foreground">NexsusHR Plan</Label>
+                        <div className="flex gap-2 mt-2">
+                          {(["starter", "growth", "business"] as const).map((p) => (
+                            <button
+                              key={p}
+                              onClick={() => setRoiPlan(p)}
+                              className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
+                                roiPlan === p
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              {p}
+                            </button>
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -885,6 +906,41 @@ export default function LandingPage() {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-16 border-b border-border/40">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-xl mx-auto text-center">
+              <h3 className="text-xl font-bold text-foreground mb-2">Stay in the Loop</h3>
+              <p className="text-sm text-muted-foreground mb-4">Get product updates, AI workforce insights, and early access to new features.</p>
+              {emailSignupSubmitted ? (
+                <div className="flex items-center justify-center gap-2 py-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <span className="text-sm font-medium text-green-500">Check your inbox to confirm your subscription.</span>
+                </div>
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setEmailSignupSubmitted(true);
+                  }}
+                  className="flex gap-2"
+                >
+                  <Input
+                    type="email"
+                    placeholder="you@company.com"
+                    value={emailSignup}
+                    onChange={(e) => setEmailSignup(e.target.value)}
+                    required
+                    className="flex-1"
+                  />
+                  <Button type="submit">
+                    <Mail className="mr-2 h-4 w-4" /> Subscribe
+                  </Button>
+                </form>
+              )}
             </div>
           </div>
         </section>

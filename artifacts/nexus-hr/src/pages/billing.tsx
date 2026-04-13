@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
 const PLAN_FEATURES: Record<string, string[]> = {
+  trial: ["10 AI Professionals (Growth-tier)", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "7 Integrations", "Usage metered, not billed"],
   starter: ["2 AI Professionals", "40 Voice Hours/mo", "5,000 Messages/mo", "10 Workflows", "5 Integrations", "Email Support"],
   growth: ["10 AI Professionals", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "15 Integrations", "Priority Chat Support"],
   business: ["50 AI Professionals", "1,000 Voice Hours/mo", "Unlimited Messages", "200 Workflows", "Unlimited Integrations", "Dedicated CSM"],
@@ -103,7 +104,7 @@ export default function BillingPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {PLAN_FEATURES[currentPlan === "trial" ? "starter" : currentPlan]?.slice(0, 4).map((feature) => (
+            {PLAN_FEATURES[currentPlan]?.slice(0, 4).map((feature) => (
               <div key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                 <span>{feature}</span>

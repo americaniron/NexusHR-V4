@@ -15,6 +15,7 @@ import {
   getPlanOverageRates,
   DUNNING_CONFIG,
   TRIAL_DURATION_DAYS,
+  TRIAL_DATA_RETENTION_DAYS,
   type PlanId,
   type BillingDimension,
 } from "../lib/billing/plans";
@@ -149,8 +150,42 @@ router.get("/billing/subscription", requireAuth, async (req, res, next) => {
     }
 
     const plan = PLAN_DEFINITIONS[sub.plan as PlanId];
+
+    let trialInfo = null;
+    if ((sub.status === "trialing" || sub.status === "expired") && sub.trialEndsAt) {
+      const now = new Date();
+      const trialEnd = new Date(sub.trialEndsAt);
+      const daysRemaining = Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      const isExpired = now > trialEnd;
+      const dataRetentionDate = new Date(trialEnd);
+      dataRetentionDate.setDate(dataRetentionDate.getDate() + TRIAL_DATA_RETENTION_DAYS);
+      const dataExpiresIn = Math.max(0, Math.ceil((dataRetentionDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      const dataRetentionExpired = now > dataRetentionDate;
+
+      trialInfo = {
+        daysRemaining,
+        isExpired,
+        trialEndsAt: sub.trialEndsAt,
+        dataRetentionDate: dataRetentionDate.toISOString(),
+        dataExpiresInDays: dataExpiresIn,
+        dataRetentionExpired,
+        tierAccess: "growth",
+        creditCardRequired: false,
+        usageMeteredNotBilled: true,
+      };
+
+      if (isExpired && sub.status === "trialing") {
+        await db.update(billingSubscriptions)
+          .set({ status: "expired", plan: "expired_trial", updatedAt: new Date() })
+          .where(eq(billingSubscriptions.orgId, orgId));
+        sub.status = "expired";
+        sub.plan = "expired_trial";
+      }
+    }
+
     res.json({
       ...sub,
+      trialInfo,
       planDetails: plan
         ? { name: plan.name, features: plan.features, sla: plan.sla, supportLevel: plan.supportLevel }
         : null,
