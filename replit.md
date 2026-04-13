@@ -29,6 +29,7 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
 -   **Real-time Communication:** Socket.io for WebSocket connections with authentication and room-based subscriptions.
 
 **Core Features & Implementations:**
+-   **AI-Guided Setup Wizard:** Multi-step onboarding wizard (Welcome → Org Profile → Browse Talent → Customize → Integrations → Deploy) with real-time AI assistant panel providing contextual guidance. Includes skeleton loading states, error handling with retry, role recommendation by industry, avatar generation, voice selection, and integration connection. Located at `/onboarding`, accessible after signup.
 -   **AI People Management:** Catalog of 105+ AI roles, onboarding and management of AI people, AI-powered interview sessions, real-time chat with ElevenLabs audio playback, HeyGen Seedance 2.0 integration for cinematic AI person videos.
 -   **AI Avatar System:** Photorealistic headshots (OpenAI `gpt-image-1` or DiceBear fallback), `AIAvatar` component supporting `idle`, `speaking`, `thinking`, `listening` states.
     -   **Emotion Engine:** Detects 7 emotion states from AI response text, mapping to ElevenLabs voice parameters and avatar visual cues (ring glows, indicator dots, waveform bars).
