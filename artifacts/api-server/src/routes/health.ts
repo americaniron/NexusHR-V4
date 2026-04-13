@@ -11,37 +11,79 @@ interface ComponentHealth {
   message?: string;
 }
 
-router.get("/healthz", async (_req, res) => {
-  const components: Record<string, ComponentHealth> = {};
-  let overallStatus: "ok" | "degraded" | "unhealthy" = "ok";
+async function probeClerk(): Promise<ComponentHealth> {
+  const secretKey = process.env.CLERK_SECRET_KEY;
+  if (!secretKey) {
+    return { status: "degraded", message: "Clerk keys not configured" };
+  }
+  const start = Date.now();
+  try {
+    const resp = await fetch("https://api.clerk.com/v1/clients", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${secretKey}` },
+      signal: AbortSignal.timeout(3000),
+    });
+    const latencyMs = Date.now() - start;
+    if (resp.status === 401) {
+      return { status: "degraded", latencyMs, message: "Clerk key invalid" };
+    }
+    return { status: "healthy", latencyMs, message: "Clerk reachable" };
+  } catch {
+    return { status: "degraded", latencyMs: Date.now() - start, message: "Clerk unreachable" };
+  }
+}
 
-  const dbStart = Date.now();
+async function probeDatabase(): Promise<ComponentHealth> {
+  const start = Date.now();
   try {
     await db.execute(sql`SELECT 1`);
-    components.database = { status: "healthy", latencyMs: Date.now() - dbStart };
+    return { status: "healthy", latencyMs: Date.now() - start };
   } catch (err) {
-    components.database = { status: "unhealthy", latencyMs: Date.now() - dbStart, message: "Database connection failed" };
-    overallStatus = "unhealthy";
     logger.error({ err }, "Health check: database connection failed");
+    return { status: "unhealthy", latencyMs: Date.now() - start, message: "Database connection failed" };
   }
+}
 
-  components.api = { status: "healthy" };
+function checkStripe(): ComponentHealth {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    return { status: "degraded", message: "Stripe key not set" };
+  }
+  return { status: "healthy", message: "Stripe configured" };
+}
 
-  const clerkConfigured = !!(process.env.CLERK_SECRET_KEY || process.env.CLERK_PUBLISHABLE_KEY);
-  components.auth = clerkConfigured
-    ? { status: "healthy", message: "Clerk configured" }
-    : { status: "degraded", message: "Clerk keys not configured" };
-  if (!clerkConfigured && overallStatus === "ok") overallStatus = "degraded";
+function checkVoice(): ComponentHealth {
+  const key = process.env.ELEVENLABS_API_KEY;
+  if (!key) {
+    return { status: "degraded", message: "ElevenLabs API key not set" };
+  }
+  return { status: "healthy", message: "ElevenLabs configured" };
+}
 
-  const elevenlabsConfigured = !!process.env.ELEVENLABS_API_KEY;
-  components.voice = elevenlabsConfigured
-    ? { status: "healthy", message: "ElevenLabs configured" }
-    : { status: "degraded", message: "ElevenLabs API key not set" };
+router.get("/healthz", async (_req, res) => {
+  const [dbHealth, authHealth] = await Promise.all([
+    probeDatabase(),
+    probeClerk(),
+  ]);
 
-  const stripeConfigured = !!process.env.STRIPE_SECRET_KEY;
-  components.payments = stripeConfigured
-    ? { status: "healthy", message: "Stripe configured" }
-    : { status: "degraded", message: "Stripe key not set" };
+  const components: Record<string, ComponentHealth> = {
+    database: dbHealth,
+    api: { status: "healthy" },
+    auth: authHealth,
+    voice: checkVoice(),
+    payments: checkStripe(),
+  };
+
+  let overallStatus: "ok" | "degraded" | "unhealthy" = "ok";
+  for (const comp of Object.values(components)) {
+    if (comp.status === "unhealthy") {
+      overallStatus = "unhealthy";
+      break;
+    }
+    if (comp.status === "degraded" && overallStatus === "ok") {
+      overallStatus = "degraded";
+    }
+  }
 
   const statusCode = overallStatus === "unhealthy" ? 503 : 200;
 

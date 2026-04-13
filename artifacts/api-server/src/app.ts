@@ -120,6 +120,26 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(clerkMiddleware());
 
+const PUBLIC_PATHS = new Set([
+  "/api/healthz",
+  "/api/billing/webhook",
+  "/api/roles",
+  "/api/static",
+]);
+
+app.use("/api", (req: Request, res: Response, next: NextFunction) => {
+  const path = req.path;
+  if (PUBLIC_PATHS.has(`/api${path}`) || path.startsWith("/static/")) {
+    return next();
+  }
+  const auth = getAuth(req);
+  if (!auth?.userId) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  next();
+});
+
 app.use("/api/static", express.static("public", {
   maxAge: "7d",
   immutable: true,
