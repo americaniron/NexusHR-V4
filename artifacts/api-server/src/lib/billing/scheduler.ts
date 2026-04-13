@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { billingSubscriptions, billingAlerts, notifications, users } from "@workspace/db";
-import { eq, and, lt, gte, isNotNull } from "drizzle-orm";
+import { eq, and, lt, lte, gte, isNotNull } from "drizzle-orm";
 import { logger } from "../logger";
 import { getUsageSummary, checkAllCountBasedLimits } from "./metering";
 import { DUNNING_CONFIG, ALERT_THRESHOLD_PERCENT, isUnlimited, type BillingDimension } from "./plans";
@@ -16,9 +16,11 @@ let dunningTimer: ReturnType<typeof setInterval> | null = null;
 export function startBillingScheduler(): void {
   monitorTimer = setInterval(runAllocationMonitor, MONITOR_INTERVAL_MS);
   dunningTimer = setInterval(runDunningSchedule, DUNNING_CHECK_INTERVAL_MS);
-  logger.info("Billing scheduler started (allocation monitor every 1h, dunning check every 6h)");
+  setInterval(runTrialExpirationCheck, MONITOR_INTERVAL_MS);
+  logger.info("Billing scheduler started (allocation monitor every 1h, dunning check every 6h, trial expiry every 1h)");
 
   setTimeout(runAllocationMonitor, 30_000);
+  setTimeout(runTrialExpirationCheck, 35_000);
 }
 
 export function stopBillingScheduler(): void {
@@ -120,6 +122,59 @@ async function persistAndNotifyAlert(
     percentage,
     source: "scheduler",
   });
+}
+
+async function runTrialExpirationCheck(): Promise<void> {
+  try {
+    const now = new Date();
+    const expiredTrials = await db.select()
+      .from(billingSubscriptions)
+      .where(and(
+        eq(billingSubscriptions.status, "trialing"),
+        isNotNull(billingSubscriptions.trialEndsAt),
+        lte(billingSubscriptions.trialEndsAt, now),
+      ));
+
+    let expired = 0;
+
+    for (const sub of expiredTrials) {
+      await db.update(billingSubscriptions)
+        .set({ status: "expired", updatedAt: now })
+        .where(eq(billingSubscriptions.orgId, sub.orgId));
+
+      const orgUsers = await db.select({ id: users.id, email: users.email, firstName: users.firstName })
+        .from(users)
+        .where(eq(users.orgId, sub.orgId));
+
+      for (const user of orgUsers) {
+        await db.insert(notifications).values({
+          orgId: sub.orgId,
+          userId: user.id,
+          type: "trial_expired",
+          title: "Your Free Trial Has Ended",
+          message: "Your 14-day free trial has expired. Upgrade to a paid plan to keep your AI workforce running. Your data will be retained for 30 days.",
+          data: { upgradeUrl: "/billing", dataRetentionDays: 30 },
+        });
+      }
+
+      if (orgUsers.length > 0) {
+        await sendEmail({
+          to: orgUsers[0].email,
+          subject: "NexsusHR: Your free trial has ended — upgrade to continue",
+          text: `Hi ${orgUsers[0].firstName || "there"},\n\nYour 14-day free trial has ended. Your AI professionals are paused, but your data is safe for 30 more days.\n\nUpgrade now to pick up right where you left off.\n\n— NexsusHR Team`,
+        });
+      }
+
+      publishEvent(sub.orgId, "billing", "billing:trial_expired", { dataRetentionDays: 30 });
+      expired++;
+    }
+
+    if (expired > 0) {
+      logger.info({ expired }, "Trial expiration check: expired trials processed");
+    }
+  } catch (err) {
+    logger.error({ err }, "Trial expiration check failed");
+  }
 }
 
 async function runDunningSchedule(): Promise<void> {
