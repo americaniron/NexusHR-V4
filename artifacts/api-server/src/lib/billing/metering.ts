@@ -1,7 +1,7 @@
 import { db } from "@workspace/db";
 import { usageEvents, billingSubscriptions, billingAlerts, aiEmployees, users, integrations, notifications } from "@workspace/db";
 import { eq, and, gte, sql } from "drizzle-orm";
-import { type BillingDimension, getPlanLimits, getPlanOverageRates, ALERT_THRESHOLD_PERCENT, isUnlimited } from "./plans";
+import { type BillingDimension, getPlanLimits, getZeroAllocations, getPlanOverageRates, ALERT_THRESHOLD_PERCENT, isUnlimited } from "./plans";
 import { getStripeClient } from "./stripe-client";
 import { logger } from "../logger";
 import { publishEvent } from "../websocket";
@@ -145,7 +145,8 @@ async function getCountBasedUsage(orgId: number, dimension: BillingDimension): P
 export async function getUsageSummary(orgId: number): Promise<UsageSummary[]> {
   const [sub] = await db.select().from(billingSubscriptions).where(eq(billingSubscriptions.orgId, orgId));
   const plan = sub?.plan || "trial";
-  const limits = getPlanLimits(plan);
+  const isExpired = sub?.status === "expired" || sub?.status === "canceled";
+  const limits = isExpired ? getZeroAllocations() : getPlanLimits(plan);
   const periodStart = sub?.currentPeriodStart || getDefaultPeriodStart();
 
   const usageData = await db
@@ -195,7 +196,8 @@ export async function getDimensionUsage(
 ): Promise<{ used: number; limit: number; remaining: number }> {
   const [sub] = await db.select().from(billingSubscriptions).where(eq(billingSubscriptions.orgId, orgId));
   const plan = sub?.plan || "trial";
-  const limits = getPlanLimits(plan);
+  const isExpired = sub?.status === "expired" || sub?.status === "canceled";
+  const limits = isExpired ? getZeroAllocations() : getPlanLimits(plan);
   const limit = limits[dimension] ?? 0;
 
   let used: number;

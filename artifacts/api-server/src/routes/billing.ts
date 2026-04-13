@@ -176,10 +176,9 @@ router.get("/billing/subscription", requireAuth, async (req, res, next) => {
 
       if (isExpired && sub.status === "trialing") {
         await db.update(billingSubscriptions)
-          .set({ status: "expired", plan: "expired_trial", updatedAt: new Date() })
+          .set({ status: "expired", updatedAt: new Date() })
           .where(eq(billingSubscriptions.orgId, orgId));
         sub.status = "expired";
-        sub.plan = "expired_trial";
       }
     }
 

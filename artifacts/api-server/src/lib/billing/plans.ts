@@ -209,6 +209,13 @@ export const REVENUE_STREAMS = [
 
 export type RevenueStream = (typeof REVENUE_STREAMS)[number];
 
+export function getZeroAllocations(): PlanAllocation {
+  return {
+    ai_employees: 0, voice_hours: 0, messages: 0, workflows: 0, tasks: 0,
+    integrations: 0, storage_gb: 0, ai_memory_gb: 0, avatars: 0, users: 0,
+  };
+}
+
 export function getPlanLimits(planId: string): PlanAllocation {
   const plan = PLAN_DEFINITIONS[planId as PlanId];
   return plan?.allocations ?? PLAN_DEFINITIONS.trial.allocations;
