@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, jsonb, boolean, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, jsonb, boolean, numeric, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { organizations } from "./organizations";
@@ -23,7 +23,11 @@ export const billingSubscriptions = pgTable("billing_subscriptions", {
   suspendedAt: timestamp("suspended_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_billing_subs_org_id").on(table.orgId),
+  index("idx_billing_subs_status").on(table.status),
+  index("idx_billing_subs_trial_ends").on(table.trialEndsAt),
+]);
 
 export const usageEvents = pgTable("usage_events", {
   id: serial("id").primaryKey(),
@@ -32,7 +36,11 @@ export const usageEvents = pgTable("usage_events", {
   quantity: integer("quantity").default(1).notNull(),
   metadata: jsonb("metadata"),
   recordedAt: timestamp("recorded_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_usage_events_org_id").on(table.orgId),
+  index("idx_usage_events_org_dimension").on(table.orgId, table.dimension),
+  index("idx_usage_events_recorded_at").on(table.recordedAt),
+]);
 
 export const billingAlerts = pgTable("billing_alerts", {
   id: serial("id").primaryKey(),

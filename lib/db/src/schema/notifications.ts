@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { organizations } from "./organizations";
@@ -14,7 +14,11 @@ export const notifications = pgTable("notifications", {
   data: jsonb("data"),
   isRead: integer("is_read").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_notifications_user_id").on(table.userId),
+  index("idx_notifications_org_id").on(table.orgId),
+  index("idx_notifications_user_read").on(table.userId, table.isRead),
+]);
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;

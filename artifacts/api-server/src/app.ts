@@ -1,17 +1,27 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import helmet from "helmet";
+import compression from "compression";
 import pinoHttp from "pino-http";
+import { randomUUID } from "crypto";
 import { clerkMiddleware } from "@clerk/express";
 import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { notFoundHandler, errorHandler } from "./middlewares/errorHandler";
+import { rateLimit } from "./middlewares/rateLimit";
 
 const app: Express = express();
+
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  (req as any).id = randomUUID();
+  next();
+});
 
 app.use(
   pinoHttp({
     logger,
+    genReqId: (req) => (req as any).id,
     serializers: {
       req(req) {
         return {
@@ -28,6 +38,34 @@ app.use(
     },
   }),
 );
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://clerk.nexsushr.com", "https://*.clerk.accounts.dev"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "blob:", "https:", "https://*.clerk.com", "https://img.clerk.com"],
+      connectSrc: ["'self'", "https:", "wss:"],
+      frameSrc: ["'self'", "https://*.clerk.accounts.dev"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  xContentTypeOptions: true,
+  xFrameOptions: { action: "deny" },
+}));
+
+app.use(compression());
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
@@ -66,6 +104,14 @@ app.use(cors({
     }
   },
 }));
+
+const globalLimiter = rateLimit({ windowMs: 60_000, max: 120, keyPrefix: "global" });
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path === "/api/billing/webhook") {
+    return next();
+  }
+  globalLimiter(req, res, next);
+});
 
 app.use((req, res, next) => {
   if (req.path === "/api/voice/transcribe" || req.path === "/api/billing/webhook") {

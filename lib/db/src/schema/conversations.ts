@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { organizations } from "./organizations";
@@ -14,7 +14,11 @@ export const conversations = pgTable("conversations", {
   status: text("status").default("active").notNull(),
   lastMessageAt: timestamp("last_message_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_conversations_org_id").on(table.orgId),
+  index("idx_conversations_user_id").on(table.userId),
+  index("idx_conversations_ai_employee_id").on(table.aiEmployeeId),
+]);
 
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
@@ -25,7 +29,10 @@ export const messages = pgTable("messages", {
   metadata: jsonb("metadata"),
   audioUrl: text("audio_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_messages_conversation_id").on(table.conversationId),
+  index("idx_messages_created_at").on(table.createdAt),
+]);
 
 export const insertConversationSchema = createInsertSchema(conversations).omit({ id: true, createdAt: true });
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
