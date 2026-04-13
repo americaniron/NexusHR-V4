@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "DY-_yOpl0vEorb6uKWonY"
@@ -48,3 +47,45 @@ id = "qzH7mb3yuYjU4UugrLfuK"
 uri = "file://artifacts/nexus-hr/public/ai-team/ryan-brooks.png"
 type = "image"
 title = "AI sales development professional"
+
+[[generated]]
+id = "tYPmDA7xurU3hUIsLOM2N"
+uri = "file://artifacts/nexus-hr/public/hero-video/scene1-office-collaboration.png"
+type = "image"
+title = "Modern office AI collaboration"
+
+[[generated]]
+id = "Y98ZFM-IXG3Hq2YY5KX_V"
+uri = "file://artifacts/nexus-hr/public/hero-video/scene2-conference-ai.png"
+type = "image"
+title = "Conference room AI meeting"
+
+[[generated]]
+id = "QZMtT8VJeCGQITMuEyM9v"
+uri = "file://artifacts/nexus-hr/public/hero-video/scene3-voice-conversation.png"
+type = "image"
+title = "Human AI voice conversation"
+
+[[generated]]
+id = "kUEjrzyVAWrBgFkoRxyG7"
+uri = "file://artifacts/nexus-hr/public/hero-video/scene4-command-center.png"
+type = "image"
+title = "AI workforce command center"
+
+[[generated]]
+id = "fsIEsIiSMhb6dz1MGfwvg"
+uri = "file://artifacts/nexus-hr/public/hero-video/scene5-healthcare.png"
+type = "image"
+title = "Healthcare AI workforce"
+
+[[generated]]
+id = "e-e6tzBzkp2xUyI3g6EjO"
+uri = "file://artifacts/nexus-hr/public/hero-video/scene6-finance.png"
+type = "image"
+title = "Finance AI workforce"
+
+[[outputs]]
+id = "F35bpBSj8u88qrdjV8YCR"
+uri = "file://NexsusHR-Product-Demo-Video-Script.md"
+type = "text"
+title = "NexsusHR Product Demo Video Script"

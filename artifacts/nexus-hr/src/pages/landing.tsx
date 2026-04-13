@@ -38,9 +38,18 @@ import {
   Mic,
   Sparkles,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 const BASE = import.meta.env.BASE_URL;
+
+const HERO_SCENES = [
+  `${BASE}hero-video/scene1-office-collaboration.png`,
+  `${BASE}hero-video/scene2-conference-ai.png`,
+  `${BASE}hero-video/scene3-voice-conversation.png`,
+  `${BASE}hero-video/scene4-command-center.png`,
+  `${BASE}hero-video/scene5-healthcare.png`,
+  `${BASE}hero-video/scene6-finance.png`,
+];
 
 const AI_TEAM = [
   {
@@ -282,6 +291,38 @@ const FAQ = [
   { q: "How does NexsusHR differ from RPA or automation tools?", a: "RPA tools follow rigid, pre-programmed rules. NexsusHR AI professionals understand natural language, reason about complex problems, adapt to new situations, and collaborate with your team through conversation — just like a human colleague would." },
 ];
 
+function HeroBackground() {
+  const [currentScene, setCurrentScene] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentScene((prev) => (prev + 1) % HERO_SCENES.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      {HERO_SCENES.map((src, i) => (
+        <div
+          key={i}
+          className="absolute inset-0 transition-opacity duration-[2000ms] ease-in-out"
+          style={{ opacity: currentScene === i ? 1 : 0 }}
+        >
+          <img
+            src={src}
+            alt=""
+            className="w-full h-full object-cover"
+            loading={i === 0 ? "eager" : "lazy"}
+          />
+        </div>
+      ))}
+      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/60" />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background" />
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("annual");
@@ -364,10 +405,8 @@ export default function LandingPage() {
 
       <main className="flex-1">
 
-        <section className="relative overflow-hidden pt-16 pb-24">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/20 via-background to-background" />
-          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-10 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl" />
+        <section className="relative overflow-hidden pt-16 pb-24 min-h-[90vh] flex items-center">
+          <HeroBackground />
           <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div>
