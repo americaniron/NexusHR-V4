@@ -1152,6 +1152,81 @@ export const CreateCheckoutResponse = zod.object({
   type: zod.string(),
   url: zod.string().nullish(),
   message: zod.string().nullish(),
+  orderId: zod.string().nullish(),
+  approvalUrl: zod.string().nullish(),
+  subscription: zod
+    .object({
+      id: zod.number(),
+      plan: zod.string(),
+      billingCycle: zod.string().nullish(),
+      status: zod.string(),
+      currentPeriodStart: zod.string().nullish(),
+      currentPeriodEnd: zod.string().nullish(),
+      trialEndsAt: zod.string().nullish(),
+      allocations: zod.object({}).passthrough().nullish(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Get available payment providers (Stripe, PayPal)
+ */
+export const GetPaymentProvidersResponse = zod.object({
+  providers: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      icon: zod.string().optional(),
+      description: zod.string().optional(),
+    }),
+  ),
+});
+
+/**
+ * @summary Create a PayPal checkout order
+ */
+export const createPaypalCheckoutBodyBillingCycleDefault = `monthly`;
+
+export const CreatePaypalCheckoutBody = zod.object({
+  plan: zod.enum(["starter", "growth", "business", "enterprise"]),
+  billingCycle: zod
+    .enum(["monthly", "annual"])
+    .default(createPaypalCheckoutBodyBillingCycleDefault),
+});
+
+export const CreatePaypalCheckoutResponse = zod.object({
+  type: zod.string(),
+  url: zod.string().nullish(),
+  message: zod.string().nullish(),
+  orderId: zod.string().nullish(),
+  approvalUrl: zod.string().nullish(),
+  subscription: zod
+    .object({
+      id: zod.number(),
+      plan: zod.string(),
+      billingCycle: zod.string().nullish(),
+      status: zod.string(),
+      currentPeriodStart: zod.string().nullish(),
+      currentPeriodEnd: zod.string().nullish(),
+      trialEndsAt: zod.string().nullish(),
+      allocations: zod.object({}).passthrough().nullish(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Capture a PayPal order after approval
+ */
+export const CapturePaypalOrderBody = zod.object({
+  orderId: zod.string(),
+});
+
+export const CapturePaypalOrderResponse = zod.object({
+  type: zod.string(),
+  url: zod.string().nullish(),
+  message: zod.string().nullish(),
+  orderId: zod.string().nullish(),
+  approvalUrl: zod.string().nullish(),
   subscription: zod
     .object({
       id: zod.number(),

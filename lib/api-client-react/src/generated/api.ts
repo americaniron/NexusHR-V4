@@ -25,6 +25,7 @@ import type {
   AvatarGenerateRequest,
   AvatarResult,
   BillingPlanList,
+  CapturePaypalOrderBody,
   CategoryList,
   CheckoutRequest,
   CheckoutResponse,
@@ -46,6 +47,7 @@ import type {
   GetAnalyticsOverviewParams,
   GetAvatarBrandingPresets200,
   GetAvatarGalleryParams,
+  GetPaymentProviders200,
   GetRecentActivityParams,
   GetVoiceProfiles200,
   HealthStatus,
@@ -3326,6 +3328,253 @@ export const useCreateCheckout = <
   TContext
 > => {
   return useMutation(getCreateCheckoutMutationOptions(options));
+};
+
+/**
+ * @summary Get available payment providers (Stripe, PayPal)
+ */
+export const getGetPaymentProvidersUrl = () => {
+  return `/api/billing/payment-providers`;
+};
+
+export const getPaymentProviders = async (
+  options?: RequestInit,
+): Promise<GetPaymentProviders200> => {
+  return customFetch<GetPaymentProviders200>(getGetPaymentProvidersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPaymentProvidersQueryKey = () => {
+  return [`/api/billing/payment-providers`] as const;
+};
+
+export const getGetPaymentProvidersQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPaymentProviders>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPaymentProviders>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPaymentProvidersQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPaymentProviders>>
+  > = ({ signal }) => getPaymentProviders({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPaymentProviders>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPaymentProvidersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPaymentProviders>>
+>;
+export type GetPaymentProvidersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get available payment providers (Stripe, PayPal)
+ */
+
+export function useGetPaymentProviders<
+  TData = Awaited<ReturnType<typeof getPaymentProviders>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPaymentProviders>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPaymentProvidersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a PayPal checkout order
+ */
+export const getCreatePaypalCheckoutUrl = () => {
+  return `/api/billing/paypal/checkout`;
+};
+
+export const createPaypalCheckout = async (
+  checkoutRequest: CheckoutRequest,
+  options?: RequestInit,
+): Promise<CheckoutResponse> => {
+  return customFetch<CheckoutResponse>(getCreatePaypalCheckoutUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(checkoutRequest),
+  });
+};
+
+export const getCreatePaypalCheckoutMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPaypalCheckout>>,
+    TError,
+    { data: BodyType<CheckoutRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPaypalCheckout>>,
+  TError,
+  { data: BodyType<CheckoutRequest> },
+  TContext
+> => {
+  const mutationKey = ["createPaypalCheckout"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPaypalCheckout>>,
+    { data: BodyType<CheckoutRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createPaypalCheckout(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePaypalCheckoutMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPaypalCheckout>>
+>;
+export type CreatePaypalCheckoutMutationBody = BodyType<CheckoutRequest>;
+export type CreatePaypalCheckoutMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a PayPal checkout order
+ */
+export const useCreatePaypalCheckout = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPaypalCheckout>>,
+    TError,
+    { data: BodyType<CheckoutRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createPaypalCheckout>>,
+  TError,
+  { data: BodyType<CheckoutRequest> },
+  TContext
+> => {
+  return useMutation(getCreatePaypalCheckoutMutationOptions(options));
+};
+
+/**
+ * @summary Capture a PayPal order after approval
+ */
+export const getCapturePaypalOrderUrl = () => {
+  return `/api/billing/paypal/capture`;
+};
+
+export const capturePaypalOrder = async (
+  capturePaypalOrderBody: CapturePaypalOrderBody,
+  options?: RequestInit,
+): Promise<CheckoutResponse> => {
+  return customFetch<CheckoutResponse>(getCapturePaypalOrderUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(capturePaypalOrderBody),
+  });
+};
+
+export const getCapturePaypalOrderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof capturePaypalOrder>>,
+    TError,
+    { data: BodyType<CapturePaypalOrderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof capturePaypalOrder>>,
+  TError,
+  { data: BodyType<CapturePaypalOrderBody> },
+  TContext
+> => {
+  const mutationKey = ["capturePaypalOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof capturePaypalOrder>>,
+    { data: BodyType<CapturePaypalOrderBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return capturePaypalOrder(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CapturePaypalOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof capturePaypalOrder>>
+>;
+export type CapturePaypalOrderMutationBody = BodyType<CapturePaypalOrderBody>;
+export type CapturePaypalOrderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Capture a PayPal order after approval
+ */
+export const useCapturePaypalOrder = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof capturePaypalOrder>>,
+    TError,
+    { data: BodyType<CapturePaypalOrderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof capturePaypalOrder>>,
+  TError,
+  { data: BodyType<CapturePaypalOrderBody> },
+  TContext
+> => {
+  return useMutation(getCapturePaypalOrderMutationOptions(options));
 };
 
 /**

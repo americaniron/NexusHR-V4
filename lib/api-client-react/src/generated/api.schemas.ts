@@ -532,6 +532,8 @@ export interface CheckoutResponse {
   type: string;
   url?: string | null;
   message?: string | null;
+  orderId?: string | null;
+  approvalUrl?: string | null;
   subscription?: Subscription;
 }
 
@@ -868,6 +870,21 @@ export type ConfirmConversationTask200 = {
   status?: string;
   task?: TaskItem;
   message?: MessageItem;
+};
+
+export type GetPaymentProviders200ProvidersItem = {
+  id: string;
+  name: string;
+  icon?: string;
+  description?: string;
+};
+
+export type GetPaymentProviders200 = {
+  providers: GetPaymentProviders200ProvidersItem[];
+};
+
+export type CapturePaypalOrderBody = {
+  orderId: string;
 };
 
 export type CreateBillingPortal200 = {

@@ -6,9 +6,12 @@ import { organizations } from "./organizations";
 export const billingSubscriptions = pgTable("billing_subscriptions", {
   id: serial("id").primaryKey(),
   orgId: integer("org_id").references(() => organizations.id).notNull(),
+  paymentProvider: text("payment_provider").default("stripe"),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   stripePriceId: text("stripe_price_id"),
+  paypalPayerId: text("paypal_payer_id"),
+  paypalOrderId: text("paypal_order_id"),
   plan: text("plan").default("trial").notNull(),
   billingCycle: text("billing_cycle").default("monthly"),
   status: text("status").default("trialing").notNull(),

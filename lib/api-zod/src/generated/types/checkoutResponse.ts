@@ -11,5 +11,7 @@ export interface CheckoutResponse {
   type: string;
   url?: string | null;
   message?: string | null;
+  orderId?: string | null;
+  approvalUrl?: string | null;
   subscription?: Subscription;
 }

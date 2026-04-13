@@ -23,6 +23,7 @@ import { getUsageSummary } from "../lib/billing/metering";
 import { publishEvent } from "../lib/websocket";
 import type Stripe from "stripe";
 import { getStripeClient } from "../lib/billing/stripe-client";
+import { isPayPalConfigured, createPayPalOrder, capturePayPalOrder } from "../lib/billing/paypal-client";
 
 const router = Router();
 
@@ -636,6 +637,168 @@ router.get("/billing/overage-estimate", requireAuth, async (req, res, next) => {
       overages,
       totalEstimate: overages.reduce((sum, o) => sum + o.estimatedCharge, 0),
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/billing/payment-providers", requireAuth, async (_req, res, next) => {
+  try {
+    const stripe = await getStripeClient();
+    const providers = [];
+    if (stripe) {
+      providers.push({ id: "stripe", name: "Credit / Debit Card", icon: "credit-card", description: "Visa, Mastercard, Amex via Stripe" });
+    }
+    if (isPayPalConfigured()) {
+      providers.push({ id: "paypal", name: "PayPal", icon: "paypal", description: "Pay with your PayPal account — 200+ countries supported" });
+    }
+    res.json({ providers });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const paypalCheckoutBody = z.object({
+  plan: z.enum(["starter", "growth", "business", "enterprise"]),
+  billingCycle: z.enum(["monthly", "annual"]).default("monthly"),
+});
+
+router.post("/billing/paypal/checkout", requireAuth, validate({ body: paypalCheckoutBody }), async (req, res, next) => {
+  try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) throw AppError.badRequest("No organization");
+
+    const { plan, billingCycle } = req.body;
+
+    if (plan === "enterprise") {
+      return res.json({ type: "contact_sales", message: "Please contact sales for Enterprise pricing." });
+    }
+
+    if (!isPayPalConfigured()) {
+      throw AppError.badRequest("PayPal is not configured.");
+    }
+
+    const planDef = PLAN_DEFINITIONS[plan as PlanId];
+    const price = billingCycle === "annual" ? planDef.annual * 12 : planDef.monthly;
+    const frontendUrl = getFrontendUrl();
+
+    const order = await createPayPalOrder({
+      planName: planDef.name,
+      amountUsd: price,
+      orgId,
+      plan,
+      billingCycle,
+      returnUrl: `${frontendUrl}/billing?paypal_success=true`,
+      cancelUrl: `${frontendUrl}/billing?paypal_canceled=true`,
+    });
+
+    const approvalLink = order.links?.find((l) => l.rel === "payer-action")?.href
+      || order.links?.find((l) => l.rel === "approve")?.href;
+
+    res.json({ type: "paypal_checkout", orderId: order.id, approvalUrl: approvalLink });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const paypalCaptureBody = z.object({
+  orderId: z.string().min(1),
+});
+
+router.post("/billing/paypal/capture", requireAuth, validate({ body: paypalCaptureBody }), async (req, res, next) => {
+  try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) throw AppError.badRequest("No organization");
+
+    const { orderId } = req.body;
+    const captured = await capturePayPalOrder(orderId);
+
+    if (captured.status !== "COMPLETED") {
+      throw AppError.badRequest(`PayPal order not completed. Status: ${captured.status}`);
+    }
+
+    const purchaseUnit = captured.purchase_units?.[0];
+    if (!purchaseUnit?.custom_id) {
+      throw AppError.badRequest("Invalid PayPal order: missing metadata");
+    }
+
+    let meta: { orgId?: number; plan?: string; billingCycle?: string };
+    try {
+      meta = JSON.parse(purchaseUnit.custom_id);
+    } catch {
+      throw AppError.badRequest("Invalid PayPal order metadata");
+    }
+
+    if (meta.orgId !== orgId) {
+      logger.warn({ expectedOrg: orgId, orderOrg: meta.orgId, orderId }, "PayPal capture org mismatch");
+      throw AppError.forbidden("Order does not belong to this organization");
+    }
+
+    const plan = meta.plan || "starter";
+    const billingCycle = meta.billingCycle || "monthly";
+
+    if (!["starter", "growth", "business"].includes(plan)) {
+      throw AppError.badRequest(`Invalid plan in PayPal order: ${plan}`);
+    }
+
+    const planDef = PLAN_DEFINITIONS[plan as PlanId];
+    const expectedAmount = billingCycle === "annual" ? planDef.annual * 12 : planDef.monthly;
+    const paidAmount = parseFloat(purchaseUnit.amount?.value || "0");
+
+    if (Math.abs(paidAmount - expectedAmount) > 0.01) {
+      logger.warn({ expectedAmount, paidAmount, orderId, plan, billingCycle }, "PayPal amount mismatch");
+      throw AppError.badRequest("Payment amount does not match the expected plan price");
+    }
+
+    const periodEnd = new Date();
+    periodEnd.setMonth(periodEnd.getMonth() + (billingCycle === "annual" ? 12 : 1));
+
+    const amountPaid = Math.round(paidAmount * 100);
+
+    const [existing] = await db.select().from(billingSubscriptions).where(eq(billingSubscriptions.orgId, orgId));
+    const values = {
+      plan,
+      status: "active",
+      billingCycle,
+      paymentProvider: "paypal",
+      paypalPayerId: captured.payer?.payer_id || null,
+      paypalOrderId: orderId,
+      allocations: getPlanLimits(plan),
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: periodEnd,
+      failedPaymentCount: 0,
+      lastPaymentError: null,
+      graceEndsAt: null,
+      suspendedAt: null,
+      updatedAt: new Date(),
+    };
+
+    let subscription;
+    if (existing) {
+      [subscription] = await db.update(billingSubscriptions).set(values).where(eq(billingSubscriptions.orgId, orgId)).returning();
+    } else {
+      [subscription] = await db.insert(billingSubscriptions).values({ orgId, ...values }).returning();
+    }
+
+    await db.insert(billingInvoices).values({
+      orgId,
+      stripeInvoiceId: `paypal_${orderId}`,
+      amountDue: amountPaid,
+      amountPaid,
+      currency: "usd",
+      status: "paid",
+      description: `PayPal payment for ${PLAN_DEFINITIONS[plan as PlanId]?.name || plan} plan`,
+      paidAt: new Date(),
+    });
+
+    publishEvent(orgId, "notifications", "notification:new", {
+      type: "plan_changed",
+      plan,
+      provider: "paypal",
+    });
+
+    logger.info({ orgId, plan, orderId }, "PayPal subscription activated");
+    res.json({ type: "activated", subscription });
   } catch (error) {
     next(error);
   }
