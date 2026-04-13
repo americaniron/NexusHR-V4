@@ -94,10 +94,16 @@ title = "NexsusHR Product Demo Video Script"
 id = "PZI6bprmNQTMC2rp1YwAb"
 uri = "file://screenshots/sophia-avatar.png"
 type = "image"
-title = "Sophia Nakamura — AI-Generated Professional Avatar"
+title = "Sophia Nakamura — AI-Generated Avatar (1024x1024)"
 
 [[outputs]]
 id = "cdAEP3MUwYcMz1jp0xSI3"
 uri = "file://screenshots/01-landing-page.jpg"
 type = "image"
 title = "Step 1: NexsusHR Landing Page"
+
+[[outputs]]
+id = "95dP5c5LIsY3ZxMM0MMpV"
+uri = "file://attached_assets/generated_videos/sophia-nakamura-introduction.mp4"
+type = "video"
+title = "Sophia Nakamura — AI Professional Introduction Video"
