@@ -120,6 +120,13 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(clerkMiddleware());
 
+app.use("/api/static", express.static("public", {
+  maxAge: "7d",
+  immutable: true,
+  etag: true,
+  lastModified: true,
+}));
+
 app.use("/api", router);
 
 app.use(notFoundHandler);
