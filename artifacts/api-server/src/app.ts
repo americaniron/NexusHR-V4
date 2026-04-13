@@ -120,16 +120,11 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(clerkMiddleware());
 
-const PUBLIC_PATHS = new Set([
-  "/api/healthz",
-  "/api/billing/webhook",
-  "/api/roles",
-  "/api/static",
-]);
+const PUBLIC_PATH_PREFIXES = ["/healthz", "/billing/webhook", "/roles", "/static"];
 
 app.use("/api", (req: Request, res: Response, next: NextFunction) => {
   const path = req.path;
-  if (PUBLIC_PATHS.has(`/api${path}`) || path.startsWith("/static/")) {
+  if (PUBLIC_PATH_PREFIXES.some(p => path === p || path.startsWith(p + "/"))) {
     return next();
   }
   const auth = getAuth(req);
