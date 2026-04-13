@@ -1,4 +1,4 @@
-import { useGetSubscription, useGetUsageSummary, useGetBillingPlans, useCreateCheckout, useCreateBillingPortal, useGetPaymentProviders, useCreatePaypalCheckout, useCapturePaypalOrder } from "@workspace/api-client-react";
+import { useGetSubscription, useGetUsageSummary, useGetBillingPlans, useCreateCheckout, useCreateBillingPortal, useGetPaymentProviders, useCreatePaypalCheckout, useCapturePaypalOrder, useListInvoices } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ export default function BillingPage() {
   const { data: usage, isLoading: usageLoading } = useGetUsageSummary();
   const { data: plansData } = useGetBillingPlans();
   const { data: providersData } = useGetPaymentProviders();
+  const { data: invoicesData } = useListInvoices();
   const checkoutMutation = useCreateCheckout();
   const paypalCheckoutMutation = useCreatePaypalCheckout();
   const paypalCaptureMutation = useCapturePaypalOrder();
@@ -357,29 +358,39 @@ export default function BillingPage() {
                 </tr>
               </thead>
               <tbody>
-                {sub?.status === "active" || sub?.status === "trialing" ? (
-                  <>
-                    <tr className="border-b border-border hover:bg-muted/50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-foreground">INV-{new Date().getFullYear()}-001</td>
-                      <td className="px-6 py-4 text-muted-foreground">{new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
-                      <td className="px-6 py-4 text-foreground font-medium">${sub?.plan === "growth" ? "299.00" : sub?.plan === "business" ? "799.00" : "99.00"}</td>
-                      <td className="px-6 py-4"><Badge variant="outline" className="text-green-500 border-green-500/30 bg-green-500/10 text-xs">Paid</Badge></td>
-                      <td className="px-6 py-4 text-right">
-                        <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-foreground" onClick={handleManageBilling}>
-                          <Download className="h-3.5 w-3.5" />
-                        </Button>
-                      </td>
-                    </tr>
-                    <tr className="border-b border-border hover:bg-muted/50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-foreground">INV-{new Date().getFullYear()}-002</td>
-                      <td className="px-6 py-4 text-muted-foreground">{new Date(Date.now() + 30 * 86400000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
-                      <td className="px-6 py-4 text-foreground font-medium">${sub?.plan === "growth" ? "299.00" : sub?.plan === "business" ? "799.00" : "99.00"}</td>
-                      <td className="px-6 py-4"><Badge variant="outline" className="text-amber-500 border-amber-500/30 bg-amber-500/10 text-xs">Upcoming</Badge></td>
-                      <td className="px-6 py-4 text-right">
-                        <span className="text-xs text-muted-foreground">Pending</span>
-                      </td>
-                    </tr>
-                  </>
+                {(invoicesData?.data || []).length > 0 ? (
+                  (invoicesData?.data || []).map((inv) => {
+                    const statusClasses: Record<string, string> = {
+                      paid: "text-green-500 border-green-500/30 bg-green-500/10",
+                      open: "text-amber-500 border-amber-500/30 bg-amber-500/10",
+                      void: "text-red-500 border-red-500/30 bg-red-500/10",
+                      draft: "text-gray-500 border-gray-500/30 bg-gray-500/10",
+                      uncollectible: "text-red-500 border-red-500/30 bg-red-500/10",
+                    };
+                    return (
+                      <tr key={inv.id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                        <td className="px-6 py-4 font-medium text-foreground">INV-{new Date(inv.createdAt).getFullYear()}-{String(inv.id).padStart(3, "0")}</td>
+                        <td className="px-6 py-4 text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                        <td className="px-6 py-4 text-foreground font-medium">${(inv.amountDue / 100).toFixed(2)}</td>
+                        <td className="px-6 py-4">
+                          <Badge variant="outline" className={`${statusClasses[inv.status] || statusClasses.draft} text-xs capitalize`}>
+                            {inv.status}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {inv.invoiceUrl ? (
+                            <a href={inv.invoiceUrl} target="_blank" rel="noopener noreferrer">
+                              <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-foreground">
+                                <Download className="h-3.5 w-3.5" />
+                              </Button>
+                            </a>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">

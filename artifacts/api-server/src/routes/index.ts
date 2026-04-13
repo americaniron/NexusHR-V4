@@ -22,6 +22,7 @@ import promptsRouter from "./prompts";
 import orchestrationRouter from "./orchestration";
 import toolsRouter from "./tools";
 import videoStudioRouter from "./video-studio";
+import apiKeysRouter from "./api-keys";
 
 const router: IRouter = Router();
 
@@ -48,5 +49,6 @@ router.use(promptsRouter);
 router.use(orchestrationRouter);
 router.use(toolsRouter);
 router.use(videoStudioRouter);
+router.use(apiKeysRouter);
 
 export default router;

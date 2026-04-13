@@ -1,4 +1,4 @@
-import { useGetCurrentOrganization, useGetCurrentUser, useUpdateOrganization } from "@workspace/api-client-react";
+import { useGetCurrentOrganization, useGetCurrentUser, useUpdateOrganization, useListApiKeys, useCreateApiKey, useRevokeApiKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -10,18 +10,21 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, User, Bell, Key, Shield, Copy, Eye, EyeOff, RefreshCw, Users, Plus, Trash2, Lock, Smartphone, Monitor, LogOut, Mail } from "lucide-react";
+import { Building2, User, Bell, Key, Shield, Copy, Users, Plus, Trash2, Lock, Smartphone, Monitor, Mail, Loader2, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function SettingsPage() {
   const { data: org, isLoading: orgLoading } = useGetCurrentOrganization();
   const { data: user, isLoading: userLoading } = useGetCurrentUser();
   const updateOrg = useUpdateOrganization();
+  const { data: apiKeysData, refetch: refetchKeys } = useListApiKeys();
+  const createKeyMutation = useCreateApiKey();
+  const revokeKeyMutation = useRevokeApiKey();
   const { toast } = useToast();
 
   const [orgName, setOrgName] = useState("");
   const [industry, setIndustry] = useState("");
-  const [showApiKey, setShowApiKey] = useState(false);
+  const [newKeyRevealed, setNewKeyRevealed] = useState<string | null>(null);
 
   useEffect(() => {
     if (org) {
@@ -39,12 +42,34 @@ export default function SettingsPage() {
     }
   };
 
-  const mockApiKey = "nxhr_sk_" + "x".repeat(32);
+  const handleCreateKey = async () => {
+    try {
+      const result = await createKeyMutation.mutateAsync({ data: { name: "Production API Key" } });
+      setNewKeyRevealed(result.key);
+      refetchKeys();
+      toast({ title: "API key created", description: "Copy your key now — it won't be shown again." });
+    } catch {
+      toast({ title: "Failed to create key", variant: "destructive" });
+    }
+  };
 
-  const handleCopyApiKey = () => {
-    navigator.clipboard.writeText(mockApiKey);
+  const handleRevokeKey = async (id: number) => {
+    try {
+      await revokeKeyMutation.mutateAsync({ id });
+      refetchKeys();
+      toast({ title: "API key revoked" });
+    } catch {
+      toast({ title: "Failed to revoke key", variant: "destructive" });
+    }
+  };
+
+  const handleCopyKey = (key: string) => {
+    navigator.clipboard.writeText(key);
     toast({ title: "API key copied to clipboard" });
   };
+
+  const activeKeys = (apiKeysData?.data || []).filter(k => !k.revoked);
+  const revokedKeys = (apiKeysData?.data || []).filter(k => k.revoked);
 
   if (orgLoading || userLoading) {
     return (
@@ -257,9 +282,6 @@ export default function SettingsPage() {
                   role="Owner"
                   isOwner
                 />
-                <TeamMemberRow name="Alex Johnson" email="alex.j@company.com" role="Admin" />
-                <TeamMemberRow name="Maria Garcia" email="maria.g@company.com" role="Member" />
-                <TeamMemberRow name="James Lee" email="james.l@company.com" role="Viewer" />
               </div>
             </CardContent>
           </Card>
@@ -320,22 +342,10 @@ export default function SettingsPage() {
                   <Monitor className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-sm font-medium text-foreground">Current Session</p>
-                    <p className="text-xs text-muted-foreground">Chrome on macOS &middot; Last active now</p>
+                    <p className="text-xs text-muted-foreground">Active now</p>
                   </div>
                 </div>
                 <Badge variant="outline" className="text-primary border-primary/30">Active</Badge>
-              </div>
-              <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-background">
-                <div className="flex items-center gap-3">
-                  <Smartphone className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Mobile App</p>
-                    <p className="text-xs text-muted-foreground">Safari on iOS &middot; Last active 2 hours ago</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                  <LogOut className="h-4 w-4 mr-1" /> Revoke
-                </Button>
               </div>
             </CardContent>
             <CardFooter className="border-t border-border/50 pt-6">
@@ -353,7 +363,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-background">
                 <div>
                   <p className="text-sm font-medium text-foreground">Change Password</p>
-                  <p className="text-xs text-muted-foreground">Last changed 30 days ago</p>
+                  <p className="text-xs text-muted-foreground">Managed via Clerk</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => toast({ title: "Password management handled via Clerk" })}>
                   Update Password
@@ -366,33 +376,97 @@ export default function SettingsPage() {
         <TabsContent value="api" className="mt-6 space-y-6">
           <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle>API Keys</CardTitle>
-              <CardDescription>Manage API keys for programmatic access to NexsusHR.</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>API Keys</CardTitle>
+                  <CardDescription>Manage API keys for programmatic access to NexsusHR.</CardDescription>
+                </div>
+                <Button size="sm" className="gap-2" onClick={handleCreateKey} disabled={createKeyMutation.isPending}>
+                  {createKeyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Generate New Key
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-lg border border-border bg-background p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-foreground">Production API Key</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">Created on Jan 15, 2026</div>
+              {newKeyRevealed && (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-amber-500 text-sm font-medium">
+                    <AlertTriangle className="h-4 w-4" />
+                    Copy your API key now — it won't be shown again
                   </div>
-                  <Badge variant="outline" className="text-green-500 border-green-500/30">Active</Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 font-mono text-sm bg-muted rounded-md px-3 py-2 text-muted-foreground overflow-hidden">
-                    {showApiKey ? mockApiKey : "nxhr_sk_" + "\u2022".repeat(32)}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 font-mono text-sm bg-muted rounded-md px-3 py-2 text-foreground overflow-x-auto whitespace-nowrap">
+                      {newKeyRevealed}
+                    </div>
+                    <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => handleCopyKey(newKeyRevealed)}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setShowApiKey(!showApiKey)}>
-                    {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleCopyApiKey}>
-                    <Copy className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="text-xs" onClick={() => setNewKeyRevealed(null)}>
+                    Dismiss
                   </Button>
                 </div>
-              </div>
-              <Button variant="outline" className="gap-2" onClick={() => toast({ title: "API key regenerated" })}>
-                <RefreshCw className="h-4 w-4" /> Regenerate Key
-              </Button>
+              )}
+
+              {activeKeys.length === 0 && !newKeyRevealed ? (
+                <div className="py-8 text-center text-muted-foreground border border-dashed rounded-lg">
+                  <Key className="h-8 w-8 mx-auto mb-3 text-muted-foreground/30" />
+                  <p className="text-sm">No API keys yet</p>
+                  <p className="text-xs mt-1">Generate a key to access the NexsusHR API programmatically.</p>
+                </div>
+              ) : (
+                activeKeys.map((apiKey) => (
+                  <div key={apiKey.id} className="rounded-lg border border-border bg-background p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium text-foreground">{apiKey.name}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Created {new Date(apiKey.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          {apiKey.lastUsedAt && ` · Last used ${new Date(apiKey.lastUsedAt).toLocaleDateString()}`}
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-green-500 border-green-500/30">Active</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 font-mono text-sm bg-muted rounded-md px-3 py-2 text-muted-foreground overflow-hidden">
+                        {apiKey.keyPrefix}{"•".repeat(40)}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:text-destructive gap-1"
+                        onClick={() => handleRevokeKey(apiKey.id)}
+                        disabled={revokeKeyMutation.isPending}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Revoke
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {revokedKeys.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Revoked Keys</div>
+                  {revokedKeys.map((apiKey) => (
+                    <div key={apiKey.id} className="rounded-lg border border-border/50 bg-muted/30 p-4 opacity-60">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-medium text-muted-foreground">{apiKey.name}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {apiKey.keyPrefix}{"•".repeat(20)}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-destructive border-destructive/30">Revoked</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
               <p className="text-xs text-muted-foreground">
                 API keys grant full access to your NexsusHR workspace. Keep them secure and never share them publicly.
               </p>

@@ -215,6 +215,23 @@ router.get("/billing/subscription", requireAuth, async (req, res, next) => {
   }
 });
 
+router.get("/billing/invoices", requireAuth, async (req, res, next) => {
+  try {
+    const { orgId } = await getAuthContext(req);
+    if (!orgId) return res.json({ data: [] });
+
+    const invoices = await db.select()
+      .from(billingInvoices)
+      .where(eq(billingInvoices.orgId, orgId))
+      .orderBy(desc(billingInvoices.createdAt))
+      .limit(50);
+
+    res.json({ data: invoices });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/billing/usage", requireAuth, async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);

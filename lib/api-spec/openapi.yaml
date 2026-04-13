@@ -30,6 +30,8 @@ tags:
     description: Integration management
   - name: billing
     description: Billing and subscriptions
+  - name: api-keys
+    description: API key management
   - name: notifications
     description: Notifications
   - name: support
@@ -853,6 +855,85 @@ paths:
                     type: string
                 required:
                   - url
+
+  /billing/invoices:
+    get:
+      operationId: listInvoices
+      tags: [billing]
+      summary: List billing invoices for the organization
+      responses:
+        "200":
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Invoice"
+                required: [data]
+
+  /api-keys:
+    get:
+      operationId: listApiKeys
+      tags: [api-keys]
+      summary: List API keys for the organization
+      responses:
+        "200":
+          description: List of API keys
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ApiKeyInfo"
+                required: [data]
+    post:
+      operationId: createApiKey
+      tags: [api-keys]
+      summary: Generate a new API key
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        "201":
+          description: New API key (full key shown only once)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyCreated"
+
+  /api-keys/{id}:
+    delete:
+      operationId: revokeApiKey
+      tags: [api-keys]
+      summary: Revoke an API key
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Key revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
 
   /voices:
     get:
@@ -2311,6 +2392,79 @@ components:
         source:
           type: string
       required: [data, source]
+
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: integer
+        orgId:
+          type: integer
+        stripeInvoiceId:
+          type: string
+          nullable: true
+        amountDue:
+          type: integer
+        amountPaid:
+          type: integer
+        currency:
+          type: string
+        status:
+          type: string
+        description:
+          type: string
+          nullable: true
+        invoiceUrl:
+          type: string
+          nullable: true
+        pdfUrl:
+          type: string
+          nullable: true
+        periodStart:
+          type: string
+          nullable: true
+        periodEnd:
+          type: string
+          nullable: true
+        paidAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, amountDue, currency, status, createdAt]
+
+    ApiKeyInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        keyPrefix:
+          type: string
+        revoked:
+          type: boolean
+        lastUsedAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, name, keyPrefix, revoked, createdAt]
+
+    ApiKeyCreated:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        key:
+          type: string
+        keyPrefix:
+          type: string
+        createdAt:
+          type: string
+      required: [id, name, key, keyPrefix, createdAt]
 
     UploadUrlRequest:
       type: object

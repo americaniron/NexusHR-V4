@@ -1249,6 +1249,64 @@ export const CreateBillingPortalResponse = zod.object({
 });
 
 /**
+ * @summary List billing invoices for the organization
+ */
+export const ListInvoicesResponse = zod.object({
+  data: zod.array(
+    zod.object({
+      id: zod.number(),
+      orgId: zod.number().optional(),
+      stripeInvoiceId: zod.string().nullish(),
+      amountDue: zod.number(),
+      amountPaid: zod.number().optional(),
+      currency: zod.string(),
+      status: zod.string(),
+      description: zod.string().nullish(),
+      invoiceUrl: zod.string().nullish(),
+      pdfUrl: zod.string().nullish(),
+      periodStart: zod.string().nullish(),
+      periodEnd: zod.string().nullish(),
+      paidAt: zod.string().nullish(),
+      createdAt: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary List API keys for the organization
+ */
+export const ListApiKeysResponse = zod.object({
+  data: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      keyPrefix: zod.string(),
+      revoked: zod.boolean(),
+      lastUsedAt: zod.string().nullish(),
+      createdAt: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Generate a new API key
+ */
+export const CreateApiKeyBody = zod.object({
+  name: zod.string().optional(),
+});
+
+/**
+ * @summary Revoke an API key
+ */
+export const RevokeApiKeyParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const RevokeApiKeyResponse = zod.object({
+  success: zod.boolean().optional(),
+});
+
+/**
  * @summary List available AI voices
  */
 export const ListVoicesResponse = zod.object({

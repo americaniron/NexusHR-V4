@@ -551,6 +551,40 @@ export interface VoiceList {
   source: string;
 }
 
+export interface Invoice {
+  id: number;
+  orgId?: number;
+  stripeInvoiceId?: string | null;
+  amountDue: number;
+  amountPaid?: number;
+  currency: string;
+  status: string;
+  description?: string | null;
+  invoiceUrl?: string | null;
+  pdfUrl?: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  paidAt?: string | null;
+  createdAt: string;
+}
+
+export interface ApiKeyInfo {
+  id: number;
+  name: string;
+  keyPrefix: string;
+  revoked: boolean;
+  lastUsedAt?: string | null;
+  createdAt: string;
+}
+
+export interface ApiKeyCreated {
+  id: number;
+  name: string;
+  key: string;
+  keyPrefix: string;
+  createdAt: string;
+}
+
 export interface UploadUrlRequest {
   /** @minLength 1 */
   name: string;
@@ -889,6 +923,22 @@ export type CapturePaypalOrderBody = {
 
 export type CreateBillingPortal200 = {
   url: string;
+};
+
+export type ListInvoices200 = {
+  data: Invoice[];
+};
+
+export type ListApiKeys200 = {
+  data: ApiKeyInfo[];
+};
+
+export type CreateApiKeyBody = {
+  name?: string;
+};
+
+export type RevokeApiKey200 = {
+  success?: boolean;
 };
 
 export type SynthesizeVoiceAlignedBodyPersonality = {
