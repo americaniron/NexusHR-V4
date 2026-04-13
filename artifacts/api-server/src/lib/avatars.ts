@@ -415,7 +415,7 @@ export async function generateAvatar(params: AvatarParams): Promise<AvatarGenera
         model: "gpt-image-1",
         prompt,
         n: 1,
-        size: "512x512",
+        size: "1024x1024",
         quality: "medium",
       });
 
@@ -430,7 +430,7 @@ export async function generateAvatar(params: AvatarParams): Promise<AvatarGenera
 
       const avatarConfig: AvatarConfig = {
         generationParams: params,
-        renderSize: "512x512",
+        renderSize: "1024x1024",
         style: "photorealistic",
       };
 
@@ -438,7 +438,7 @@ export async function generateAvatar(params: AvatarParams): Promise<AvatarGenera
         version: 1,
         avatarUrl,
         renderConfig: {
-          size: "512x512",
+          size: "1024x1024",
           style: "photorealistic",
           generationParams: params,
         },
