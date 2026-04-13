@@ -10,9 +10,9 @@ import { useState } from "react";
 
 const PLAN_FEATURES: Record<string, string[]> = {
   trial: ["10 AI Professionals (Growth-tier)", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "7 Integrations", "Usage metered, not billed"],
-  starter: ["2 AI Professionals", "40 Voice Hours/mo", "5,000 Messages/mo", "10 Workflows", "5 Integrations", "Email Support"],
-  growth: ["10 AI Professionals", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "15 Integrations", "Priority Chat Support"],
-  business: ["50 AI Professionals", "1,000 Voice Hours/mo", "Unlimited Messages", "200 Workflows", "Unlimited Integrations", "Dedicated CSM"],
+  starter: ["2 AI Professionals", "40 Voice Hours/mo", "5,000 Messages/mo", "10 Workflows", "3 Integrations", "Email Support"],
+  growth: ["10 AI Professionals", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "7 Integrations", "Priority Email Support"],
+  business: ["50 AI Professionals", "1,000 Voice Hours/mo", "Unlimited Messages", "200 Workflows", "Unlimited Integrations", "Phone Support + 4hr SLA"],
   enterprise: ["Unlimited AI Professionals", "Unlimited Voice Hours", "Unlimited Messages", "Unlimited Workflows", "Unlimited Integrations", "24/7 Premium + SLA"],
 };
 

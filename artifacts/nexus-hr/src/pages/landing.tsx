@@ -72,7 +72,7 @@ const PLANS = [
     annualTotal: 2988,
     annualSavings: 600,
     desc: "For small teams getting started with AI workforce",
-    features: ["2 AI Professionals", "40 Voice Hours/mo", "5,000 Messages/mo", "10 Workflows", "5 Integrations", "Email Support", "Basic Analytics"],
+    features: ["2 AI Professionals", "40 Voice Hours/mo", "5,000 Messages/mo", "10 Workflows", "3 Integrations", "Email Support", "Basic Analytics"],
     cta: "Start Free Trial",
   },
   {
@@ -83,7 +83,7 @@ const PLANS = [
     annualTotal: 7788,
     annualSavings: 1800,
     desc: "For growing organizations scaling their AI workforce",
-    features: ["10 AI Professionals", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "15 Integrations", "Priority Chat Support", "Advanced Analytics", "Custom Personalities"],
+    features: ["10 AI Professionals", "200 Voice Hours/mo", "25,000 Messages/mo", "50 Workflows", "7 Integrations", "Priority Email Support", "Advanced Analytics", "Custom Personalities"],
     popular: true,
     cta: "Start Free Trial",
     trialNote: "14-day free trial with Growth-tier access",
@@ -96,7 +96,7 @@ const PLANS = [
     annualTotal: 19188,
     annualSavings: 4800,
     desc: "For scaling enterprises with advanced needs",
-    features: ["50 AI Professionals", "1,000 Voice Hours/mo", "Unlimited Messages", "200 Workflows", "Unlimited Integrations", "Dedicated CSM", "Full Analytics Suite", "Custom Workflows", "API Access"],
+    features: ["50 AI Professionals", "1,000 Voice Hours/mo", "Unlimited Messages", "200 Workflows", "Unlimited Integrations", "Phone Support + 4hr SLA", "Full Analytics Suite", "Custom Workflows", "API Access"],
     cta: "Start Free Trial",
   },
   {
