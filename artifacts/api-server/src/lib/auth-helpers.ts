@@ -9,6 +9,12 @@ export interface AuthContext {
   userId: number | null;
   clerkUserId: string | null;
   clerkOrgId: string | null;
+  isOwner: boolean;
+}
+
+function getOwnerEmails(): string[] {
+  const raw = process.env.OWNER_EMAILS || "";
+  return raw.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
 }
 
 export async function getAuthContext(req: Request): Promise<AuthContext> {
@@ -18,6 +24,7 @@ export async function getAuthContext(req: Request): Promise<AuthContext> {
 
   let orgId: number | null = null;
   let userId: number | null = null;
+  let isOwner = false;
 
   if (clerkOrgId) {
     const [org] = await db.select().from(organizations).where(eq(organizations.clerkOrgId, clerkOrgId));
@@ -27,9 +34,12 @@ export async function getAuthContext(req: Request): Promise<AuthContext> {
   if (clerkUserId) {
     const [user] = await db.select().from(users).where(eq(users.clerkUserId, clerkUserId));
     userId = user?.id ?? null;
+    if (user?.email) {
+      isOwner = getOwnerEmails().includes(user.email.toLowerCase());
+    }
   }
 
-  return { orgId, userId, clerkUserId, clerkOrgId };
+  return { orgId, userId, clerkUserId, clerkOrgId, isOwner };
 }
 
 export function emptyPagination(page = 1, limit = 12) {

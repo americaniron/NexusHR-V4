@@ -6,13 +6,15 @@ import { type BillingDimension } from "../lib/billing/plans";
 export function requirePlanLimit(dimension: BillingDimension, quantity: number = 1) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { orgId } = await getAuthContext(req);
+      const { orgId, isOwner } = await getAuthContext(req);
       if (!orgId) {
         return res.status(403).json({
           error: "No organization context",
           code: "NO_ORG",
         });
       }
+
+      if (isOwner) return next();
 
       const { allowed, used, limit, remaining } = await checkPlanLimit(orgId, dimension, quantity);
 

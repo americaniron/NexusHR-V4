@@ -59,6 +59,6 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
 -   **HTTP Client/State Management:** TanStack Query
 -   **Real-time Communication:** Socket.io
 -   **Object Storage:** Google Cloud Storage (GCS)
--   **Payment Processing:** Stripe (primary, card payments) + PayPal (international, 200+ countries). Dual-provider billing with payment method selector modal. PayPal uses direct REST API v2 (OAuth2 token + orders). Stripe uses direct `STRIPE_SECRET_KEY` env var (Replit OAuth declined).
+-   **Payment Processing:** Stripe (primary, card payments) + PayPal (international, 200+ countries). Dual-provider billing with payment method selector modal. PayPal uses direct REST API v2 (OAuth2 token + orders). Stripe uses direct `STRIPE_SECRET_KEY` env var (Replit OAuth declined). Owner emails (`OWNER_EMAILS` env var) get permanent enterprise access with no expiry or billing limits.
 -   **Avatar Placeholders:** DiceBear API
 -   **Integration Tools:** Google Workspace, Slack, HubSpot, Jira, GitHub, Mailchimp, SendGrid, Freshdesk, Zoom, Trello, Dropbox, Pipedrive, BambooHR, Microsoft 365, Salesforce, Zendesk, QuickBooks, Notion, Asana.

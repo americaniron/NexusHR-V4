@@ -128,12 +128,39 @@ router.get("/billing/plans", requireAuth, async (_req, res, next) => {
 
 router.get("/billing/subscription", requireAuth, async (req, res, next) => {
   try {
-    const { orgId } = await getAuthContext(req);
+    const { orgId, isOwner } = await getAuthContext(req);
     if (!orgId) throw AppError.notFound("No organization");
 
     let [sub] = await db.select().from(billingSubscriptions).where(eq(billingSubscriptions.orgId, orgId));
 
-    if (!sub) {
+    if (isOwner) {
+      const ownerValues = {
+        plan: "enterprise",
+        status: "active",
+        paymentProvider: "owner",
+        billingCycle: "annual",
+        allocations: getPlanLimits("enterprise"),
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 365 * 86400000),
+        trialEndsAt: null,
+        failedPaymentCount: 0,
+        lastPaymentError: null,
+        graceEndsAt: null,
+        suspendedAt: null,
+        updatedAt: new Date(),
+      };
+
+      if (!sub) {
+        [sub] = await db.insert(billingSubscriptions)
+          .values({ orgId, ...ownerValues })
+          .returning();
+      } else if (sub.paymentProvider !== "owner" || sub.status !== "active" || sub.plan !== "enterprise") {
+        [sub] = await db.update(billingSubscriptions)
+          .set(ownerValues)
+          .where(eq(billingSubscriptions.orgId, orgId))
+          .returning();
+      }
+    } else if (!sub) {
       const trialEnd = new Date();
       trialEnd.setDate(trialEnd.getDate() + TRIAL_DURATION_DAYS);
       [sub] = await db
