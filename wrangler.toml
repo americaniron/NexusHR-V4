@@ -1,0 +1,28 @@
+name = "nexus-hr-buddy"
+compatibility_date = "2024-01-01"
+
+# Cloudflare Pages configuration for the frontend
+[env.production]
+name = "nexus-hr-buddy"
+
+# Build configuration
+[build]
+command = "pnpm run build"
+cwd = "."
+
+[build.upload]
+format = "service-worker"
+dir = "artifacts/nexus-hr/dist/public"
+main = "."
+
+# Environment variables (these should be set in Cloudflare dashboard)
+# The following are placeholders - actual values should be configured in Cloudflare Pages settings
+[env.production.vars]
+# Add your environment variables here or configure them in Cloudflare Dashboard
+
+# Note: For the API server, you'll need to deploy it separately
+# Cloudflare Workers don't support Node.js native modules like http.createServer
+# Consider using:
+# 1. Cloudflare Workers for API (requires refactoring to use fetch handlers)
+# 2. Cloudflare D1 or external database instead of PostgreSQL
+# 3. Or deploy API to a compatible platform (Railway, Render, Fly.io, etc.)
