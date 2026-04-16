@@ -181,6 +181,7 @@ export function ProactiveBehaviors({ employeeId, employeeName, apiBase }: Proact
                   onToggle={() => setExpandedRule(expandedRule === rule.id ? null : rule.id)}
                   onToggleEnabled={() => handleToggleRule(rule.id)}
                   onDelete={() => handleDeleteRule(rule.id)}
+                  apiBase={apiBase}
                 />
               ))}
             </div>
@@ -197,13 +198,45 @@ function RuleCard({
   onToggle,
   onToggleEnabled,
   onDelete,
+  apiBase,
 }: {
   rule: ProactiveRule;
   expanded: boolean;
   onToggle: () => void;
   onToggleEnabled: () => void;
   onDelete: () => void;
+  apiBase: string;
 }) {
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ message: string } | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const handleTestRule = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTesting(true);
+    setTestResult(null);
+    setTestError(null);
+    try {
+      const res = await fetch(`${apiBase}/proactive-rules/${rule.id}/test`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Test failed");
+      }
+      const data = await res.json();
+      setTestResult({ message: data.message });
+      toast({ title: "Test message generated", description: "The preview message appears below." });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Test failed";
+      setTestError(msg);
+      toast({ title: "Test failed", description: msg, variant: "destructive" });
+    } finally {
+      setTesting(false);
+    }
+  };
   return (
     <div className={`rounded-lg border ${rule.enabled ? "border-border" : "border-border/50 opacity-60"} bg-background/50`}>
       <div className="flex items-center gap-3 p-3 cursor-pointer" onClick={onToggle}>
@@ -269,7 +302,34 @@ function RuleCard({
             </div>
           )}
 
-          <div className="flex justify-end">
+          {testResult && (
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                  Test Preview
+                </Badge>
+              </div>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{testResult.message}</p>
+            </div>
+          )}
+
+          {testError && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+              <p className="text-sm text-destructive">{testError}</p>
+            </div>
+          )}
+
+          <div className="flex justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTestRule}
+              disabled={testing}
+              className="gap-1"
+            >
+              <Play className="h-3 w-3" />
+              {testing ? "Testing..." : "Test Rule"}
+            </Button>
             <Button variant="destructive" size="sm" onClick={onDelete} className="gap-1">
               <Trash2 className="h-3 w-3" />
               Delete

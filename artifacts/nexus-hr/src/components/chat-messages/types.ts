@@ -43,6 +43,7 @@ export interface ChatMessageData {
     proactiveRuleName?: string;
     proactiveType?: string;
     triggerEvent?: string;
+    isTest?: boolean;
   };
   audioUrl?: string | null;
   createdAt?: string;

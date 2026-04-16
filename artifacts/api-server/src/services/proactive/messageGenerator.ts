@@ -148,6 +148,106 @@ export async function executeProactiveRule(
   );
 }
 
+export async function testProactiveRule(
+  rule: ProactiveRule,
+  requestingUserId: number,
+): Promise<{ message: string; conversationId: number; messageId: number }> {
+  const [employee] = await db
+    .select()
+    .from(aiEmployees)
+    .where(eq(aiEmployees.id, rule.aiEmployeeId));
+
+  if (!employee) {
+    throw new Error("AI employee not found");
+  }
+
+  const [role] = await db
+    .select()
+    .from(aiEmployeeRoles)
+    .where(eq(aiEmployeeRoles.id, employee.roleId));
+
+  const userId = requestingUserId;
+
+  let [conv] = await db
+    .select()
+    .from(conversations)
+    .where(and(
+      eq(conversations.orgId, rule.orgId),
+      eq(conversations.userId, userId),
+      eq(conversations.aiEmployeeId, rule.aiEmployeeId),
+      eq(conversations.status, "active"),
+    ))
+    .orderBy(desc(conversations.lastMessageAt))
+    .limit(1);
+
+  if (!conv) {
+    [conv] = await db
+      .insert(conversations)
+      .values({
+        orgId: rule.orgId,
+        userId,
+        aiEmployeeId: rule.aiEmployeeId,
+        title: `Proactive: ${rule.name}`,
+        status: "active",
+      })
+      .returning();
+  }
+
+  const testTriggerData = { test: true, triggeredManually: true };
+
+  const messageContent = await generateProactiveMessage(rule, employee, role, testTriggerData);
+
+  const [msg] = await db
+    .insert(messages)
+    .values({
+      conversationId: conv.id,
+      role: "assistant",
+      content: messageContent,
+      messageType: "proactive",
+      metadata: {
+        proactive: true,
+        proactiveRuleId: rule.id,
+        proactiveRuleName: rule.name,
+        proactiveType: rule.type,
+        triggerEvent: rule.triggerEvent,
+        triggerData: testTriggerData,
+        isTest: true,
+      },
+    })
+    .returning();
+
+  await db
+    .update(conversations)
+    .set({ lastMessageAt: new Date() })
+    .where(eq(conversations.id, conv.id));
+
+  await db.insert(proactiveExecutions).values({
+    ruleId: rule.id,
+    orgId: rule.orgId,
+    aiEmployeeId: rule.aiEmployeeId,
+    status: "completed",
+    triggerData: testTriggerData,
+    messageContent,
+    conversationId: conv.id,
+    messageId: msg.id,
+  });
+
+  publishEvent(rule.orgId, "conversations", "conversation:message", {
+    conversationId: conv.id,
+    aiMessage: msg,
+    proactive: true,
+    ruleName: rule.name,
+    isTest: true,
+  });
+
+  logger.info(
+    { ruleId: rule.id, employeeId: employee.id, conversationId: conv.id, messageId: msg.id },
+    "Proactive rule test executed successfully",
+  );
+
+  return { message: messageContent, conversationId: conv.id, messageId: msg.id };
+}
+
 async function generateProactiveMessage(
   rule: ProactiveRule,
   employee: typeof aiEmployees.$inferSelect,

@@ -8,6 +8,8 @@ import { z } from "zod/v4";
 import { validate, paginationQuery, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
 import { logger } from "../lib/logger";
+import { testProactiveRule } from "../services/proactive/messageGenerator";
+import { checkRateLimit } from "../services/proactive/scheduler";
 
 const router = Router();
 
@@ -206,6 +208,38 @@ router.delete("/proactive-rules/:id", requireAuth, validate({ params: idParam })
     await db.delete(proactiveRules).where(eq(proactiveRules.id, id));
 
     res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/proactive-rules/:id/test", requireAuth, validate({ params: idParam }), async (req, res, next) => {
+  try {
+    const { orgId, userId } = await getAuthContext(req);
+    if (!orgId || !userId) throw AppError.forbidden();
+
+    const id = parseInt(String(req.params.id));
+    const [rule] = await db
+      .select()
+      .from(proactiveRules)
+      .where(and(eq(proactiveRules.id, id), eq(proactiveRules.orgId, orgId)));
+    if (!rule) throw AppError.notFound("Proactive rule not found");
+
+    const rateLimitOk = await checkRateLimit(rule.id, rule.aiEmployeeId, rule.maxPerDay);
+    if (!rateLimitOk) {
+      throw AppError.badRequest("Rate limit exceeded for this rule. Try again later.");
+    }
+
+    const result = await testProactiveRule(rule, userId);
+
+    logger.info({ ruleId: rule.id }, "Proactive rule test executed");
+    res.json({
+      success: true,
+      message: result.message,
+      conversationId: result.conversationId,
+      messageId: result.messageId,
+      isTest: true,
+    });
   } catch (error) {
     next(error);
   }

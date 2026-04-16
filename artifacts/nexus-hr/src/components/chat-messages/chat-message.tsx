@@ -52,6 +52,7 @@ export function ChatMessage({
   const quickReplies = message.metadata?.quickReplies || [];
   const emotionBadge = emotion && emotion !== "neutral" ? EMOTION_BADGES[emotion] : null;
   const isProactive = messageType === "proactive" || message.metadata?.proactive;
+  const isTest = message.metadata?.isTest;
 
   if (messageType === "status_update") {
     return (
@@ -81,7 +82,7 @@ export function ChatMessage({
         {isProactive && !isUser && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 mb-1 text-[10px] font-medium rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20">
             <Sparkles className="h-3 w-3" />
-            Proactive{message.metadata?.proactiveRuleName ? ` — ${message.metadata.proactiveRuleName}` : ""}
+            {isTest ? "Test" : "Proactive"}{message.metadata?.proactiveRuleName ? ` — ${message.metadata.proactiveRuleName}` : ""}
           </span>
         )}
 
