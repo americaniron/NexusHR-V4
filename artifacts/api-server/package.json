@@ -16,6 +16,7 @@
     "seed:tech-publicsector-media-roles": "tsx src/scripts/seed-tech-publicsector-media-roles.ts",
     "seed:aerospace-hr-telecom-roles": "tsx src/scripts/seed-aerospace-hr-telecom-roles.ts",
     "seed:tool-registry": "tsx src/scripts/seed-tool-registry.ts",
+    "migrate:encrypt-configs": "tsx src/scripts/migrate-encrypt-configs.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

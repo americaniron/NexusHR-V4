@@ -6,6 +6,7 @@ import { evaluatePermission, checkRateLimit } from "./permissionEngine";
 import { logToolAccess } from "./auditLogger";
 import { resolveAdapter } from "./adapters/registry";
 import type { OAuthCredentials } from "./adapters/types";
+import { decryptConnectionConfig, encryptConnectionConfig } from "../../lib/encryption";
 
 const EXECUTION_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -142,12 +143,14 @@ export async function executeToolAccess(request: ToolExecutionRequest): Promise<
     const adapter = resolveAdapter(tool);
     const executeFn = adapter
       ? async () => {
-          const creds = extractCredentials(connection);
+          const decryptedConfig = decryptConnectionConfig(connection.connectionConfig);
+          const creds = extractCredentialsFromDecrypted(decryptedConfig);
           if (adapter.refreshToken && creds.expiresAt && creds.expiresAt < Date.now()) {
             const refreshed = await adapter.refreshToken(creds);
             if (refreshed) {
+              const mergedConfig = { ...((decryptedConfig as Record<string, unknown>) || {}), ...refreshed };
               await db.update(integrations)
-                .set({ connectionConfig: { ...((connection.connectionConfig as Record<string, unknown>) || {}), ...refreshed } })
+                .set({ connectionConfig: encryptConnectionConfig(mergedConfig) })
                 .where(eq(integrations.id, connection.id));
               Object.assign(creds, refreshed);
             }
@@ -220,14 +223,14 @@ async function executeWithTimeout<T>(fn: () => Promise<T>, timeoutMs: number): P
   });
 }
 
-function extractCredentials(connection: typeof integrations.$inferSelect): OAuthCredentials {
-  const config = (connection.connectionConfig as Record<string, unknown>) || {};
+function extractCredentialsFromDecrypted(config: unknown): OAuthCredentials {
+  const obj = (config as Record<string, unknown>) || {};
   return {
-    accessToken: (config.accessToken as string) || "",
-    refreshToken: config.refreshToken as string | undefined,
-    tokenType: (config.tokenType as string) || "Bearer",
-    expiresAt: config.expiresAt as number | undefined,
-    scope: config.scope as string | undefined,
+    accessToken: (obj.accessToken as string) || "",
+    refreshToken: obj.refreshToken as string | undefined,
+    tokenType: (obj.tokenType as string) || "Bearer",
+    expiresAt: obj.expiresAt as number | undefined,
+    scope: obj.scope as string | undefined,
   };
 }
 

@@ -4,6 +4,7 @@ import { getAuthContext } from "../lib/auth-helpers";
 import { z } from "zod/v4";
 import { validate, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
+import { encryptConnectionConfig } from "../lib/encryption";
 import { db } from "@workspace/db";
 import { toolRegistry, integrations, toolPermissionOverrides, aiEmployees } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -78,11 +79,13 @@ router.post("/tools/connections", requireAuth, validate({ body: connectBody }), 
       throw AppError.badRequest("Tool is already connected");
     }
 
+    const encryptedConfig = config ? encryptConnectionConfig(config) : null;
+
     if (existing) {
       const [updated] = await db.update(integrations).set({
         status: "connected",
         connectedScopes: scopes || tool.requiredScopes,
-        connectionConfig: config || null,
+        connectionConfig: encryptedConfig,
         connectedAt: new Date(),
         disconnectedAt: null,
         healthStatus: "healthy",
@@ -95,7 +98,7 @@ router.post("/tools/connections", requireAuth, validate({ body: connectBody }), 
         toolId,
         status: "connected",
         connectedScopes: scopes || tool.requiredScopes,
-        connectionConfig: config || null,
+        connectionConfig: encryptedConfig,
         connectedAt: new Date(),
         healthStatus: "healthy",
       }).returning();

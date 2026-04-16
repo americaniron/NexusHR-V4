@@ -10,6 +10,7 @@ import { AppError } from "../middlewares/errorHandler";
 import { requirePlanLimit } from "../middlewares/planLimits";
 import { recordUsage, checkAllCountBasedLimits } from "../lib/billing/metering";
 import crypto from "crypto";
+import { encryptConnectionConfig } from "../lib/encryption";
 
 const router = Router();
 
@@ -253,12 +254,14 @@ router.get("/integrations/oauth/:provider/callback", async (req, res, next) => {
     const [existing] = await db.select().from(integrations)
       .where(and(eq(integrations.orgId, storedState.orgId), eq(integrations.toolId, tool.id)));
 
+    const encryptedConfig = encryptConnectionConfig(connectionConfig);
+
     if (existing) {
       await db.update(integrations)
         .set({
           status: "connected",
           connectedAt: new Date(),
-          connectionConfig,
+          connectionConfig: encryptedConfig,
           connectedScopes: config.scopes,
         })
         .where(eq(integrations.id, existing.id));
@@ -268,7 +271,7 @@ router.get("/integrations/oauth/:provider/callback", async (req, res, next) => {
         toolId: tool.id,
         status: "connected",
         connectedAt: new Date(),
-        connectionConfig,
+        connectionConfig: encryptedConfig,
         connectedScopes: config.scopes,
       });
       await recordUsage(storedState.orgId, "integrations", 1, { toolId: tool.id, action: "oauth_connect" });
