@@ -65,7 +65,7 @@ async function getRecentConversations(sinceMinutes: number = 60, limit: number =
   return summaries;
 }
 
-function extractMemoryEntries(msgs: Array<{ role: string; content: string }>): Array<{
+export function extractMemoryEntries(msgs: Array<{ role: string; content: string }>): Array<{
   memoryType: "preference" | "personal_context" | "interaction_pattern";
   content: string;
 }> {
