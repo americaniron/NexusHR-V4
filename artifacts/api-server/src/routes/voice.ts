@@ -206,6 +206,8 @@ const sttTokenLimit = rateLimit({ windowMs: 60_000, max: 10, keyPrefix: "voice-s
 router.get("/voice/stt-token", requireAuth, sttTokenLimit, async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const token = await generateSttToken();
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
     res.json({ token });
   } catch (error) {
     if (error instanceof Error && error.message.includes("ElevenLabs")) {

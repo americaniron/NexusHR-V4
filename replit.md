@@ -2,7 +2,7 @@
 
 ## Overview
 
-NexsusHR is a production-grade AI People platform for businesses to discover, onboard, and collaborate with fully autonomous AI People. It elevates the concept from "AI Employees/Agents" to "AI People" by providing each with a unique identity, personality, voice, and cinematic video presence. The platform offers a comprehensive solution for integrating AI into business operations, aiming to enhance productivity and operational efficiency.
+NexsusHR is a production-grade AI People platform designed to help businesses discover, onboard, and collaborate with fully autonomous AI People. It differentiates itself by giving each AI a unique identity, personality, voice, and cinematic video presence. The platform aims to seamlessly integrate AI into business operations, significantly enhancing productivity and operational efficiency.
 
 ## User Preferences
 
@@ -14,68 +14,48 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
 
 **Frontend:**
 -   **Framework:** React with Vite.
--   **Styling:** TailwindCSS v4 and shadcn/ui components.
--   **Design System:** Dark theme (charcoal) with bronze/copper as the primary brand color.
--   **Component Architecture:** Structured with page components, feature hooks, shared UI, and utilities.
--   **State Management:** React `useState` for local UI state, Zustand for global client state (with localStorage), and TanStack Query for server state management (data fetching, caching, synchronization).
--   **Performance:** Utilizes `VirtualizedList`, debouncing, throttling, and code splitting with `React.lazy`/`Suspense`.
+-   **Styling:** TailwindCSS v4 and shadcn/ui components, using a dark theme (charcoal) with bronze/copper branding.
+-   **State Management:** React `useState` for local UI, Zustand for global client state, and TanStack Query for server state.
+-   **Performance:** `VirtualizedList`, debouncing, throttling, and code splitting.
 
 **Backend:**
 -   **API Framework:** Express 5 with Clerk middleware.
--   **Database:** PostgreSQL with Drizzle ORM (comprehensive schema covering organizations, users, AI roles, employees, interviews, tasks, workflows, conversations, integrations, billing, support, notifications, relational memory, and prompt templates/audit logs).
--   **Validation:** Zod schemas for all API inputs. Query schemas use `.passthrough()` in the validate middleware to allow unknown proxy parameters.
--   **Testing:** Vitest + Supertest for integration tests. Query schemas shared via `src/schemas/query.ts`.
+-   **Database:** PostgreSQL with Drizzle ORM, covering comprehensive schemas for all platform functionalities.
+-   **Validation:** Zod schemas for all API inputs.
 -   **API Codegen:** Orval generates React Query hooks and Zod schemas from OpenAPI.
--   **Error Handling:** Structured JSON errors with a global handler.
--   **Real-time Communication:** Socket.io for WebSocket connections with authentication and room-based subscriptions.
+-   **Real-time Communication:** Socket.io for WebSocket connections with authentication.
 
 **Core Features & Implementations:**
--   **AI-Guided Setup Wizard:** Multi-step onboarding wizard (Welcome → Org Profile → Browse Talent → Customize → Integrations → Deploy) guided by Aria Lawson (Admin & Onboarding Director) — a live video-call-style AI presence. Aria plays her intro video on welcome, then appears as a live avatar with speaking animations on every step. She speaks all guidance through ElevenLabs voice synthesis and responds to customer questions in real-time via Claude AI (`/api/aria/ask` endpoint). The "Ask Aria" input accepts free-form questions contextually aware of the current step, org details, selected role, etc. No chatbot-style text — Aria is a real AI professional. Located at `/onboarding`, accessible after signup.
--   **AI People Management:** Catalog of 105+ AI roles, onboarding and management of AI people, AI-powered interview sessions, real-time chat with ElevenLabs audio playback, HeyGen Seedance 2.0 integration for cinematic AI person videos.
--   **AI Avatar System:** Photorealistic headshots (Claude Opus 4.6 prompt refinement + Replit image proxy, DiceBear fallback), `AIAvatar` component supporting `idle`, `speaking`, `thinking`, `listening` states.
-    -   **Emotion Engine:** Detects 7 emotion states from AI response text, mapping to ElevenLabs voice parameters and avatar visual cues (ring glows, indicator dots, waveform bars).
-    -   **Avatar Animator:** `AvatarAnimator` component for viseme-driven mouth animation, idle cycles, and emotion-driven facial expressions.
-    -   **Rich Chat Messages:** 8 types including text, voice transcription, data cards, file attachments, action confirmations, status updates, quick replies, and escalation notices.
-    -   **ElevenLabs Alignment API:** Used for character-level timing data to drive lip sync.
-    -   **Collaboration Visibility Panel:** Real-time inter-professional workflow progress with dependency graphs and assignments.
--   **WebRTC Video Call System:** Real-time video calls with AI employees via WebRTC signaling (RTCPeerConnection + SDP offer/answer + ICE candidates) over Socket.IO. Canvas-based animated avatar (`VideoAvatar`) with real-time lip sync driven by TTS audio via Web Audio API analyser, facial expressions from the emotion engine (7 states), eye movement/blinking, and head gestures. `useVideoCall` hook manages full session lifecycle including RTCPeerConnection negotiation, media capture with audio-only fallback, push-to-talk STT from mic via MediaRecorder + transcription API, latency monitoring, reconnection (max 3 attempts), and graceful fallback to voice mode. `VideoCallSession` component displays user camera feed alongside animated avatar with call controls (mute, camera toggle, push-to-talk mic recording, session recording, fullscreen). Video call sessions created via `/api/video-call/session` with conversation ownership validation. Server-side session authorization binds sessionId to the creating user's org+clerkUserId — only authorized sockets can join. Entry points on both conversations page (Video Call button) and employee detail page (Video Call button linking with `?videoCall=true`). Graceful fallback to voice mode on WebRTC failure.
-    -   **Photorealistic Avatar Animation (D-ID/HeyGen):** External avatar animation API integration for photorealistic talking-head video avatars. `avatarAnimation.ts` library supports both D-ID Interactive Streams and HeyGen Streaming APIs (auto-detected via `DID_API_KEY` or `HEYGEN_API_KEY` env vars). TTS audio from ElevenLabs is sent to the animation service which returns a WebRTC video stream of a photorealistic avatar lip-syncing to the audio. Emotion states from the emotion engine map to avatar expression parameters (happy/serious with intensity). `PhotorealisticAvatar` component renders the remote video stream with emotion-driven glow effects, falling back seamlessly to the canvas-based `VideoAvatar` when the animation service is unavailable. `useAvatarAnimation` hook manages stream session lifecycle (create, answer SDP, ICE candidates, send audio, destroy). API endpoints at `/api/video-call/avatar-stream/*` (create, answer, ice, talk, destroy, status, expression). Server-side session management with 30-min TTL and automatic cleanup.
-    -   **Session Recording & Playback:** MediaRecorder-based session recording captures the full video call stream (video+audio in WebM format). Recording toggle button in video call controls with visual indicators (REC badge, duration timer, upload progress). Recordings are uploaded to GCS via presigned URLs (3-step flow: request-upload → PUT to GCS → confirm-upload). `video_call_recordings` DB table stores metadata (sessionId, conversationId, duration, size, storage path). Playback viewer (`RecordingPlayback` component) with full controls (play/pause, seek, volume, skip, fullscreen, download). Recording history panel accessible from conversations page header ("Recordings" button) with list view showing duration, date, file size, and delete option. API endpoints: `POST /api/video-call/recordings/request-upload`, `POST /api/video-call/recordings/confirm-upload`, `GET /api/video-call/recordings`, `GET /api/video-call/recordings/:id/stream`, `DELETE /api/video-call/recordings/:id`.
--   **Voice & Visual States:** ElevenLabs TTS with personality-mapped voice settings, emotion-aware modulation, and multilingual support (29 languages via `eleven_multilingual_v2`). OpenAI Whisper (`gpt-4o-mini-transcribe`) for audio transcription. Voice cloning via ElevenLabs `POST /voice/clone`. Cloned voice management: `GET /api/voice/cloned` lists cloned voices, `DELETE /api/voice/cloned/:id` deletes them. "My Cloned Voices" UI section on employee personality config page allows viewing, deleting, and assigning cloned voices to employees. Per-employee `voiceLanguage` column for language selection. `useVoiceMode` hook for managing the full voice pipeline.
--   **AI Personality Engine:** 7-Axis personality system with customizable sliders, dynamic tone control, culture alignment, and a relational memory engine.
--   **Semantic Memory (pgvector):** Vector-based semantic search for long-term conversation memory using pgvector (PostgreSQL extension). Neural 384-dimensional embeddings via `all-MiniLM-L6-v2` (Sentence Transformers) using `@xenova/transformers` for local inference — captures paraphrases, synonyms, and conceptual similarity. Hybrid retrieval combines cosine similarity with time-decay relevance scoring. Background memory consolidation job runs every 30 minutes to extract and embed key insights from conversations. API endpoints for semantic search, embedding backfill (with `reembedAll` option for model migration), manual consolidation, listing, and deletion (`/api/memory/search`, `/api/memory/backfill`, `/api/memory/consolidate`, `GET /api/memory/list/:aiEmployeeId`, `DELETE /api/memory/:id`). **Memory Management UI:** "Memory" tab on the employee detail page (`MemoryManagement` component) lets users browse stored memories with pagination, search semantically, filter by type (preference/personal_context/interaction_pattern), and delete individual memories. Shows summary cards for total count, last updated timestamp, and memory types.
--   **Prompt Architecture & Assembly Pipeline:** 9-layer prompt assembly, 7-stage assembly pipeline for context injection and token management, PII redaction, audit logging, and template versioning.
--   **AI Orchestration Layer:** Task router for AI employee assignment, assignment engine, progress tracker, dependency manager, and workflow execution engine.
--   **Proactive AI Behaviors:** Infrastructure for AI employees to autonomously initiate work. `proactive_rules` table stores scheduled (cron) and event-triggered rules per employee. Scheduler service (`services/proactive/scheduler.ts`) evaluates time-based rules every 60s. Event listener (`services/proactive/eventListener.ts`) handles trigger-based rules on system events. Rules fire LLM-generated contextual messages posted to conversations with `messageType: "proactive"` visual indicator. Per-employee rate limiting (default 5/day). CRUD API at `/api/proactive-rules/...`. Frontend config panel on employee detail page ("Proactive" tab).
--   **Secure Tool Access Framework:** RBAC for tool permissions, secure execution engine with pre-flight checks and audit trails, and security hardening.
--   **Real Integration Adapters:** ToolAdapter pattern (`adapters/types.ts`) with pluggable adapters for Slack (channels, messages, threads), Google Workspace (Gmail, Calendar, Drive), HubSpot (contacts, deals, companies), Jira (issues, projects, comments, transitions), and GitHub (repos, issues, PRs, comments). Adapter registry (`adapters/registry.ts`) dispatches by tool name or provider. OAuth2 flows for all five providers with CSRF-safe state, provider-aware token exchange (Jira uses JSON body, GitHub requires Accept header), and credential redaction from API responses. Execution engine auto-routes through adapters when available, with token refresh support. OAuth tokens are encrypted at rest using AES-256-GCM (`INTEGRATION_ENCRYPTION_KEY` env var) via `lib/encryption.ts`; plaintext records can be migrated with `scripts/migrate-encrypt-configs.ts`.
--   **Production Security & Performance:** Helmet.js for security headers, gzip compression, global and route-specific rate limiting, UUID-based request ID tracking, enhanced health checks, database indexing, and frontend build optimizations.
--   **Deep Analytics & Performance Metrics:** Comprehensive quality-oriented analytics system including:
-    -   **Response Ratings:** Thumbs up/down rating on every AI employee message in conversations, stored in `response_ratings` table, aggregated per employee.
-    -   **SLA Tracking:** Configurable SLA targets (response time, task completion time) per AI employee via `sla_configs` table. Analytics dashboard shows SLA compliance percentages.
-    -   **CSAT Surveys:** Periodic satisfaction surveys triggered after 5+ messages in conversations. Star ratings (1-5) with optional feedback stored in `csat_responses` table.
-    -   **Quality Metrics Dashboard:** New KPI cards for Approval Rate, SLA Compliance, CSAT Score, and Week-over-Week trends with directional indicators on the Analytics page.
-    -   **Trend Analysis:** Week-over-week comparison with directional arrows showing improving/declining metrics.
-    -   **Per-Employee Performance Tab:** Dedicated "Performance" tab on employee detail page with quality metrics, trend charts (task completion, approval rating over time), and SLA configuration.
-    -   **Exportable Reports:** CSV/JSON performance report export for individual employees or the full team via `/api/analytics/export`.
-    -   **API Endpoints:** `POST /api/analytics/ratings`, `GET/PUT /api/analytics/sla/:id`, `POST /api/analytics/csat`, `GET /api/analytics/quality-metrics`, `GET /api/analytics/trends`, `GET /api/analytics/employee/:id/performance`, `GET /api/analytics/export`.
--   **Enterprise Compliance & Data Residency:** Data residency preference (US/EU/APAC) stored on organizations. GDPR data management with full data export and deletion request workflows (30-day grace period for deletions). Consent management for data processing, analytics, third-party sharing, and marketing. Configurable data retention policies for conversations, audit logs, and task history. Compliance posture dashboard showing SOC 2, GDPR, HIPAA, and PCI DSS framework status based on org configuration. Searchable audit log viewer with CSV/JSON export. Schema: `compliance_data_requests`, `compliance_consent_records`, `compliance_retention_policies` tables. Routes at `/api/compliance/*`. Frontend pages at `/compliance` (dashboard), `/audit-logs` (viewer), and Settings > Data & Privacy tab.
+-   **AI-Guided Setup Wizard:** Multi-step onboarding guided by a live video-call-style AI presence (Aria Lawson), utilizing ElevenLabs for voice and Claude AI for real-time responses.
+-   **AI People Management:** Catalog of 105+ AI roles, AI-powered interview sessions, real-time chat with ElevenLabs audio, and HeyGen Seedance 2.0 integration for cinematic AI videos.
+-   **AI Avatar System:** Photorealistic headshots, `AIAvatar` component with `idle`, `speaking`, `thinking`, `listening` states. Includes an Emotion Engine mapping text to visual/voice parameters, and an `AvatarAnimator` for viseme-driven mouth animation and facial expressions. Rich chat messages support 8 types.
+-   **WebRTC Video Call System:** Real-time video calls with AI employees via WebRTC over Socket.IO. Features canvas-based animated avatars (`VideoAvatar`) with real-time lip sync, emotion-driven facial expressions, eye movement, and head gestures. Includes session recording and playback to GCS. Photorealistic avatar animation is supported via D-ID or HeyGen integration.
+-   **Voice & Visual States:** ElevenLabs TTS with personality-mapped voice settings and emotion-aware modulation (multilingual support). OpenAI Whisper for audio transcription. Voice cloning capabilities are integrated.
+-   **AI Personality Engine:** 7-Axis personality system with customizable sliders, dynamic tone control, culture alignment, and relational memory.
+-   **Semantic Memory (pgvector):** Vector-based semantic search for long-term conversation memory using pgvector and `all-MiniLM-L6-v2` embeddings. Includes hybrid retrieval and a background memory consolidation job. A UI is provided for memory management.
+-   **Prompt Architecture:** 9-layer prompt assembly pipeline with context injection, token management, PII redaction, and audit logging.
+-   **AI Orchestration Layer:** Task router, assignment engine, progress tracker, dependency manager, and workflow execution engine.
+-   **Proactive AI Behaviors:** Infrastructure for autonomous AI actions based on scheduled or event-triggered rules.
+-   **Secure Tool Access Framework:** RBAC for tool permissions, secure execution engine, and audit trails.
+-   **Real Integration Adapters:** Pluggable `ToolAdapter` pattern for Slack, Google Workspace, HubSpot, Jira, and GitHub, with OAuth2 flows and encrypted token storage.
+-   **Deep Analytics & Performance Metrics:** Comprehensive system including response ratings, SLA tracking, CSAT surveys, quality metrics dashboard, trend analysis, and exportable reports.
+-   **Enterprise Compliance & Data Residency:** Data residency preferences, GDPR management (data export/deletion), consent management, configurable data retention policies, and a compliance posture dashboard.
 
 ## External Dependencies
 
 -   **Authentication:** Clerk
--   **AI:** Anthropic Claude Opus 4.6 via Replit AI Integrations (reasoning, chat, prompt refinement). OpenAI Whisper (`gpt-4o-mini-transcribe`) via Replit AI Integrations for speech-to-text. Model, provider, and token limits are configurable via env vars (`AI_PROVIDER`, `AI_MODEL`, `AI_DEFAULT_MAX_TOKENS`, `AI_REFINEMENT_MAX_TOKENS`) in `artifacts/api-server/src/lib/aiConfig.ts`.
--   **Voice Synthesis:** ElevenLabs (via Replit integration connector) — multilingual TTS (`eleven_multilingual_v2`), voice cloning, and alignment API
--   **Speech-to-Text:** OpenAI Whisper (`gpt-4o-mini-transcribe`) via `@workspace/integrations-openai-ai-server`
--   **Image Generation:** Replit AI proxy (Claude Opus 4.6 prompt refinement)
--   **Database:** PostgreSQL (with pgvector extension for semantic search)
--   **ORM:** Drizzle ORM
--   **Validation:** Zod
--   **UI Components:** shadcn/ui
--   **HTTP Client/State Management:** TanStack Query
--   **Real-time Communication:** Socket.io
--   **Object Storage:** Google Cloud Storage (GCS)
--   **Payment Processing:** Stripe (primary, card payments) + PayPal (international, 200+ countries). Dual-provider billing with payment method selector modal. PayPal uses direct REST API v2 (OAuth2 token + orders). Stripe uses direct `STRIPE_SECRET_KEY` env var (Replit OAuth declined). Owner emails (`OWNER_EMAILS` env var) get permanent enterprise access with no expiry or billing limits.
--   **Avatar Animation:** D-ID Interactive Streams or HeyGen Streaming API (optional, for photorealistic video avatars — configured via `DID_API_KEY` or `HEYGEN_API_KEY` env vars)
--   **Avatar Placeholders:** DiceBear API
--   **Integration Tools:** Google Workspace, Slack, HubSpot, Jira, GitHub, Mailchimp, SendGrid, Freshdesk, Zoom, Trello, Dropbox, Pipedrive, BambooHR, Microsoft 365, Salesforce, Zendesk, QuickBooks, Notion, Asana.
+-   **AI:** Anthropic Claude Opus 4.6 (reasoning, chat, prompt refinement) via Replit AI Integrations.
+-   **Speech-to-Text:** ElevenLabs Scribe v2 Realtime (WebSocket-based, ~150ms latency, client-side streaming with single-use tokens). Fallback: OpenAI Whisper via Replit AI Integrations.
+-   **Voice Synthesis:** ElevenLabs (TTS, voice cloning, alignment API) via Replit integration connector.
+-   **Image Generation:** Replit AI proxy (Claude Opus 4.6 for prompt refinement).
+-   **Database:** PostgreSQL (with pgvector extension).
+-   **ORM:** Drizzle ORM.
+-   **Validation:** Zod.
+-   **UI Components:** shadcn/ui.
+-   **HTTP Client/State Management:** TanStack Query.
+-   **Real-time Communication:** Socket.io.
+-   **Object Storage:** Google Cloud Storage (GCS).
+-   **Payment Processing:** Stripe, PayPal.
+-   **Avatar Animation:** D-ID Interactive Streams or HeyGen Streaming API (optional).
+-   **Avatar Placeholders:** DiceBear API.
+-   **Integration Tools:** Google Workspace, Slack, HubSpot, Jira, GitHub.

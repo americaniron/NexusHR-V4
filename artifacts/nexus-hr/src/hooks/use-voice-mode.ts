@@ -130,16 +130,22 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
   }, [isVoiceMode, requestMicPermission, realtimeSTT]);
 
   const startRecording = useCallback(async () => {
+    pendingTranscriptRef.current = null;
+    setMicPermissionGranted(true);
+    setIsRecording(true);
     try {
-      setIsRecording(true);
-      setMicPermissionGranted(true);
-      pendingTranscriptRef.current = null;
       await realtimeSTT.startStreaming();
     } catch {
       onError?.("Failed to start recording. Please check your microphone.");
       setIsRecording(false);
     }
   }, [onError, realtimeSTT]);
+
+  useEffect(() => {
+    if (isRecording && !realtimeSTT.isStreaming && !realtimeSTT.isConnecting) {
+      setIsRecording(false);
+    }
+  }, [isRecording, realtimeSTT.isStreaming, realtimeSTT.isConnecting]);
 
   const stopRecording = useCallback(async (): Promise<string | null> => {
     setIsRecording(false);

@@ -53,7 +53,7 @@ export function useRealtimeSTT(options: UseRealtimeSTTOptions = {}): UseRealtime
     onErrorRef.current = onError;
   }, [onPartialTranscript, onFinalTranscript, onError]);
 
-  const cleanup = useCallback(() => {
+  const cleanupMedia = useCallback(() => {
     if (levelIntervalRef.current) {
       clearInterval(levelIntervalRef.current);
       levelIntervalRef.current = undefined;
@@ -74,28 +74,50 @@ export function useRealtimeSTT(options: UseRealtimeSTTOptions = {}): UseRealtime
       streamRef.current = null;
     }
 
+    analyserRef.current = null;
+    setAudioLevel(0);
+  }, []);
+
+  const cleanup = useCallback(() => {
+    cleanupMedia();
+
     if (wsRef.current) {
-      if (wsRef.current.readyState === WebSocket.OPEN) {
+      if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
         wsRef.current.close(1000, "User stopped");
       }
       wsRef.current = null;
     }
 
-    analyserRef.current = null;
-    setAudioLevel(0);
     setIsStreaming(false);
     setIsConnecting(false);
-  }, []);
+  }, [cleanupMedia]);
 
   const stopStreaming = useCallback(() => {
-    const accumulated = accumulatedTextRef.current.trim();
-    if (accumulated) {
-      setFinalText(accumulated);
-      onFinalRef.current?.(accumulated);
+    const ws = wsRef.current;
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify({
+          message_type: "input_audio_chunk",
+          audio_base_64: "",
+          sample_rate: SAMPLE_RATE,
+          commit: true,
+        }));
+      } catch {
+        // ignore send errors during close
+      }
     }
-    accumulatedTextRef.current = "";
-    setPartialText("");
-    cleanup();
+
+    setTimeout(() => {
+      const accumulated = accumulatedTextRef.current.trim();
+      if (accumulated) {
+        setFinalText(accumulated);
+        onFinalRef.current?.(accumulated);
+      }
+      accumulatedTextRef.current = "";
+      setPartialText("");
+      cleanup();
+    }, 300);
   }, [cleanup]);
 
   const startStreaming = useCallback(async () => {
@@ -169,10 +191,15 @@ export function useRealtimeSTT(options: UseRealtimeSTTOptions = {}): UseRealtime
 
       ws.onerror = () => {
         onErrorRef.current?.("Real-time transcription connection failed. Retrying with standard mode.");
-        cleanup();
+        cleanupMedia();
+        wsRef.current = null;
+        setIsStreaming(false);
+        setIsConnecting(false);
       };
 
       ws.onclose = (event) => {
+        cleanupMedia();
+
         if (event.code !== 1000) {
           const accumulated = accumulatedTextRef.current.trim();
           if (accumulated) {
@@ -181,6 +208,8 @@ export function useRealtimeSTT(options: UseRealtimeSTTOptions = {}): UseRealtime
           }
           accumulatedTextRef.current = "";
         }
+
+        wsRef.current = null;
         setIsStreaming(false);
         setIsConnecting(false);
       };
@@ -189,7 +218,7 @@ export function useRealtimeSTT(options: UseRealtimeSTTOptions = {}): UseRealtime
       onErrorRef.current?.(message);
       cleanup();
     }
-  }, [isStreaming, isConnecting, apiBase, language, cleanup]);
+  }, [isStreaming, isConnecting, apiBase, language, cleanup, cleanupMedia]);
 
   const startAudioCapture = useCallback((ws: WebSocket, stream: MediaStream) => {
     const audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
