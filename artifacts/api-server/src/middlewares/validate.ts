@@ -17,6 +17,8 @@ export function validate(schemas: ValidationSchemas) {
         for (const issue of result.error.issues) {
           errors.push({ field: `params.${issue.path.join(".")}`, message: issue.message });
         }
+      } else {
+        Object.defineProperty(req, "params", { value: result.data, writable: true, configurable: true });
       }
     }
 
@@ -27,6 +29,8 @@ export function validate(schemas: ValidationSchemas) {
         for (const issue of result.error.issues) {
           errors.push({ field: `query.${issue.path.join(".")}`, message: issue.message });
         }
+      } else {
+        Object.defineProperty(req, "query", { value: result.data, writable: true, configurable: true });
       }
     }
 
@@ -36,6 +40,8 @@ export function validate(schemas: ValidationSchemas) {
         for (const issue of result.error.issues) {
           errors.push({ field: `body.${issue.path.join(".")}`, message: issue.message });
         }
+      } else {
+        req.body = result.data;
       }
     }
 

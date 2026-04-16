@@ -37,20 +37,18 @@ router.get("/tasks", requireAuth, validate({ query: listTasksQuery }), async (re
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.json(emptyPagination());
 
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 12));
-    const offset = (page - 1) * limit;
-    const status = req.query.status as string | undefined;
-    const assigneeId = req.query.assigneeId as string | undefined;
-    const priority = req.query.priority as string | undefined;
+    const { page = 1, limit = 12, status, assigneeId, priority } = req.query as Record<string, unknown>;
+    const pageNum = page as number;
+    const limitNum = limit as number;
+    const offset = (pageNum - 1) * limitNum;
 
     const conditions = [eq(tasks.orgId, orgId)];
-    if (status) conditions.push(eq(tasks.status, status));
-    if (assigneeId) conditions.push(eq(tasks.assigneeId, parseInt(assigneeId)));
-    if (priority) conditions.push(eq(tasks.priority, priority));
+    if (status) conditions.push(eq(tasks.status, status as string));
+    if (assigneeId) conditions.push(eq(tasks.assigneeId, assigneeId as number));
+    if (priority) conditions.push(eq(tasks.priority, priority as string));
 
     const where = and(...conditions);
-    const data = await db.select().from(tasks).where(where).limit(limit).offset(offset);
+    const data = await db.select().from(tasks).where(where).limit(limitNum).offset(offset);
     const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(tasks).where(where);
 
     const enriched = await Promise.all(data.map(async (task) => {
@@ -66,7 +64,7 @@ router.get("/tasks", requireAuth, validate({ query: listTasksQuery }), async (re
 
     res.json({
       data: enriched,
-      pagination: { page, limit, total: Number(count), totalPages: Math.ceil(Number(count) / limit) },
+      pagination: { page: pageNum, limit: limitNum, total: Number(count), totalPages: Math.ceil(Number(count) / limitNum) },
     });
   } catch (error) {
     next(error);
@@ -108,7 +106,7 @@ router.get("/tasks/:id", requireAuth, validate({ params: idParam }), async (req,
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.forbidden();
 
-    const id = parseInt(String(req.params.id));
+    const id = req.params.id as unknown as number;
     const [task] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
     if (!task) throw AppError.notFound("Task not found");
     res.json(task);
@@ -122,7 +120,7 @@ router.patch("/tasks/:id", requireAuth, validate({ params: idParam, body: update
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.forbidden();
 
-    const id = parseInt(String(req.params.id));
+    const id = req.params.id as unknown as number;
     const [existing] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
     if (!existing) throw AppError.notFound("Task not found");
 
@@ -158,7 +156,7 @@ router.delete("/tasks/:id", requireAuth, validate({ params: idParam }), async (r
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.forbidden();
 
-    const id = parseInt(String(req.params.id));
+    const id = req.params.id as unknown as number;
     const [existing] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.orgId, orgId)));
     if (!existing) throw AppError.notFound("Task not found");
 

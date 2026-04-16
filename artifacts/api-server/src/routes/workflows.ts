@@ -29,12 +29,13 @@ router.get("/workflows", requireAuth, validate({ query: paginationQuery }), asyn
     const { orgId } = await getAuthContext(req);
     if (!orgId) return res.json(emptyPagination());
 
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 12));
-    const offset = (page - 1) * limit;
+    const { page = 1, limit = 12 } = req.query as Record<string, unknown>;
+    const pageNum = page as number;
+    const limitNum = limit as number;
+    const offset = (pageNum - 1) * limitNum;
 
     const where = eq(workflows.orgId, orgId);
-    const data = await db.select().from(workflows).where(where).limit(limit).offset(offset);
+    const data = await db.select().from(workflows).where(where).limit(limitNum).offset(offset);
     const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(workflows).where(where);
 
     const enriched = await Promise.all(data.map(async (wf) => {
@@ -44,7 +45,7 @@ router.get("/workflows", requireAuth, validate({ query: paginationQuery }), asyn
 
     res.json({
       data: enriched,
-      pagination: { page, limit, total: Number(count), totalPages: Math.ceil(Number(count) / limit) },
+      pagination: { page: pageNum, limit: limitNum, total: Number(count), totalPages: Math.ceil(Number(count) / limitNum) },
     });
   } catch (error) {
     next(error);
@@ -74,7 +75,7 @@ router.get("/workflows/:id", requireAuth, validate({ params: idParam }), async (
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.forbidden();
 
-    const id = parseInt(String(req.params.id));
+    const id = req.params.id as unknown as number;
     const [workflow] = await db.select().from(workflows).where(and(eq(workflows.id, id), eq(workflows.orgId, orgId)));
     if (!workflow) throw AppError.notFound("Workflow not found");
 
@@ -90,7 +91,7 @@ router.patch("/workflows/:id", requireAuth, validate({ params: idParam, body: up
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.forbidden();
 
-    const id = parseInt(String(req.params.id));
+    const id = req.params.id as unknown as number;
     const [existing] = await db.select().from(workflows).where(and(eq(workflows.id, id), eq(workflows.orgId, orgId)));
     if (!existing) throw AppError.notFound("Workflow not found");
 
@@ -112,7 +113,7 @@ router.delete("/workflows/:id", requireAuth, validate({ params: idParam }), asyn
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.forbidden();
 
-    const id = parseInt(String(req.params.id));
+    const id = req.params.id as unknown as number;
     const [existing] = await db.select().from(workflows).where(and(eq(workflows.id, id), eq(workflows.orgId, orgId)));
     if (!existing) throw AppError.notFound("Workflow not found");
 
