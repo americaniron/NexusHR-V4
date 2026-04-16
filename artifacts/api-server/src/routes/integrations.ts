@@ -99,9 +99,11 @@ router.post("/integrations/:toolId/connect", requireAuth, requirePlanLimit("inte
     if (!tool) throw AppError.notFound("Tool not found");
 
     if (OAUTH_REQUIRED_TOOLS.has(tool.name)) {
-      const clientId = process.env[OAUTH_CONFIGS[tool.name].clientIdEnv];
-      if (!clientId) {
-        throw AppError.badRequest(`${tool.displayName} requires OAuth configuration. Set ${OAUTH_CONFIGS[tool.name].clientIdEnv} and ${OAUTH_CONFIGS[tool.name].clientSecretEnv} environment variables.`);
+      const oauthCfg = OAUTH_CONFIGS[tool.name];
+      const clientId = process.env[oauthCfg.clientIdEnv];
+      const clientSecret = process.env[oauthCfg.clientSecretEnv];
+      if (!clientId || !clientSecret) {
+        throw AppError.badRequest(`${tool.displayName} requires OAuth configuration. Set ${oauthCfg.clientIdEnv} and ${oauthCfg.clientSecretEnv} environment variables.`);
       }
       res.json({ requiresOAuth: true, provider: tool.name, authorizeUrl: `/api/integrations/oauth/${tool.name}/authorize` });
       return;
