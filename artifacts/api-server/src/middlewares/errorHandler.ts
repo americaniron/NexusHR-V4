@@ -22,6 +22,10 @@ export class AppError extends Error {
   static badRequest(message: string) {
     return new AppError(400, "BAD_REQUEST", message);
   }
+
+  static internal(message: string) {
+    return new AppError(500, "INTERNAL_ERROR", message);
+  }
 }
 
 export function notFoundHandler(_req: Request, res: Response) {

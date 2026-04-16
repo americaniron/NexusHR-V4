@@ -187,7 +187,7 @@ router.post("/integrations/:toolId/disconnect", requireAuth, validate({ params: 
   }
 });
 
-const oauthStateStore = new Map<string, { orgId: number; toolName: string; expiresAt: number }>();
+export const oauthStateStore = new Map<string, { orgId: number; toolName: string; expiresAt: number }>();
 
 router.get("/integrations/oauth/:provider/authorize", requireAuth, async (req, res, next) => {
   try {
