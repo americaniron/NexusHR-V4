@@ -372,7 +372,16 @@ export function SetupWizard() {
           </div>
 
           <div className="space-y-4">
-            <AIAssistant messages={AI_GUIDE[stepId] || []} stepTitle={stepId} />
+            <AIAssistant
+              messages={AI_GUIDE[stepId] || []}
+              stepTitle={stepId}
+              context={{
+                orgName: orgName || undefined,
+                industry: industry || undefined,
+                selectedRole: selectedRole?.title,
+                employeeName: employeeName || undefined,
+              }}
+            />
 
             {stepId !== "welcome" && stepId !== "deploy" && (
               <div className="flex gap-2">
