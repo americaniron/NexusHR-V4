@@ -20,6 +20,12 @@ import {
   Play,
   Pause,
   History,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 interface ProactiveRule {
@@ -39,6 +45,27 @@ interface ProactiveRule {
   lastFiredAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+interface ProactiveExecution {
+  id: number;
+  ruleId: number;
+  orgId: number;
+  aiEmployeeId: number;
+  status: string;
+  triggerData: Record<string, unknown> | null;
+  messageContent: string | null;
+  conversationId: number | null;
+  messageId: number | null;
+  error: string | null;
+  executedAt: string;
+}
+
+interface ExecutionsPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 }
 
 interface ProactiveBehaviorsProps {
@@ -319,6 +346,8 @@ function RuleCard({
             </div>
           )}
 
+          <ExecutionHistory ruleId={rule.id} maxPerDay={rule.maxPerDay} apiBase={apiBase} />
+
           <div className="flex justify-between">
             <Button
               variant="outline"
@@ -335,6 +364,183 @@ function RuleCard({
               Delete
             </Button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExecutionStatusIcon({ status }: { status: string }) {
+  switch (status) {
+    case "completed":
+      return <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />;
+    case "failed":
+      return <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />;
+    case "pending":
+      return <Loader2 className="h-3.5 w-3.5 text-yellow-500 shrink-0 animate-spin" />;
+    default:
+      return <AlertCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />;
+  }
+}
+
+function ExecutionHistory({
+  ruleId,
+  maxPerDay,
+  apiBase,
+}: {
+  ruleId: number;
+  maxPerDay: number;
+  apiBase: string;
+}) {
+  const [executions, setExecutions] = useState<ProactiveExecution[]>([]);
+  const [pagination, setPagination] = useState<ExecutionsPagination | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [page, setPage] = useState(1);
+  const [todayCount, setTodayCount] = useState(0);
+  const { toast } = useToast();
+
+  const fetchExecutions = useCallback(async (p: number) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${apiBase}/proactive-rules/${ruleId}/executions?page=${p}&limit=10`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setExecutions(data.data || []);
+        setPagination(data.pagination || null);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const count = (data.data || []).filter((ex: ProactiveExecution) => {
+          const exDate = new Date(ex.executedAt);
+          return exDate >= today;
+        }).length;
+        if (p === 1) {
+          setTodayCount(count);
+        }
+      }
+    } catch {
+      toast({ title: "Failed to load execution history", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [ruleId, apiBase, toast]);
+
+  useEffect(() => {
+    if (showHistory) {
+      fetchExecutions(page);
+    }
+  }, [showHistory, page, fetchExecutions]);
+
+  const handleToggleHistory = () => {
+    setShowHistory(!showHistory);
+    if (!showHistory) {
+      setPage(1);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={handleToggleHistory}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <History className="h-3.5 w-3.5" />
+        <span>Execution History</span>
+        {pagination && (
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+            {pagination.total}
+          </Badge>
+        )}
+        {showHistory ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      </button>
+
+      {showHistory && (
+        <div className="rounded-md border border-border bg-muted/30 p-2 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <AlertCircle className="h-3 w-3" />
+              <span>Rate limit: {todayCount} of {maxPerDay} messages used today</span>
+            </div>
+            {todayCount >= maxPerDay && (
+              <Badge variant="destructive" className="text-[10px]">Limit reached</Badge>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : executions.length === 0 ? (
+            <div className="py-4 text-center text-xs text-muted-foreground">
+              No executions yet
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {executions.map(exec => (
+                <div
+                  key={exec.id}
+                  className="flex items-start gap-2 p-2 rounded bg-background/50 text-xs"
+                >
+                  <ExecutionStatusIcon status={exec.status} />
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge
+                        variant={exec.status === "completed" ? "default" : exec.status === "failed" ? "destructive" : "secondary"}
+                        className="text-[10px] px-1.5 py-0 capitalize"
+                      >
+                        {exec.status}
+                      </Badge>
+                      <span className="text-muted-foreground shrink-0">
+                        {new Date(exec.executedAt).toLocaleString()}
+                      </span>
+                    </div>
+                    {exec.messageContent && (
+                      <p className="text-muted-foreground truncate" title={exec.messageContent}>
+                        {exec.messageContent}
+                      </p>
+                    )}
+                    {exec.error && (
+                      <p className="text-red-400 truncate" title={exec.error}>
+                        Error: {exec.error}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {pagination && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[10px] text-muted-foreground">
+                Page {pagination.page} of {pagination.totalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  disabled={page <= 1}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  disabled={page >= pagination.totalPages}
+                  onClick={() => setPage(p => p + 1)}
+                >
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
