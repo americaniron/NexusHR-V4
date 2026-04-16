@@ -1,3 +1,6 @@
+export const SUPPORTED_PROVIDERS = ["anthropic"] as const;
+export type SupportedProvider = (typeof SUPPORTED_PROVIDERS)[number];
+
 function parsePositiveInt(value: string | undefined, fallback: number): number {
   if (!value || value.trim() === "") return fallback;
   const trimmed = value.trim();
@@ -12,8 +15,22 @@ function parseNonEmptyString(value: string | undefined, fallback: string): strin
   return value.trim();
 }
 
+function parseProvider(value: string | undefined, fallback: SupportedProvider): SupportedProvider {
+  if (!value || value.trim() === "") return fallback;
+  const trimmed = value.trim().toLowerCase();
+  if (!(SUPPORTED_PROVIDERS as readonly string[]).includes(trimmed)) {
+    console.error(
+      `[aiConfig] Invalid AI_PROVIDER "${trimmed}". ` +
+      `Supported providers: ${SUPPORTED_PROVIDERS.join(", ")}. ` +
+      `Falling back to "${fallback}".`
+    );
+    return fallback;
+  }
+  return trimmed as SupportedProvider;
+}
+
 export const AI_CONFIG = {
-  provider: parseNonEmptyString(process.env.AI_PROVIDER, "anthropic"),
+  provider: parseProvider(process.env.AI_PROVIDER, "anthropic"),
   model: parseNonEmptyString(process.env.AI_MODEL, "claude-opus-4-6"),
   defaultMaxTokens: parsePositiveInt(process.env.AI_DEFAULT_MAX_TOKENS, 8192),
   refinementMaxTokens: parsePositiveInt(process.env.AI_REFINEMENT_MAX_TOKENS, 1024),
