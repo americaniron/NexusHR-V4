@@ -4,6 +4,8 @@ import { eq, and } from "drizzle-orm";
 import { AppError } from "../../middlewares/errorHandler";
 import { evaluatePermission, checkRateLimit } from "./permissionEngine";
 import { logToolAccess } from "./auditLogger";
+import { getAdapter } from "./adapters/registry";
+import type { OAuthCredentials } from "./adapters/types";
 
 const EXECUTION_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -137,10 +139,26 @@ export async function executeToolAccess(request: ToolExecutionRequest): Promise<
   let resultStatus: "success" | "error" | "timeout" = "success";
 
   try {
-    executionResult = await executeWithTimeout(
-      () => simulateToolInvocation(tool, operation, parameters),
-      EXECUTION_TIMEOUT_MS,
-    );
+    const adapter = getAdapter(tool.name);
+    const executeFn = adapter
+      ? async () => {
+          const creds = extractCredentials(connection);
+          if (adapter.refreshToken && creds.expiresAt && creds.expiresAt < Date.now()) {
+            const refreshed = await adapter.refreshToken(creds);
+            if (refreshed) {
+              await db.update(integrations)
+                .set({ connectionConfig: { ...((connection.connectionConfig as Record<string, unknown>) || {}), ...refreshed } })
+                .where(eq(integrations.id, connection.id));
+              Object.assign(creds, refreshed);
+            }
+          }
+          const adapterResult = await adapter.execute(operation, parameters || {}, creds);
+          if (!adapterResult.success) throw new Error(adapterResult.error || "Adapter execution failed");
+          return adapterResult.data;
+        }
+      : () => simulateToolInvocation(tool, operation, parameters);
+
+    executionResult = await executeWithTimeout(executeFn, EXECUTION_TIMEOUT_MS);
   } catch (err) {
     if (err instanceof Error && err.message === "EXECUTION_TIMEOUT") {
       resultStatus = "timeout";
@@ -196,6 +214,17 @@ async function executeWithTimeout<T>(fn: () => Promise<T>, timeoutMs: number): P
         reject(err);
       });
   });
+}
+
+function extractCredentials(connection: typeof integrations.$inferSelect): OAuthCredentials {
+  const config = (connection.connectionConfig as Record<string, unknown>) || {};
+  return {
+    accessToken: (config.accessToken as string) || "",
+    refreshToken: config.refreshToken as string | undefined,
+    tokenType: (config.tokenType as string) || "Bearer",
+    expiresAt: config.expiresAt as number | undefined,
+    scope: config.scope as string | undefined,
+  };
 }
 
 async function simulateToolInvocation(

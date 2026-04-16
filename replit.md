@@ -43,6 +43,7 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
 -   **Prompt Architecture & Assembly Pipeline:** 9-layer prompt assembly, 7-stage assembly pipeline for context injection and token management, PII redaction, audit logging, and template versioning.
 -   **AI Orchestration Layer:** Task router for AI employee assignment, assignment engine, progress tracker, dependency manager, and workflow execution engine.
 -   **Secure Tool Access Framework:** RBAC for tool permissions, secure execution engine with pre-flight checks and audit trails, and security hardening.
+-   **Real Integration Adapters:** ToolAdapter pattern (`adapters/types.ts`) with pluggable adapters for Slack (channels, messages, threads) and Google Workspace (Gmail, Calendar, Drive). Adapter registry (`adapters/registry.ts`) dispatches by tool name. OAuth2 flows for Slack and Google with CSRF-safe state, provider-aware token validation, and credential redaction from API responses. Execution engine auto-routes through adapters when available, with token refresh support.
 -   **Production Security & Performance:** Helmet.js for security headers, gzip compression, global and route-specific rate limiting, UUID-based request ID tracking, enhanced health checks, database indexing, and frontend build optimizations.
 
 ## External Dependencies
