@@ -3,7 +3,7 @@ import { ReplitConnectors } from "@replit/connectors-sdk";
 const connectors = new ReplitConnectors();
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || "";
-const ELEVENLABS_BASE_URL = "https://api.elevenlabs.io/v1";
+const ELEVENLABS_BASE_URL = "https://api.elevenlabs.io";
 
 function useProxy(): boolean {
   return !ELEVENLABS_API_KEY;
