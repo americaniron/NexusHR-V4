@@ -47,7 +47,7 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
 ## External Dependencies
 
 -   **Authentication:** Clerk
--   **AI (Exclusive):** Anthropic Claude Opus 4.6 via Replit AI Integrations (all reasoning, chat, prompt refinement, transcription)
+-   **AI (Exclusive):** Anthropic Claude Opus 4.6 via Replit AI Integrations (all reasoning, chat, prompt refinement, transcription). Model, provider, and token limits are configurable via env vars (`AI_PROVIDER`, `AI_MODEL`, `AI_DEFAULT_MAX_TOKENS`, `AI_REFINEMENT_MAX_TOKENS`) in `artifacts/api-server/src/lib/aiConfig.ts`.
 -   **Voice Synthesis:** ElevenLabs (via Replit integration connector)
 -   **Image Generation:** Replit AI proxy (Claude Opus 4.6 prompt refinement)
 -   **Database:** PostgreSQL
