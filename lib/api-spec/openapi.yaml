@@ -1216,6 +1216,206 @@ paths:
               schema:
                 $ref: "#/components/schemas/ArticleList"
 
+  /analytics/ratings:
+    post:
+      operationId: rateMessage
+      tags: [dashboard]
+      summary: Rate an AI employee message (thumbs up/down)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messageId:
+                  type: integer
+                conversationId:
+                  type: integer
+                aiEmployeeId:
+                  type: integer
+                rating:
+                  type: integer
+                  minimum: 0
+                  maximum: 1
+              required: [messageId, conversationId, aiEmployeeId, rating]
+      responses:
+        "201":
+          description: Rating created
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /analytics/quality-metrics:
+    get:
+      operationId: getQualityMetrics
+      tags: [dashboard]
+      summary: Get quality metrics (ratings, SLA, CSAT)
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d]
+            default: 30d
+      responses:
+        "200":
+          description: Quality metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QualityMetrics"
+
+  /analytics/trends:
+    get:
+      operationId: getAnalyticsTrends
+      tags: [dashboard]
+      summary: Week-over-week trend data
+      responses:
+        "200":
+          description: Trend data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsTrends"
+
+  /analytics/employee/{id}/performance:
+    get:
+      operationId: getEmployeePerformance
+      tags: [dashboard]
+      summary: Get performance metrics for a specific employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d]
+            default: 30d
+      responses:
+        "200":
+          description: Employee performance data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeePerformance"
+
+  /analytics/sla/{id}:
+    get:
+      operationId: getSlaConfig
+      tags: [dashboard]
+      summary: Get SLA configuration for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: SLA config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SlaConfig"
+    put:
+      operationId: updateSlaConfig
+      tags: [dashboard]
+      summary: Update SLA targets for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targetResponseTimeSec:
+                  type: integer
+                targetTaskCompletionMin:
+                  type: integer
+      responses:
+        "200":
+          description: Updated SLA config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SlaConfig"
+
+  /analytics/csat:
+    post:
+      operationId: submitCsat
+      tags: [dashboard]
+      summary: Submit a CSAT survey response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                aiEmployeeId:
+                  type: integer
+                conversationId:
+                  type: integer
+                score:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                feedback:
+                  type: string
+              required: [aiEmployeeId, conversationId, score]
+      responses:
+        "201":
+          description: CSAT submitted
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /analytics/export:
+    get:
+      operationId: exportAnalytics
+      tags: [dashboard]
+      summary: Export performance report as CSV or JSON
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+        - name: employeeId
+          in: query
+          schema:
+            type: integer
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d]
+            default: 30d
+      responses:
+        "200":
+          description: Report data
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: object
+
   /analytics/overview:
     get:
       operationId: getAnalyticsOverview
@@ -2522,6 +2722,147 @@ components:
                 type: number
             required: [employeeId, name, tasksCompleted, rating]
       required: [tasksOverTime, utilizationByDepartment, taskDistribution, topPerformers]
+
+    QualityMetrics:
+      type: object
+      properties:
+        avgRating:
+          type: number
+        positiveRatings:
+          type: integer
+        totalRatings:
+          type: integer
+        slaCompliance:
+          type: number
+        slaTotal:
+          type: integer
+        csatScore:
+          type: number
+        totalCsat:
+          type: integer
+      required: [avgRating, totalRatings, slaCompliance, csatScore, totalCsat]
+
+    AnalyticsTrends:
+      type: object
+      properties:
+        currentWeek:
+          type: object
+          properties:
+            tasksCompleted:
+              type: integer
+            totalTasks:
+              type: integer
+            avgRating:
+              type: number
+            csatScore:
+              type: number
+            totalRatings:
+              type: integer
+            totalCsat:
+              type: integer
+        previousWeek:
+          type: object
+          properties:
+            tasksCompleted:
+              type: integer
+            totalTasks:
+              type: integer
+            avgRating:
+              type: number
+            csatScore:
+              type: number
+            totalRatings:
+              type: integer
+            totalCsat:
+              type: integer
+        trends:
+          type: object
+          properties:
+            tasksCompletedChange:
+              type: number
+            avgRatingChange:
+              type: number
+            csatChange:
+              type: number
+      required: [currentWeek, previousWeek, trends]
+
+    EmployeePerformance:
+      type: object
+      properties:
+        avgRating:
+          type: number
+        positiveRatings:
+          type: integer
+        totalRatings:
+          type: integer
+        csatScore:
+          type: number
+        totalCsat:
+          type: integer
+        slaCompliance:
+          type: number
+        totalTasks:
+          type: integer
+        completedTasks:
+          type: integer
+        avgCompletionTimeMin:
+          type: number
+        p95CompletionTimeMin:
+          type: number
+        targetResponseTimeSec:
+          type: integer
+        targetTaskCompletionMin:
+          type: integer
+        ratingsTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              week:
+                type: string
+              value:
+                type: number
+              count:
+                type: integer
+            required: [week, value, count]
+        csatTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              week:
+                type: string
+              value:
+                type: number
+              count:
+                type: integer
+            required: [week, value, count]
+        tasksTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              week:
+                type: string
+              completed:
+                type: integer
+              total:
+                type: integer
+            required: [week, completed, total]
+      required: [avgRating, totalRatings, csatScore, totalCsat, slaCompliance, totalTasks, completedTasks]
+
+    SlaConfig:
+      type: object
+      properties:
+        id:
+          type: integer
+        aiEmployeeId:
+          type: integer
+        targetResponseTimeSec:
+          type: integer
+        targetTaskCompletionMin:
+          type: integer
+      required: [targetResponseTimeSec, targetTaskCompletionMin]
 
     BillingPlan:
       type: object

@@ -20,6 +20,7 @@ import type {
   ActivityList,
   AlignedSynthesisResponse,
   AnalyticsOverview,
+  AnalyticsTrends,
   ApiKeyCreated,
   ArticleList,
   AvatarGallery,
@@ -50,10 +51,15 @@ import type {
   DeleteProactiveRule200,
   Employee,
   EmployeeList,
+  EmployeePerformance,
+  ExportAnalytics200Two,
+  ExportAnalyticsParams,
   GetAnalyticsOverviewParams,
   GetAvatarBrandingPresets200,
   GetAvatarGalleryParams,
+  GetEmployeePerformanceParams,
   GetPaymentProviders200,
+  GetQualityMetricsParams,
   GetRecentActivityParams,
   GetVoiceLanguages200,
   GetVoiceProfiles200,
@@ -86,11 +92,17 @@ import type {
   NotificationList,
   Organization,
   ProactiveRule,
+  QualityMetrics,
+  RateMessage201,
+  RateMessageBody,
   RevokeApiKey200,
   Role,
   RoleList,
   SendInterviewMessage,
   SendMessage,
+  SlaConfig,
+  SubmitCsat201,
+  SubmitCsatBody,
   Subscription,
   SynthesizeVoiceAlignedBody,
   TaskItem,
@@ -102,6 +114,7 @@ import type {
   UpdateEmployee,
   UpdateOrganization,
   UpdateProactiveRuleBody,
+  UpdateSlaConfigBody,
   UpdateTask,
   UpdateWorkflow,
   UploadUrlRequest,
@@ -5092,6 +5105,744 @@ export function useListArticles<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListArticlesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Rate an AI employee message (thumbs up/down)
+ */
+export const getRateMessageUrl = () => {
+  return `/api/analytics/ratings`;
+};
+
+export const rateMessage = async (
+  rateMessageBody: RateMessageBody,
+  options?: RequestInit,
+): Promise<RateMessage201> => {
+  return customFetch<RateMessage201>(getRateMessageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(rateMessageBody),
+  });
+};
+
+export const getRateMessageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rateMessage>>,
+    TError,
+    { data: BodyType<RateMessageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rateMessage>>,
+  TError,
+  { data: BodyType<RateMessageBody> },
+  TContext
+> => {
+  const mutationKey = ["rateMessage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rateMessage>>,
+    { data: BodyType<RateMessageBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return rateMessage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RateMessageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rateMessage>>
+>;
+export type RateMessageMutationBody = BodyType<RateMessageBody>;
+export type RateMessageMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Rate an AI employee message (thumbs up/down)
+ */
+export const useRateMessage = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rateMessage>>,
+    TError,
+    { data: BodyType<RateMessageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof rateMessage>>,
+  TError,
+  { data: BodyType<RateMessageBody> },
+  TContext
+> => {
+  return useMutation(getRateMessageMutationOptions(options));
+};
+
+/**
+ * @summary Get quality metrics (ratings, SLA, CSAT)
+ */
+export const getGetQualityMetricsUrl = (params?: GetQualityMetricsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/analytics/quality-metrics?${stringifiedParams}`
+    : `/api/analytics/quality-metrics`;
+};
+
+export const getQualityMetrics = async (
+  params?: GetQualityMetricsParams,
+  options?: RequestInit,
+): Promise<QualityMetrics> => {
+  return customFetch<QualityMetrics>(getGetQualityMetricsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetQualityMetricsQueryKey = (
+  params?: GetQualityMetricsParams,
+) => {
+  return [
+    `/api/analytics/quality-metrics`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetQualityMetricsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getQualityMetrics>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetQualityMetricsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getQualityMetrics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetQualityMetricsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getQualityMetrics>>
+  > = ({ signal }) => getQualityMetrics(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getQualityMetrics>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetQualityMetricsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getQualityMetrics>>
+>;
+export type GetQualityMetricsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get quality metrics (ratings, SLA, CSAT)
+ */
+
+export function useGetQualityMetrics<
+  TData = Awaited<ReturnType<typeof getQualityMetrics>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetQualityMetricsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getQualityMetrics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetQualityMetricsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Week-over-week trend data
+ */
+export const getGetAnalyticsTrendsUrl = () => {
+  return `/api/analytics/trends`;
+};
+
+export const getAnalyticsTrends = async (
+  options?: RequestInit,
+): Promise<AnalyticsTrends> => {
+  return customFetch<AnalyticsTrends>(getGetAnalyticsTrendsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAnalyticsTrendsQueryKey = () => {
+  return [`/api/analytics/trends`] as const;
+};
+
+export const getGetAnalyticsTrendsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAnalyticsTrends>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalyticsTrends>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAnalyticsTrendsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAnalyticsTrends>>
+  > = ({ signal }) => getAnalyticsTrends({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalyticsTrends>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAnalyticsTrendsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAnalyticsTrends>>
+>;
+export type GetAnalyticsTrendsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Week-over-week trend data
+ */
+
+export function useGetAnalyticsTrends<
+  TData = Awaited<ReturnType<typeof getAnalyticsTrends>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalyticsTrends>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAnalyticsTrendsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get performance metrics for a specific employee
+ */
+export const getGetEmployeePerformanceUrl = (
+  id: number,
+  params?: GetEmployeePerformanceParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/analytics/employee/${id}/performance?${stringifiedParams}`
+    : `/api/analytics/employee/${id}/performance`;
+};
+
+export const getEmployeePerformance = async (
+  id: number,
+  params?: GetEmployeePerformanceParams,
+  options?: RequestInit,
+): Promise<EmployeePerformance> => {
+  return customFetch<EmployeePerformance>(
+    getGetEmployeePerformanceUrl(id, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetEmployeePerformanceQueryKey = (
+  id: number,
+  params?: GetEmployeePerformanceParams,
+) => {
+  return [
+    `/api/analytics/employee/${id}/performance`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetEmployeePerformanceQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEmployeePerformance>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params?: GetEmployeePerformanceParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getEmployeePerformance>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetEmployeePerformanceQueryKey(id, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getEmployeePerformance>>
+  > = ({ signal }) =>
+    getEmployeePerformance(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getEmployeePerformance>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetEmployeePerformanceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEmployeePerformance>>
+>;
+export type GetEmployeePerformanceQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get performance metrics for a specific employee
+ */
+
+export function useGetEmployeePerformance<
+  TData = Awaited<ReturnType<typeof getEmployeePerformance>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params?: GetEmployeePerformanceParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getEmployeePerformance>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetEmployeePerformanceQueryOptions(
+    id,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get SLA configuration for an employee
+ */
+export const getGetSlaConfigUrl = (id: number) => {
+  return `/api/analytics/sla/${id}`;
+};
+
+export const getSlaConfig = async (
+  id: number,
+  options?: RequestInit,
+): Promise<SlaConfig> => {
+  return customFetch<SlaConfig>(getGetSlaConfigUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSlaConfigQueryKey = (id: number) => {
+  return [`/api/analytics/sla/${id}`] as const;
+};
+
+export const getGetSlaConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSlaConfig>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSlaConfig>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSlaConfigQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSlaConfig>>> = ({
+    signal,
+  }) => getSlaConfig(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSlaConfig>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSlaConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSlaConfig>>
+>;
+export type GetSlaConfigQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get SLA configuration for an employee
+ */
+
+export function useGetSlaConfig<
+  TData = Awaited<ReturnType<typeof getSlaConfig>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSlaConfig>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSlaConfigQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update SLA targets for an employee
+ */
+export const getUpdateSlaConfigUrl = (id: number) => {
+  return `/api/analytics/sla/${id}`;
+};
+
+export const updateSlaConfig = async (
+  id: number,
+  updateSlaConfigBody: UpdateSlaConfigBody,
+  options?: RequestInit,
+): Promise<SlaConfig> => {
+  return customFetch<SlaConfig>(getUpdateSlaConfigUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateSlaConfigBody),
+  });
+};
+
+export const getUpdateSlaConfigMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSlaConfig>>,
+    TError,
+    { id: number; data: BodyType<UpdateSlaConfigBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateSlaConfig>>,
+  TError,
+  { id: number; data: BodyType<UpdateSlaConfigBody> },
+  TContext
+> => {
+  const mutationKey = ["updateSlaConfig"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateSlaConfig>>,
+    { id: number; data: BodyType<UpdateSlaConfigBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateSlaConfig(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSlaConfigMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateSlaConfig>>
+>;
+export type UpdateSlaConfigMutationBody = BodyType<UpdateSlaConfigBody>;
+export type UpdateSlaConfigMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update SLA targets for an employee
+ */
+export const useUpdateSlaConfig = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSlaConfig>>,
+    TError,
+    { id: number; data: BodyType<UpdateSlaConfigBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateSlaConfig>>,
+  TError,
+  { id: number; data: BodyType<UpdateSlaConfigBody> },
+  TContext
+> => {
+  return useMutation(getUpdateSlaConfigMutationOptions(options));
+};
+
+/**
+ * @summary Submit a CSAT survey response
+ */
+export const getSubmitCsatUrl = () => {
+  return `/api/analytics/csat`;
+};
+
+export const submitCsat = async (
+  submitCsatBody: SubmitCsatBody,
+  options?: RequestInit,
+): Promise<SubmitCsat201> => {
+  return customFetch<SubmitCsat201>(getSubmitCsatUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(submitCsatBody),
+  });
+};
+
+export const getSubmitCsatMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitCsat>>,
+    TError,
+    { data: BodyType<SubmitCsatBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitCsat>>,
+  TError,
+  { data: BodyType<SubmitCsatBody> },
+  TContext
+> => {
+  const mutationKey = ["submitCsat"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitCsat>>,
+    { data: BodyType<SubmitCsatBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitCsat(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitCsatMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitCsat>>
+>;
+export type SubmitCsatMutationBody = BodyType<SubmitCsatBody>;
+export type SubmitCsatMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Submit a CSAT survey response
+ */
+export const useSubmitCsat = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitCsat>>,
+    TError,
+    { data: BodyType<SubmitCsatBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitCsat>>,
+  TError,
+  { data: BodyType<SubmitCsatBody> },
+  TContext
+> => {
+  return useMutation(getSubmitCsatMutationOptions(options));
+};
+
+/**
+ * @summary Export performance report as CSV or JSON
+ */
+export const getExportAnalyticsUrl = (params?: ExportAnalyticsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/analytics/export?${stringifiedParams}`
+    : `/api/analytics/export`;
+};
+
+export const exportAnalytics = async (
+  params?: ExportAnalyticsParams,
+  options?: RequestInit,
+): Promise<string | ExportAnalytics200Two> => {
+  return customFetch<string | ExportAnalytics200Two>(
+    getExportAnalyticsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getExportAnalyticsQueryKey = (params?: ExportAnalyticsParams) => {
+  return [`/api/analytics/export`, ...(params ? [params] : [])] as const;
+};
+
+export const getExportAnalyticsQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportAnalytics>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ExportAnalyticsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportAnalytics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getExportAnalyticsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof exportAnalytics>>> = ({
+    signal,
+  }) => exportAnalytics(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportAnalytics>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ExportAnalyticsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof exportAnalytics>>
+>;
+export type ExportAnalyticsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Export performance report as CSV or JSON
+ */
+
+export function useExportAnalytics<
+  TData = Awaited<ReturnType<typeof exportAnalytics>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ExportAnalyticsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportAnalytics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getExportAnalyticsQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

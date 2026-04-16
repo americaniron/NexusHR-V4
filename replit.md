@@ -48,6 +48,15 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
 -   **Secure Tool Access Framework:** RBAC for tool permissions, secure execution engine with pre-flight checks and audit trails, and security hardening.
 -   **Real Integration Adapters:** ToolAdapter pattern (`adapters/types.ts`) with pluggable adapters for Slack (channels, messages, threads) and Google Workspace (Gmail, Calendar, Drive). Adapter registry (`adapters/registry.ts`) dispatches by tool name. OAuth2 flows for Slack and Google with CSRF-safe state, provider-aware token validation, and credential redaction from API responses. Execution engine auto-routes through adapters when available, with token refresh support.
 -   **Production Security & Performance:** Helmet.js for security headers, gzip compression, global and route-specific rate limiting, UUID-based request ID tracking, enhanced health checks, database indexing, and frontend build optimizations.
+-   **Deep Analytics & Performance Metrics:** Comprehensive quality-oriented analytics system including:
+    -   **Response Ratings:** Thumbs up/down rating on every AI employee message in conversations, stored in `response_ratings` table, aggregated per employee.
+    -   **SLA Tracking:** Configurable SLA targets (response time, task completion time) per AI employee via `sla_configs` table. Analytics dashboard shows SLA compliance percentages.
+    -   **CSAT Surveys:** Periodic satisfaction surveys triggered after 5+ messages in conversations. Star ratings (1-5) with optional feedback stored in `csat_responses` table.
+    -   **Quality Metrics Dashboard:** New KPI cards for Approval Rate, SLA Compliance, CSAT Score, and Week-over-Week trends with directional indicators on the Analytics page.
+    -   **Trend Analysis:** Week-over-week comparison with directional arrows showing improving/declining metrics.
+    -   **Per-Employee Performance Tab:** Dedicated "Performance" tab on employee detail page with quality metrics, trend charts (task completion, approval rating over time), and SLA configuration.
+    -   **Exportable Reports:** CSV/JSON performance report export for individual employees or the full team via `/api/analytics/export`.
+    -   **API Endpoints:** `POST /api/analytics/ratings`, `GET/PUT /api/analytics/sla/:id`, `POST /api/analytics/csat`, `GET /api/analytics/quality-metrics`, `GET /api/analytics/trends`, `GET /api/analytics/employee/:id/performance`, `GET /api/analytics/export`.
 
 ## External Dependencies
 

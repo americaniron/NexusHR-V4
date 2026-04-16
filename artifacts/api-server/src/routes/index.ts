@@ -27,6 +27,7 @@ import ariaRouter from "./aria";
 import videoCallRouter from "./videoCall";
 import memoryRouter from "./memory";
 import proactiveRulesRouter from "./proactive-rules";
+import analyticsRouter from "./analytics";
 
 const router: IRouter = Router();
 
@@ -58,5 +59,6 @@ router.use(ariaRouter);
 router.use(videoCallRouter);
 router.use(memoryRouter);
 router.use(proactiveRulesRouter);
+router.use(analyticsRouter);
 
 export default router;

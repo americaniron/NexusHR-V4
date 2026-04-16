@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AIAvatar } from "@/components/ai-avatar";
 import { AudioWaveformPlayer } from "@/components/audio-waveform-player";
+import { MessageRating } from "@/components/message-rating";
 import { User, Sparkles } from "lucide-react";
 import type { ChatMessageData } from "./types";
 import { TextMessage } from "./text-message";
@@ -17,6 +18,8 @@ interface ChatMessageProps {
   message: ChatMessageData;
   avatarUrl?: string | null;
   avatarName?: string;
+  conversationId?: number;
+  aiEmployeeId?: number;
   onPlayStateChange?: (playing: boolean) => void;
   onQuickReply?: (reply: string) => void;
   onActionApprove?: (actionId: string) => void;
@@ -36,6 +39,8 @@ export function ChatMessage({
   message,
   avatarUrl,
   avatarName,
+  conversationId,
+  aiEmployeeId,
   onPlayStateChange,
   onQuickReply,
   onActionApprove,
@@ -105,6 +110,14 @@ export function ChatMessage({
             compact
             className="mt-1"
             onPlayStateChange={onPlayStateChange}
+          />
+        )}
+
+        {!isUser && conversationId && aiEmployeeId && (
+          <MessageRating
+            messageId={message.id}
+            conversationId={conversationId}
+            aiEmployeeId={aiEmployeeId}
           />
         )}
 

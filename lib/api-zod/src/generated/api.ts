@@ -1670,6 +1670,188 @@ export const ListArticlesResponse = zod.object({
 });
 
 /**
+ * @summary Rate an AI employee message (thumbs up/down)
+ */
+export const rateMessageBodyRatingMin = 0;
+export const rateMessageBodyRatingMax = 1;
+
+export const RateMessageBody = zod.object({
+  messageId: zod.number(),
+  conversationId: zod.number(),
+  aiEmployeeId: zod.number(),
+  rating: zod
+    .number()
+    .min(rateMessageBodyRatingMin)
+    .max(rateMessageBodyRatingMax),
+});
+
+/**
+ * @summary Get quality metrics (ratings, SLA, CSAT)
+ */
+export const getQualityMetricsQueryPeriodDefault = `30d`;
+
+export const GetQualityMetricsQueryParams = zod.object({
+  period: zod
+    .enum(["7d", "30d", "90d"])
+    .default(getQualityMetricsQueryPeriodDefault),
+});
+
+export const GetQualityMetricsResponse = zod.object({
+  avgRating: zod.number(),
+  positiveRatings: zod.number().optional(),
+  totalRatings: zod.number(),
+  slaCompliance: zod.number(),
+  slaTotal: zod.number().optional(),
+  csatScore: zod.number(),
+  totalCsat: zod.number(),
+});
+
+/**
+ * @summary Week-over-week trend data
+ */
+export const GetAnalyticsTrendsResponse = zod.object({
+  currentWeek: zod.object({
+    tasksCompleted: zod.number().optional(),
+    totalTasks: zod.number().optional(),
+    avgRating: zod.number().optional(),
+    csatScore: zod.number().optional(),
+    totalRatings: zod.number().optional(),
+    totalCsat: zod.number().optional(),
+  }),
+  previousWeek: zod.object({
+    tasksCompleted: zod.number().optional(),
+    totalTasks: zod.number().optional(),
+    avgRating: zod.number().optional(),
+    csatScore: zod.number().optional(),
+    totalRatings: zod.number().optional(),
+    totalCsat: zod.number().optional(),
+  }),
+  trends: zod.object({
+    tasksCompletedChange: zod.number().optional(),
+    avgRatingChange: zod.number().optional(),
+    csatChange: zod.number().optional(),
+  }),
+});
+
+/**
+ * @summary Get performance metrics for a specific employee
+ */
+export const GetEmployeePerformanceParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const getEmployeePerformanceQueryPeriodDefault = `30d`;
+
+export const GetEmployeePerformanceQueryParams = zod.object({
+  period: zod
+    .enum(["7d", "30d", "90d"])
+    .default(getEmployeePerformanceQueryPeriodDefault),
+});
+
+export const GetEmployeePerformanceResponse = zod.object({
+  avgRating: zod.number(),
+  positiveRatings: zod.number().optional(),
+  totalRatings: zod.number(),
+  csatScore: zod.number(),
+  totalCsat: zod.number(),
+  slaCompliance: zod.number(),
+  totalTasks: zod.number(),
+  completedTasks: zod.number(),
+  avgCompletionTimeMin: zod.number().optional(),
+  p95CompletionTimeMin: zod.number().optional(),
+  targetResponseTimeSec: zod.number().optional(),
+  targetTaskCompletionMin: zod.number().optional(),
+  ratingsTrend: zod
+    .array(
+      zod.object({
+        week: zod.string(),
+        value: zod.number(),
+        count: zod.number(),
+      }),
+    )
+    .optional(),
+  csatTrend: zod
+    .array(
+      zod.object({
+        week: zod.string(),
+        value: zod.number(),
+        count: zod.number(),
+      }),
+    )
+    .optional(),
+  tasksTrend: zod
+    .array(
+      zod.object({
+        week: zod.string(),
+        completed: zod.number(),
+        total: zod.number(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Get SLA configuration for an employee
+ */
+export const GetSlaConfigParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetSlaConfigResponse = zod.object({
+  id: zod.number().optional(),
+  aiEmployeeId: zod.number().optional(),
+  targetResponseTimeSec: zod.number(),
+  targetTaskCompletionMin: zod.number(),
+});
+
+/**
+ * @summary Update SLA targets for an employee
+ */
+export const UpdateSlaConfigParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateSlaConfigBody = zod.object({
+  targetResponseTimeSec: zod.number().optional(),
+  targetTaskCompletionMin: zod.number().optional(),
+});
+
+export const UpdateSlaConfigResponse = zod.object({
+  id: zod.number().optional(),
+  aiEmployeeId: zod.number().optional(),
+  targetResponseTimeSec: zod.number(),
+  targetTaskCompletionMin: zod.number(),
+});
+
+/**
+ * @summary Submit a CSAT survey response
+ */
+export const submitCsatBodyScoreMax = 5;
+
+export const SubmitCsatBody = zod.object({
+  aiEmployeeId: zod.number(),
+  conversationId: zod.number(),
+  score: zod.number().min(1).max(submitCsatBodyScoreMax),
+  feedback: zod.string().optional(),
+});
+
+/**
+ * @summary Export performance report as CSV or JSON
+ */
+export const exportAnalyticsQueryFormatDefault = `csv`;
+export const exportAnalyticsQueryPeriodDefault = `30d`;
+
+export const ExportAnalyticsQueryParams = zod.object({
+  format: zod.enum(["csv", "json"]).default(exportAnalyticsQueryFormatDefault),
+  employeeId: zod.coerce.number().optional(),
+  period: zod
+    .enum(["7d", "30d", "90d"])
+    .default(exportAnalyticsQueryPeriodDefault),
+});
+
+export const ExportAnalyticsResponse = zod.object({}).passthrough();
+
+/**
  * @summary Analytics overview with charts data
  */
 export const getAnalyticsOverviewQueryPeriodDefault = `30d`;

@@ -19,3 +19,4 @@ export * from "./video-projects";
 export * from "./avatar-assets";
 export * from "./api-keys";
 export * from "./proactive-rules";
+export * from "./analytics";

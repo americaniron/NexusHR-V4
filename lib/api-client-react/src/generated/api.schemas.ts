@@ -496,6 +496,89 @@ export interface AnalyticsOverview {
   topPerformers: AnalyticsOverviewTopPerformersItem[];
 }
 
+export interface QualityMetrics {
+  avgRating: number;
+  positiveRatings?: number;
+  totalRatings: number;
+  slaCompliance: number;
+  slaTotal?: number;
+  csatScore: number;
+  totalCsat: number;
+}
+
+export type AnalyticsTrendsCurrentWeek = {
+  tasksCompleted?: number;
+  totalTasks?: number;
+  avgRating?: number;
+  csatScore?: number;
+  totalRatings?: number;
+  totalCsat?: number;
+};
+
+export type AnalyticsTrendsPreviousWeek = {
+  tasksCompleted?: number;
+  totalTasks?: number;
+  avgRating?: number;
+  csatScore?: number;
+  totalRatings?: number;
+  totalCsat?: number;
+};
+
+export type AnalyticsTrendsTrends = {
+  tasksCompletedChange?: number;
+  avgRatingChange?: number;
+  csatChange?: number;
+};
+
+export interface AnalyticsTrends {
+  currentWeek: AnalyticsTrendsCurrentWeek;
+  previousWeek: AnalyticsTrendsPreviousWeek;
+  trends: AnalyticsTrendsTrends;
+}
+
+export type EmployeePerformanceRatingsTrendItem = {
+  week: string;
+  value: number;
+  count: number;
+};
+
+export type EmployeePerformanceCsatTrendItem = {
+  week: string;
+  value: number;
+  count: number;
+};
+
+export type EmployeePerformanceTasksTrendItem = {
+  week: string;
+  completed: number;
+  total: number;
+};
+
+export interface EmployeePerformance {
+  avgRating: number;
+  positiveRatings?: number;
+  totalRatings: number;
+  csatScore: number;
+  totalCsat: number;
+  slaCompliance: number;
+  totalTasks: number;
+  completedTasks: number;
+  avgCompletionTimeMin?: number;
+  p95CompletionTimeMin?: number;
+  targetResponseTimeSec?: number;
+  targetTaskCompletionMin?: number;
+  ratingsTrend?: EmployeePerformanceRatingsTrendItem[];
+  csatTrend?: EmployeePerformanceCsatTrendItem[];
+  tasksTrend?: EmployeePerformanceTasksTrendItem[];
+}
+
+export interface SlaConfig {
+  id?: number;
+  aiEmployeeId?: number;
+  targetResponseTimeSec: number;
+  targetTaskCompletionMin: number;
+}
+
 export type BillingPlanLimits = { [key: string]: number };
 
 export interface BillingPlan {
@@ -1156,6 +1239,88 @@ export type ListArticlesParams = {
   category?: string;
   search?: string;
 };
+
+export type RateMessageBody = {
+  messageId: number;
+  conversationId: number;
+  aiEmployeeId: number;
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  rating: number;
+};
+
+export type RateMessage201 = { [key: string]: unknown };
+
+export type GetQualityMetricsParams = {
+  period?: GetQualityMetricsPeriod;
+};
+
+export type GetQualityMetricsPeriod =
+  (typeof GetQualityMetricsPeriod)[keyof typeof GetQualityMetricsPeriod];
+
+export const GetQualityMetricsPeriod = {
+  "7d": "7d",
+  "30d": "30d",
+  "90d": "90d",
+} as const;
+
+export type GetEmployeePerformanceParams = {
+  period?: GetEmployeePerformancePeriod;
+};
+
+export type GetEmployeePerformancePeriod =
+  (typeof GetEmployeePerformancePeriod)[keyof typeof GetEmployeePerformancePeriod];
+
+export const GetEmployeePerformancePeriod = {
+  "7d": "7d",
+  "30d": "30d",
+  "90d": "90d",
+} as const;
+
+export type UpdateSlaConfigBody = {
+  targetResponseTimeSec?: number;
+  targetTaskCompletionMin?: number;
+};
+
+export type SubmitCsatBody = {
+  aiEmployeeId: number;
+  conversationId: number;
+  /**
+   * @minimum 1
+   * @maximum 5
+   */
+  score: number;
+  feedback?: string;
+};
+
+export type SubmitCsat201 = { [key: string]: unknown };
+
+export type ExportAnalyticsParams = {
+  format?: ExportAnalyticsFormat;
+  employeeId?: number;
+  period?: ExportAnalyticsPeriod;
+};
+
+export type ExportAnalyticsFormat =
+  (typeof ExportAnalyticsFormat)[keyof typeof ExportAnalyticsFormat];
+
+export const ExportAnalyticsFormat = {
+  csv: "csv",
+  json: "json",
+} as const;
+
+export type ExportAnalyticsPeriod =
+  (typeof ExportAnalyticsPeriod)[keyof typeof ExportAnalyticsPeriod];
+
+export const ExportAnalyticsPeriod = {
+  "7d": "7d",
+  "30d": "30d",
+  "90d": "90d",
+} as const;
+
+export type ExportAnalytics200Two = { [key: string]: unknown };
 
 export type GetAnalyticsOverviewParams = {
   period?: GetAnalyticsOverviewPeriod;

@@ -7,6 +7,7 @@ import { AvatarAnimator } from "@/components/avatar-animator";
 import type { VisemeData } from "@/components/avatar-animator";
 import { ChatMessage } from "@/components/chat-messages";
 import type { ChatMessageData } from "@/components/chat-messages";
+import { CsatSurvey } from "@/components/csat-survey";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -113,6 +114,8 @@ function ChatWindow({ conversationId, autoStartVideoCall, onVideoCallAutoStarted
   const [currentEmotion, setCurrentEmotion] = useState<EmotionState>("neutral");
   const [activeVisemes, setActiveVisemes] = useState<VisemeData[]>([]);
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
+  const [showCsatSurvey, setShowCsatSurvey] = useState(false);
+  const [messageCount, setMessageCount] = useState(0);
 
   const voiceMode = useVoiceMode({
     onTranscription: (text) => {
@@ -196,6 +199,14 @@ function ChatWindow({ conversationId, autoStartVideoCall, onVideoCallAutoStarted
       }
 
       setAiAvatarState("idle");
+
+      setMessageCount(prev => {
+        const next = prev + 1;
+        if (next >= 5 && next % 5 === 0) {
+          setShowCsatSurvey(true);
+        }
+        return next;
+      });
 
       const shouldSynthesize = voiceMode.isVoiceMode || isVideoCallActive;
       if (shouldSynthesize && refreshed.data) {
@@ -491,6 +502,8 @@ function ChatWindow({ conversationId, autoStartVideoCall, onVideoCallAutoStarted
               message={chatMsg}
               avatarUrl={conv.aiEmployee?.avatarUrl}
               avatarName={conv.aiEmployee?.name}
+              conversationId={conversationId}
+              aiEmployeeId={conv.aiEmployee?.id}
               onPlayStateChange={(playing) => {
                 if (playing) {
                   setAiAvatarState("speaking");
@@ -525,6 +538,15 @@ function ChatWindow({ conversationId, autoStartVideoCall, onVideoCallAutoStarted
           </div>
         )}
       </div>
+
+      {showCsatSurvey && conv.aiEmployee && (
+        <CsatSurvey
+          conversationId={conversationId}
+          aiEmployeeId={conv.aiEmployee.id}
+          employeeName={conv.aiEmployee.name}
+          onDismiss={() => setShowCsatSurvey(false)}
+        />
+      )}
 
       <div className="p-4 border-t border-border bg-card">
         {voiceMode.isVoiceMode ? (

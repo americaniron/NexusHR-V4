@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AIAvatar } from "@/components/ai-avatar";
 import { PersonalityConfig } from "@/components/personality-config";
 import { ProactiveBehaviors } from "@/components/proactive-behaviors";
+import { EmployeePerformanceTab } from "@/components/employee-performance-tab";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +33,7 @@ import {
   Trash2,
   Video,
   Sparkles,
+  BarChart3,
 } from "lucide-react";
 
 interface PersonalityAxes {
@@ -246,6 +248,9 @@ export default function EmployeeDetailPage() {
           <TabsTrigger value="proactive" className="gap-2">
             <Sparkles className="h-4 w-4" /> Proactive
           </TabsTrigger>
+          <TabsTrigger value="performance" className="gap-2">
+            <BarChart3 className="h-4 w-4" /> Performance
+          </TabsTrigger>
           <TabsTrigger value="personality" className="gap-2">
             <Brain className="h-4 w-4" /> Personality
           </TabsTrigger>
@@ -306,6 +311,13 @@ export default function EmployeeDetailPage() {
             employeeId={employeeId}
             employeeName={employee.name}
             apiBase={apiBase}
+          />
+        </TabsContent>
+
+        <TabsContent value="performance" className="mt-6">
+          <EmployeePerformanceTab
+            employeeId={employeeId}
+            employeeName={employee.name}
           />
         </TabsContent>
 

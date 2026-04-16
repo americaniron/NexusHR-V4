@@ -1,4 +1,4 @@
-import { useGetAnalyticsOverview } from "@workspace/api-client-react";
+import { useGetAnalyticsOverview, useGetQualityMetrics, useGetAnalyticsTrends } from "@workspace/api-client-react";
 import { useEmployeeState } from "@/hooks/useEmployeeState";
 import { useTaskState } from "@/hooks/useTaskState";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -37,6 +37,12 @@ import {
   Download,
   ImageIcon,
   FileSpreadsheet,
+  ThumbsUp,
+  Shield,
+  Star,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
@@ -68,12 +74,48 @@ function ExportButton({ chartName, onExport }: { chartName: string; onExport: (f
   );
 }
 
+function TrendIndicator({ value, suffix = "%" }: { value: number; suffix?: string }) {
+  if (value === 0) return <span className="flex items-center gap-0.5 text-xs text-muted-foreground"><Minus className="h-3 w-3" /> 0{suffix}</span>;
+  if (value > 0) return <span className="flex items-center gap-0.5 text-xs text-green-500"><ArrowUpRight className="h-3 w-3" /> +{value}{suffix}</span>;
+  return <span className="flex items-center gap-0.5 text-xs text-amber-500"><ArrowDownRight className="h-3 w-3" /> {value}{suffix}</span>;
+}
+
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState("30d");
-  const { data, isLoading } = useGetAnalyticsOverview();
+  const { data, isLoading } = useGetAnalyticsOverview({ period: period as any });
+  const { data: qualityMetrics, isLoading: qualityLoading } = useGetQualityMetrics({ period: period as any });
+  const { data: trends } = useGetAnalyticsTrends();
   const { employees } = useEmployeeState();
   const { tasks } = useTaskState();
   const { toast } = useToast();
+
+  const apiBase = `${import.meta.env.BASE_URL}api`.replace(/\/\//g, "/");
+
+  const handleExportReport = async (format: string) => {
+    try {
+      const url = `${apiBase}/analytics/export?format=${format}&period=${period}`;
+      if (format === "csv") {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `performance_report_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        toast({ title: "Report Downloaded", description: "Performance report exported as CSV." });
+      } else {
+        const res = await fetch(url, { credentials: "include" });
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `performance_report_${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(blobUrl);
+        toast({ title: "Report Downloaded", description: "Performance report exported as JSON." });
+      }
+    } catch {
+      toast({ title: "Export failed", variant: "destructive" });
+    }
+  };
 
   const handleExport = (chartName: string, format: string) => {
     if (format === "csv") {
@@ -179,23 +221,132 @@ export default function AnalyticsPage() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Analytics</h1>
           <p className="text-muted-foreground mt-1">Performance and engagement metrics across the organization.</p>
         </div>
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-36 bg-card">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7d">Last 7 Days</SelectItem>
-            <SelectItem value="30d">Last 30 Days</SelectItem>
-            <SelectItem value="90d">Last 90 Days</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Download className="h-4 w-4" />
+                Export Report
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExportReport("csv")}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" /> Download CSV Report
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportReport("json")}>
+                <Download className="h-4 w-4 mr-2" /> Download JSON Report
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-36 bg-card">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Last 7 Days</SelectItem>
+              <SelectItem value="30d">Last 30 Days</SelectItem>
+              <SelectItem value="90d">Last 90 Days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <KPICard title="AI Professionals" value={kpis.totalEmployees} icon={Users} trend="+12%" trendUp />
-        <KPICard title="Tasks Completed" value={kpis.completedTasks} icon={CheckSquare} trend="+8%" trendUp />
-        <KPICard title="Completion Rate" value={`${kpis.completionRate}%`} icon={Zap} trend={kpis.completionRate >= 80 ? "+3%" : "-2%"} trendUp={kpis.completionRate >= 80} />
+        <KPICard
+          title="AI Professionals"
+          value={kpis.totalEmployees}
+          icon={Users}
+          trend={trends?.trends?.tasksCompletedChange !== undefined ? `${trends.trends.tasksCompletedChange >= 0 ? "+" : ""}${trends.trends.tasksCompletedChange}%` : undefined}
+          trendUp={trends?.trends?.tasksCompletedChange !== undefined ? trends.trends.tasksCompletedChange >= 0 : undefined}
+        />
+        <KPICard
+          title="Tasks Completed"
+          value={kpis.completedTasks}
+          icon={CheckSquare}
+          trend={trends?.currentWeek ? `${trends.currentWeek.tasksCompleted} this week` : undefined}
+          trendUp={trends?.trends?.tasksCompletedChange ? trends.trends.tasksCompletedChange >= 0 : undefined}
+        />
+        <KPICard
+          title="Completion Rate"
+          value={`${kpis.completionRate}%`}
+          icon={Zap}
+          trend={kpis.completionRate >= 80 ? "On track" : "Below target"}
+          trendUp={kpis.completionRate >= 80}
+        />
         <KPICard title="Active Tasks" value={kpis.inProgressTasks} icon={Activity} trend="In progress" />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-muted-foreground">Approval Rate</span>
+              <ThumbsUp className="h-4 w-4 text-muted-foreground" />
+            </div>
+            {qualityLoading ? <Skeleton className="h-8 w-20" /> : (
+              <>
+                <div className="text-3xl font-bold text-foreground">{qualityMetrics?.avgRating ?? 0}%</div>
+                <div className="flex items-center gap-2 mt-1">
+                  {trends?.trends?.avgRatingChange !== undefined && <TrendIndicator value={trends.trends.avgRatingChange} />}
+                  <span className="text-xs text-muted-foreground">({qualityMetrics?.totalRatings ?? 0} ratings)</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-muted-foreground">SLA Compliance</span>
+              <Shield className="h-4 w-4 text-muted-foreground" />
+            </div>
+            {qualityLoading ? <Skeleton className="h-8 w-20" /> : (
+              <>
+                <div className="text-3xl font-bold text-foreground">{qualityMetrics?.slaCompliance ?? 100}%</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-muted-foreground">({qualityMetrics?.slaTotal ?? 0} tasks measured)</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-muted-foreground">CSAT Score</span>
+              <Star className="h-4 w-4 text-muted-foreground" />
+            </div>
+            {qualityLoading ? <Skeleton className="h-8 w-20" /> : (
+              <>
+                <div className="text-3xl font-bold text-foreground">{qualityMetrics?.csatScore ?? 0}<span className="text-lg text-muted-foreground">/5</span></div>
+                <div className="flex items-center gap-2 mt-1">
+                  {trends?.trends?.csatChange !== undefined && <TrendIndicator value={trends.trends.csatChange} />}
+                  <span className="text-xs text-muted-foreground">({qualityMetrics?.totalCsat ?? 0} responses)</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-muted-foreground">Week-over-Week</span>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </div>
+            {!trends ? <Skeleton className="h-8 w-20" /> : (
+              <>
+                <div className="text-3xl font-bold text-foreground">
+                  {trends.currentWeek?.tasksCompleted ?? 0}
+                  <span className="text-lg text-muted-foreground"> tasks</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <TrendIndicator value={trends.trends?.tasksCompletedChange ?? 0} />
+                  <span className="text-xs text-muted-foreground">vs last week ({trends.previousWeek?.tasksCompleted ?? 0})</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
