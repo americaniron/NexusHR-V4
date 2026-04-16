@@ -41,6 +41,7 @@ interface UseVideoCallReturn {
   stopRecording: () => Promise<string | null>;
   isTranscribing: boolean;
   isTtsSpeaking: boolean;
+  avatarAnimationAvailable: boolean;
 }
 
 export function useVideoCall(options: UseVideoCallOptions): UseVideoCallReturn {
@@ -67,6 +68,7 @@ export function useVideoCall(options: UseVideoCallOptions): UseVideoCallReturn {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isTtsSpeaking, setIsTtsSpeaking] = useState(false);
+  const [avatarAnimationAvailable, setAvatarAnimationAvailable] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -247,6 +249,7 @@ export function useVideoCall(options: UseVideoCallOptions): UseVideoCallReturn {
       const session = await response.json();
       setSessionId(session.sessionId);
       sessionIdRef.current = session.sessionId;
+      setAvatarAnimationAvailable(!!session.avatarAnimationAvailable);
 
       const token = await getToken();
       if (!token) {
@@ -572,5 +575,6 @@ export function useVideoCall(options: UseVideoCallOptions): UseVideoCallReturn {
     stopRecording,
     isTranscribing,
     isTtsSpeaking,
+    avatarAnimationAvailable,
   };
 }

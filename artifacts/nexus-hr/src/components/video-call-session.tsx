@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { VideoAvatar } from "@/components/video-avatar";
+import { PhotorealisticAvatar } from "@/components/photorealistic-avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 import type { EmotionState } from "@/components/ai-avatar";
 import type { VideoCallStatus } from "@/hooks/use-video-call";
+import type { AvatarAnimationStatus } from "@/hooks/use-avatar-animation";
 
 interface VideoCallSessionProps {
   status: VideoCallStatus;
@@ -26,6 +28,9 @@ interface VideoCallSessionProps {
   isListening?: boolean;
   isRecording?: boolean;
   isTranscribing?: boolean;
+  avatarAnimationStatus?: AvatarAnimationStatus;
+  avatarRemoteStream?: MediaStream | null;
+  avatarProvider?: string | null;
   onToggleMute: () => void;
   onToggleCamera: () => void;
   onEndCall: () => void;
@@ -56,6 +61,9 @@ export function VideoCallSession({
   isListening = false,
   isRecording = false,
   isTranscribing = false,
+  avatarAnimationStatus = "idle",
+  avatarRemoteStream = null,
+  avatarProvider = null,
   onToggleMute,
   onToggleCamera,
   onEndCall,
@@ -204,7 +212,7 @@ export function VideoCallSession({
 
       <div className="flex-1 relative flex items-center justify-center min-h-[300px]">
         <div className="w-full h-full flex items-center justify-center p-4">
-          <VideoAvatar
+          <PhotorealisticAvatar
             avatarUrl={avatarUrl}
             name={avatarName}
             emotion={emotion}
@@ -212,6 +220,9 @@ export function VideoCallSession({
             isThinking={isThinking}
             isListening={isListening}
             audioAnalyser={ttsAudioAnalyser}
+            remoteStream={avatarRemoteStream}
+            animationStatus={avatarAnimationStatus}
+            provider={avatarProvider}
             className="w-full h-full max-w-[400px] max-h-[400px]"
           />
         </div>
