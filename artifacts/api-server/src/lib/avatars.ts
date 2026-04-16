@@ -1,4 +1,5 @@
-import OpenAI from "openai";
+import { getAnthropicClient } from "@workspace/integrations-anthropic-ai/client";
+import { AI_CONFIG } from "./aiConfig";
 import { randomUUID } from "crypto";
 import { objectStorageClient } from "./objectStorage";
 import {
@@ -74,17 +75,6 @@ const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
 const QUALITY_THRESHOLD = 0.5;
 const MAX_GENERATION_ATTEMPTS = 3;
-
-let _openai: OpenAI | null = null;
-function getOpenAI(): OpenAI {
-  if (!_openai) {
-    _openai = new OpenAI({
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://ai-proxy.replit.app/v1",
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "placeholder",
-    });
-  }
-  return _openai;
-}
 
 const INDUSTRY_ATTIRE: Record<string, Record<string, string>> = {
   technology: {
@@ -169,9 +159,61 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function generateImageBuffer(prompt: string, size: "512x512" | "1024x1024" = "1024x1024"): Promise<Buffer> {
-  const openai = getOpenAI();
+async function generateImageWithClaude(prompt: string): Promise<Buffer> {
+  const anthropic = getAnthropicClient();
 
+  const refinementResponse = await anthropic.messages.create({
+    model: AI_CONFIG.model,
+    max_tokens: AI_CONFIG.refinementMaxTokens,
+    messages: [{
+      role: "user",
+      content: `You are a professional portrait photographer. Refine this image prompt to be more detailed and photorealistic. Return ONLY the refined prompt text, nothing else.\n\nOriginal prompt: ${prompt}`,
+    }],
+  });
+
+  const refinedPrompt = refinementResponse.content[0].type === "text"
+    ? refinementResponse.content[0].text
+    : prompt;
+
+  const imageApiUrl = "https://ai-proxy.replit.app/v1/images/generations";
+
+  const imageResponse = await fetch(imageApiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer placeholder",
+    },
+    body: JSON.stringify({
+      model: "gpt-image-1",
+      prompt: refinedPrompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "high",
+    }),
+  });
+
+  if (!imageResponse.ok) {
+    const errorText = await imageResponse.text();
+    throw new Error(`Image generation failed: ${imageResponse.status} ${errorText}`);
+  }
+
+  const data = await imageResponse.json() as { data?: Array<{ b64_json?: string; url?: string }> };
+  const imageData = data.data?.[0];
+
+  if (imageData?.b64_json) {
+    return Buffer.from(imageData.b64_json, "base64");
+  }
+
+  if (imageData?.url) {
+    const imgResp = await fetch(imageData.url);
+    if (!imgResp.ok) throw new Error("Failed to download generated image");
+    return Buffer.from(await imgResp.arrayBuffer());
+  }
+
+  throw new Error("No image data returned from generation model");
+}
+
+async function generateImageBuffer(prompt: string, size: "512x512" | "1024x1024" = "1024x1024"): Promise<Buffer> {
   let lastError: Error | null = null;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -180,20 +222,7 @@ async function generateImageBuffer(prompt: string, size: "512x512" | "1024x1024"
         console.log(`[StyleGAN3] Image generation retry ${attempt}/${MAX_RETRIES}`);
       }
 
-      const response = await openai.images.generate({
-        model: "gpt-image-1",
-        prompt,
-        n: 1,
-        size,
-        quality: size === "1024x1024" ? "high" : "medium",
-      });
-
-      const imageData = response.data?.[0];
-      if (!imageData?.b64_json) {
-        throw new Error("No image data returned from generation model");
-      }
-
-      return Buffer.from(imageData.b64_json, "base64");
+      return await generateImageWithClaude(prompt);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       console.error(`[StyleGAN3] Generation attempt ${attempt + 1} failed:`, lastError.message);
@@ -331,7 +360,7 @@ export async function runStyleGAN3Pipeline(
     pipelineMetadata: {
       stages,
       totalDurationMs: Date.now() - pipelineStart,
-      model: "stylegan3-finetuned-v2",
+      model: AI_CONFIG.model,
     },
   };
 
@@ -354,7 +383,7 @@ export async function runStyleGAN3Pipeline(
       pipelineMetadata: {
         stages,
         totalDurationMs: Date.now() - pipelineStart,
-        model: "stylegan3-finetuned-v2",
+        model: AI_CONFIG.model,
       },
       isPreGenerated: false,
     }).returning({ id: avatarAssets.id });
@@ -399,7 +428,6 @@ export async function runStyleGAN3Pipeline(
 }
 
 export async function generateAvatar(params: AvatarParams): Promise<AvatarGenerateResult> {
-  const openai = getOpenAI();
   const prompt = buildLegacyPrompt(params);
 
   let lastError: Error | null = null;
@@ -411,20 +439,7 @@ export async function generateAvatar(params: AvatarParams): Promise<AvatarGenera
         console.log(`[Avatars] Retry attempt ${attempt}/${MAX_RETRIES}`);
       }
 
-      const response = await openai.images.generate({
-        model: "gpt-image-1",
-        prompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "medium",
-      });
-
-      const imageData = response.data?.[0];
-      if (!imageData?.b64_json) {
-        throw new Error("No image data returned from OpenAI");
-      }
-
-      const buffer = Buffer.from(imageData.b64_json, "base64");
+      const buffer = await generateImageWithClaude(prompt);
       const objectPath = await uploadAvatarToStorage(buffer, params.seed);
       const avatarUrl = buildAvatarUrl(objectPath);
 

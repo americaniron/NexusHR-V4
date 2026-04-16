@@ -23,6 +23,7 @@ import orchestrationRouter from "./orchestration";
 import toolsRouter from "./tools";
 import videoStudioRouter from "./video-studio";
 import apiKeysRouter from "./api-keys";
+import ariaRouter from "./aria";
 
 const router: IRouter = Router();
 
@@ -50,5 +51,6 @@ router.use(orchestrationRouter);
 router.use(toolsRouter);
 router.use(videoStudioRouter);
 router.use(apiKeysRouter);
+router.use(ariaRouter);
 
 export default router;

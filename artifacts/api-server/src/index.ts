@@ -1,5 +1,6 @@
 import { createServer } from "http";
 import app from "./app";
+import { AI_CONFIG } from "./lib/aiConfig";
 import { logger } from "./lib/logger";
 import { initWebSocket } from "./lib/websocket";
 import { initializeEmailTransport } from "./lib/email";
@@ -26,6 +27,17 @@ initializeEmailTransport();
 startBillingScheduler();
 
 httpServer.listen(port, () => {
+  logger.info(
+    {
+      ai: {
+        provider: AI_CONFIG.provider,
+        model: AI_CONFIG.model,
+        defaultMaxTokens: AI_CONFIG.defaultMaxTokens,
+        refinementMaxTokens: AI_CONFIG.refinementMaxTokens,
+      },
+    },
+    "AI configuration loaded",
+  );
   logger.info({ port }, "Server listening");
 });
 

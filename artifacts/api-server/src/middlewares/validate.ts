@@ -17,15 +17,20 @@ export function validate(schemas: ValidationSchemas) {
         for (const issue of result.error.issues) {
           errors.push({ field: `params.${issue.path.join(".")}`, message: issue.message });
         }
+      } else {
+        Object.defineProperty(req, "params", { value: result.data, writable: true, configurable: true });
       }
     }
 
     if (schemas.query) {
-      const result = schemas.query.safeParse(req.query);
+      const schema = schemas.query instanceof z.ZodObject ? schemas.query.passthrough() : schemas.query;
+      const result = schema.safeParse(req.query);
       if (!result.success) {
         for (const issue of result.error.issues) {
           errors.push({ field: `query.${issue.path.join(".")}`, message: issue.message });
         }
+      } else {
+        Object.defineProperty(req, "query", { value: result.data, writable: true, configurable: true });
       }
     }
 
@@ -35,6 +40,8 @@ export function validate(schemas: ValidationSchemas) {
         for (const issue of result.error.issues) {
           errors.push({ field: `body.${issue.path.join(".")}`, message: issue.message });
         }
+      } else {
+        req.body = result.data;
       }
     }
 
@@ -54,7 +61,7 @@ export function validate(schemas: ValidationSchemas) {
 export const paginationQuery = z.object({
   page: z.coerce.number().int().min(1).default(1).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(12).optional(),
-});
+}).passthrough();
 
 export const idParam = z.object({
   id: z.coerce.number().int().min(1),

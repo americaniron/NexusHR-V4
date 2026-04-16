@@ -1,5 +1,30 @@
+import { ReplitConnectors } from "@replit/connectors-sdk";
+
+const connectors = new ReplitConnectors();
+
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || "";
-const ELEVENLABS_BASE_URL = "https://api.elevenlabs.io/v1";
+const ELEVENLABS_BASE_URL = "https://api.elevenlabs.io";
+
+function useProxy(): boolean {
+  return !ELEVENLABS_API_KEY;
+}
+
+async function elevenLabsFetch(path: string, init?: RequestInit): Promise<Response> {
+  if (useProxy()) {
+    return connectors.proxy("elevenlabs", path, {
+      method: init?.method || "GET",
+      headers: init?.headers as Record<string, string> | undefined,
+      body: init?.body as string | undefined,
+    });
+  }
+  return fetch(`${ELEVENLABS_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      "xi-api-key": ELEVENLABS_API_KEY,
+      ...(init?.headers as Record<string, string> || {}),
+    },
+  });
+}
 
 export async function textToSpeech(
   text: string,
@@ -13,12 +38,11 @@ export async function textToSpeech(
   }
 ) {
   const voiceId = options?.voiceId || "21m00Tcm4TlvDq8ikWAM";
-  const response = await fetch(
-    `${ELEVENLABS_BASE_URL}/text-to-speech/${voiceId}`,
+  const response = await elevenLabsFetch(
+    `/v1/text-to-speech/${voiceId}`,
     {
       method: "POST",
       headers: {
-        "xi-api-key": ELEVENLABS_API_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -96,12 +120,11 @@ export async function textToSpeechStream(
   }
 ): Promise<{ body: ReadableStream<Uint8Array>; contentType: string }> {
   const voiceId = options?.voiceId || "21m00Tcm4TlvDq8ikWAM";
-  const response = await fetch(
-    `${ELEVENLABS_BASE_URL}/text-to-speech/${voiceId}/stream`,
+  const response = await elevenLabsFetch(
+    `/v1/text-to-speech/${voiceId}/stream`,
     {
       method: "POST",
       headers: {
-        "xi-api-key": ELEVENLABS_API_KEY,
         "Content-Type": "application/json",
         "Accept": "audio/mpeg",
       },
@@ -145,12 +168,11 @@ export async function textToSpeechWithAlignment(
   }
 ): Promise<{ audio: Buffer; alignment: AlignmentData | null; visemes: VisemeData[] }> {
   const voiceId = options?.voiceId || "21m00Tcm4TlvDq8ikWAM";
-  const response = await fetch(
-    `${ELEVENLABS_BASE_URL}/text-to-speech/${voiceId}/with-timestamps`,
+  const response = await elevenLabsFetch(
+    `/v1/text-to-speech/${voiceId}/with-timestamps`,
     {
       method: "POST",
       headers: {
-        "xi-api-key": ELEVENLABS_API_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -185,10 +207,8 @@ export async function textToSpeechWithAlignment(
 }
 
 export async function listVoices() {
-  const response = await fetch(`${ELEVENLABS_BASE_URL}/voices`, {
-    headers: {
-      "xi-api-key": ELEVENLABS_API_KEY,
-    },
+  const response = await elevenLabsFetch(`/v1/voices`, {
+    method: "GET",
   });
 
   if (!response.ok) {

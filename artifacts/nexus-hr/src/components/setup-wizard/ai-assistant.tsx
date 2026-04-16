@@ -1,84 +1,332 @@
-import { useState, useEffect, useRef } from "react";
-import { Bot, Sparkles } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Volume2, VolumeX, Send, MessageCircle, X, Loader2 } from "lucide-react";
+import { useAuth } from "@clerk/react";
 
-interface AIMessage {
-  text: string;
-  isTyping?: boolean;
-}
+const BASE = import.meta.env.BASE_URL;
+const API_BASE = `${BASE}api`.replace(/\/\//g, "/");
+const ADMIN_NAME = "Aria Lawson";
+const ADMIN_TITLE = "Admin & Onboarding Director";
+const ADMIN_AVATAR = `${BASE}admin-aria-avatar.png`;
+const ADMIN_VIDEO = `${BASE}admin-aria-intro.mp4`;
+const ADMIN_VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
 
 interface AIAssistantProps {
   messages: string[];
   stepTitle: string;
+  context?: {
+    orgName?: string;
+    industry?: string;
+    selectedRole?: string;
+    employeeName?: string;
+  };
 }
 
-function TypingText({ text, onComplete }: { text: string; onComplete?: () => void }) {
-  const [displayed, setDisplayed] = useState("");
-  const indexRef = useRef(0);
+async function synthesizeVoice(
+  text: string,
+  token: string | null,
+): Promise<HTMLAudioElement | null> {
+  try {
+    const response = await fetch(`${API_BASE}/voice/synthesize`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        text,
+        voiceId: ADMIN_VOICE_ID,
+        roleTitle: ADMIN_TITLE,
+        personality: { energy: 0.6, formality: 0.7, warmth: 0.8 },
+      }),
+    });
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.onended = () => URL.revokeObjectURL(url);
+    audio.onerror = () => URL.revokeObjectURL(url);
+    return audio;
+  } catch {
+    return null;
+  }
+}
+
+export function AIAssistant({ messages, stepTitle, context }: AIAssistantProps) {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [caption, setCaption] = useState("");
+  const [showChat, setShowChat] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [isVideoStep, setIsVideoStep] = useState(stepTitle === "welcome");
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const stepIdRef = useRef(stepTitle);
+  const audioEnabledRef = useRef(audioEnabled);
+  const { getToken } = useAuth();
+
+  audioEnabledRef.current = audioEnabled;
+  stepIdRef.current = stepTitle;
+
+  const stopAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      audioRef.current = null;
+    }
+    setIsSpeaking(false);
+  }, []);
+
+  const speak = useCallback(async (text: string, forStep: string) => {
+    setCaption(text);
+    if (!audioEnabledRef.current) return;
+
+    const token = await getToken();
+    if (stepIdRef.current !== forStep) return;
+
+    const audio = await synthesizeVoice(text, token);
+    if (!audio || stepIdRef.current !== forStep) return;
+
+    audioRef.current = audio;
+    setIsSpeaking(true);
+
+    audio.onended = () => {
+      audioRef.current = null;
+      setIsSpeaking(false);
+    };
+    audio.onerror = () => {
+      audioRef.current = null;
+      setIsSpeaking(false);
+    };
+
+    audio.play().catch(() => {
+      setIsSpeaking(false);
+    });
+  }, [getToken]);
 
   useEffect(() => {
-    setDisplayed("");
-    indexRef.current = 0;
-    const interval = setInterval(() => {
-      if (indexRef.current < text.length) {
-        setDisplayed(text.slice(0, indexRef.current + 1));
-        indexRef.current++;
-      } else {
-        clearInterval(interval);
-        onComplete?.();
+    stopAudio();
+    setCaption("");
+    setShowChat(false);
+    setIsVideoStep(stepTitle === "welcome");
+
+    if (stepTitle === "welcome") {
+      const v = videoRef.current;
+      if (v) {
+        v.currentTime = 0;
+        v.play().catch(() => {});
       }
-    }, 12);
-    return () => clearInterval(interval);
-  }, [text, onComplete]);
+      return;
+    }
 
-  return <>{displayed}<span className="animate-pulse">|</span></>;
-}
+    const combined = messages.join(" ");
+    if (!combined) return;
 
-export function AIAssistant({ messages, stepTitle }: AIAssistantProps) {
-  const [visibleCount, setVisibleCount] = useState(1);
-  const [typingDone, setTypingDone] = useState<Set<number>>(new Set());
-  const scrollRef = useRef<HTMLDivElement>(null);
+    const timer = setTimeout(() => {
+      speak(combined, stepTitle);
+    }, 500);
 
-  useEffect(() => {
-    setVisibleCount(1);
-    setTypingDone(new Set());
+    return () => clearTimeout(timer);
   }, [stepTitle]);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [visibleCount, typingDone]);
-
-  const handleTypingComplete = (idx: number) => {
-    setTypingDone((prev) => new Set(prev).add(idx));
-    if (idx < messages.length - 1) {
-      setTimeout(() => setVisibleCount((prev) => Math.min(prev + 1, messages.length)), 400);
+  const handleVideoEnded = () => {
+    setIsSpeaking(false);
+    setIsVideoStep(false);
+    const combined = messages.join(" ");
+    if (combined) {
+      speak(combined, stepTitle);
     }
   };
 
+  const toggleAudio = useCallback(() => {
+    if (audioEnabled) {
+      stopAudio();
+    }
+    setAudioEnabled((prev) => !prev);
+  }, [audioEnabled, stopAudio]);
+
+  const handleAskAria = useCallback(async () => {
+    if (!chatInput.trim() || chatLoading) return;
+    const question = chatInput.trim();
+    setChatInput("");
+    setChatLoading(true);
+    stopAudio();
+
+    try {
+      const token = await getToken();
+      const response = await fetch(`${API_BASE}/aria/ask`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({ question, stepId: stepTitle, context }),
+      });
+
+      if (!response.ok) {
+        setCaption("I'm sorry, I couldn't process that right now. Could you try again?");
+        setChatLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+      const ariaResponse = data.response || "Let me look into that for you.";
+
+      setShowChat(false);
+      speak(ariaResponse, stepTitle);
+    } catch {
+      setCaption("I'm having a moment — please try asking again.");
+    } finally {
+      setChatLoading(false);
+    }
+  }, [chatInput, chatLoading, stepTitle, context, getToken, stopAudio, speak]);
+
   return (
     <div className="rounded-xl border border-primary/20 bg-gradient-to-b from-primary/5 to-transparent overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-primary/10 bg-primary/5">
-        <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center">
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
-        </div>
-        <span className="text-sm font-semibold text-foreground">NexsusHR AI Guide</span>
-        <div className="ml-auto flex items-center gap-1.5">
-          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-[10px] text-muted-foreground">Active</span>
-        </div>
-      </div>
-      <div ref={scrollRef} className="p-4 space-y-3 max-h-[280px] overflow-y-auto">
-        {messages.slice(0, visibleCount).map((msg, i) => (
-          <div key={`${stepTitle}-${i}`} className="flex gap-2.5">
-            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Bot className="h-3 w-3 text-primary" />
+      <div className="relative bg-black aspect-[4/3] overflow-hidden">
+        {isVideoStep ? (
+          <video
+            ref={videoRef}
+            src={ADMIN_VIDEO}
+            className="w-full h-full object-cover"
+            muted
+            playsInline
+            onPlaying={() => setIsSpeaking(true)}
+            onEnded={handleVideoEnded}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative">
+            <div className="relative">
+              <div
+                className={`transition-all duration-500 ${
+                  isSpeaking ? "scale-105" : "scale-100"
+                }`}
+              >
+                <img
+                  src={ADMIN_AVATAR}
+                  alt={ADMIN_NAME}
+                  className={`w-28 h-28 rounded-full object-cover border-4 transition-all duration-300 ${
+                    isSpeaking
+                      ? "border-primary shadow-[0_0_30px_rgba(var(--primary-rgb,200,120,50),0.4)]"
+                      : "border-white/20 shadow-lg"
+                  }`}
+                />
+              </div>
+
+              {isSpeaking && (
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-end gap-[3px]">
+                  {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                    <div
+                      key={i}
+                      className="w-[3px] bg-primary rounded-full animate-waveform-bar"
+                      style={{
+                        animationDelay: `${i * 0.08}s`,
+                        height: 14,
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {typingDone.has(i) ? msg : <TypingText text={msg} onComplete={() => handleTypingComplete(i)} />}
+
+            <div className="absolute top-3 left-3 flex items-center gap-2">
+              <div
+                className={`h-2 w-2 rounded-full ${
+                  isSpeaking ? "bg-green-500 animate-pulse" : "bg-green-500/60"
+                }`}
+              />
+              <span className="text-xs text-white/70 font-medium">LIVE</span>
+            </div>
+          </div>
+        )}
+
+        {caption && !isVideoStep && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent px-4 pb-4 pt-10">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-white text-xs font-semibold">{ADMIN_NAME}</span>
+              <span className="text-white/40 text-[10px]">{ADMIN_TITLE}</span>
+            </div>
+            <p className="text-white/90 text-sm leading-snug">
+              {caption}
             </p>
           </div>
-        ))}
+        )}
+
+        {!caption && !isVideoStep && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
+            <div className="flex items-center gap-2">
+              <span className="text-white text-xs font-semibold">{ADMIN_NAME}</span>
+              <span className="text-white/40 text-[10px]">{ADMIN_TITLE}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="absolute top-3 right-3">
+          <button
+            onClick={toggleAudio}
+            className="h-8 w-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
+            title={audioEnabled ? "Mute Aria" : "Unmute Aria"}
+          >
+            {audioEnabled ? (
+              <Volume2 className="h-4 w-4 text-white" />
+            ) : (
+              <VolumeX className="h-4 w-4 text-white/50" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div className="px-3 py-2.5">
+        {!showChat ? (
+          <button
+            onClick={() => setShowChat(true)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors text-xs text-primary font-medium"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            Ask Aria a Question
+          </button>
+        ) : (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-muted-foreground font-medium">
+                Ask Aria anything about this step
+              </span>
+              <button
+                onClick={() => setShowChat(false)}
+                className="h-5 w-5 rounded-full hover:bg-muted flex items-center justify-center"
+              >
+                <X className="h-3 w-3 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAskAria()}
+                placeholder="Type your question..."
+                className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                disabled={chatLoading}
+                autoFocus
+              />
+              <button
+                onClick={handleAskAria}
+                disabled={chatLoading || !chatInput.trim()}
+                className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {chatLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 text-primary-foreground animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5 text-primary-foreground" />
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

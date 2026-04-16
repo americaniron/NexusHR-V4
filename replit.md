@@ -23,21 +23,22 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
 **Backend:**
 -   **API Framework:** Express 5 with Clerk middleware.
 -   **Database:** PostgreSQL with Drizzle ORM (comprehensive schema covering organizations, users, AI roles, employees, interviews, tasks, workflows, conversations, integrations, billing, support, notifications, relational memory, and prompt templates/audit logs).
--   **Validation:** Zod schemas for all API inputs.
+-   **Validation:** Zod schemas for all API inputs. Query schemas use `.passthrough()` in the validate middleware to allow unknown proxy parameters.
+-   **Testing:** Vitest + Supertest for integration tests. Query schemas shared via `src/schemas/query.ts`.
 -   **API Codegen:** Orval generates React Query hooks and Zod schemas from OpenAPI.
 -   **Error Handling:** Structured JSON errors with a global handler.
 -   **Real-time Communication:** Socket.io for WebSocket connections with authentication and room-based subscriptions.
 
 **Core Features & Implementations:**
--   **AI-Guided Setup Wizard:** Multi-step onboarding wizard (Welcome → Org Profile → Browse Talent → Customize → Integrations → Deploy) with real-time AI assistant panel providing contextual guidance. Includes skeleton loading states, error handling with retry, role recommendation by industry, avatar generation, voice selection, and integration connection. Located at `/onboarding`, accessible after signup.
+-   **AI-Guided Setup Wizard:** Multi-step onboarding wizard (Welcome → Org Profile → Browse Talent → Customize → Integrations → Deploy) guided by Aria Lawson (Admin & Onboarding Director) — a live video-call-style AI presence. Aria plays her intro video on welcome, then appears as a live avatar with speaking animations on every step. She speaks all guidance through ElevenLabs voice synthesis and responds to customer questions in real-time via Claude AI (`/api/aria/ask` endpoint). The "Ask Aria" input accepts free-form questions contextually aware of the current step, org details, selected role, etc. No chatbot-style text — Aria is a real AI professional. Located at `/onboarding`, accessible after signup.
 -   **AI People Management:** Catalog of 105+ AI roles, onboarding and management of AI people, AI-powered interview sessions, real-time chat with ElevenLabs audio playback, HeyGen Seedance 2.0 integration for cinematic AI person videos.
--   **AI Avatar System:** Photorealistic headshots (OpenAI `gpt-image-1` or DiceBear fallback), `AIAvatar` component supporting `idle`, `speaking`, `thinking`, `listening` states.
+-   **AI Avatar System:** Photorealistic headshots (Claude Opus 4.6 prompt refinement + Replit image proxy, DiceBear fallback), `AIAvatar` component supporting `idle`, `speaking`, `thinking`, `listening` states.
     -   **Emotion Engine:** Detects 7 emotion states from AI response text, mapping to ElevenLabs voice parameters and avatar visual cues (ring glows, indicator dots, waveform bars).
     -   **Avatar Animator:** `AvatarAnimator` component for viseme-driven mouth animation, idle cycles, and emotion-driven facial expressions.
     -   **Rich Chat Messages:** 8 types including text, voice transcription, data cards, file attachments, action confirmations, status updates, quick replies, and escalation notices.
     -   **ElevenLabs Alignment API:** Used for character-level timing data to drive lip sync.
     -   **Collaboration Visibility Panel:** Real-time inter-professional workflow progress with dependency graphs and assignments.
--   **Voice & Visual States:** ElevenLabs TTS with personality-mapped voice settings and emotion-aware modulation. OpenAI Whisper STT for transcription. `useVoiceMode` hook for managing the full voice pipeline.
+-   **Voice & Visual States:** ElevenLabs TTS with personality-mapped voice settings and emotion-aware modulation. Claude Opus 4.6 for audio transcription. `useVoiceMode` hook for managing the full voice pipeline.
 -   **AI Personality Engine:** 7-Axis personality system with customizable sliders, dynamic tone control, culture alignment, and a relational memory engine.
 -   **Prompt Architecture & Assembly Pipeline:** 9-layer prompt assembly, 7-stage assembly pipeline for context injection and token management, PII redaction, audit logging, and template versioning.
 -   **AI Orchestration Layer:** Task router for AI employee assignment, assignment engine, progress tracker, dependency manager, and workflow execution engine.
@@ -47,11 +48,9 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
 ## External Dependencies
 
 -   **Authentication:** Clerk
--   **AI (Primary):** Anthropic Claude (Opus 4.6, Sonnet 4.6) via Replit AI Integrations
--   **AI (Fallback):** OpenAI GPT-4o via Replit AI Integrations
+-   **AI (Exclusive):** Anthropic Claude Opus 4.6 via Replit AI Integrations (all reasoning, chat, prompt refinement, transcription). Model, provider, and token limits are configurable via env vars (`AI_PROVIDER`, `AI_MODEL`, `AI_DEFAULT_MAX_TOKENS`, `AI_REFINEMENT_MAX_TOKENS`) in `artifacts/api-server/src/lib/aiConfig.ts`.
 -   **Voice Synthesis:** ElevenLabs (via Replit integration connector)
--   **Image Generation:** OpenAI `gpt-image-1`
--   **Speech-to-Text:** OpenAI Whisper
+-   **Image Generation:** Replit AI proxy (Claude Opus 4.6 prompt refinement)
 -   **Database:** PostgreSQL
 -   **ORM:** Drizzle ORM
 -   **Validation:** Zod

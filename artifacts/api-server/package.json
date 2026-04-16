@@ -15,7 +15,9 @@
     "seed:creative-realestate-agriculture-roles": "tsx src/scripts/seed-creative-realestate-agriculture-roles.ts",
     "seed:tech-publicsector-media-roles": "tsx src/scripts/seed-tech-publicsector-media-roles.ts",
     "seed:aerospace-hr-telecom-roles": "tsx src/scripts/seed-aerospace-hr-telecom-roles.ts",
-    "seed:tool-registry": "tsx src/scripts/seed-tool-registry.ts"
+    "seed:tool-registry": "tsx src/scripts/seed-tool-registry.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@clerk/express": "^2.1.0",
@@ -33,7 +35,6 @@
     "google-auth-library": "^10.6.2",
     "helmet": "^8.1.0",
     "http-proxy-middleware": "^3.0.5",
-    "openai": "^6.34.0",
     "pino": "^9",
     "pino-http": "^10",
     "socket.io": "^4.8.3",
@@ -46,10 +47,13 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "catalog:",
+    "@types/supertest": "^7.2.0",
     "esbuild": "^0.27.3",
     "esbuild-plugin-pino": "^2.3.3",
     "pino-pretty": "^13",
+    "supertest": "^7.2.2",
     "thread-stream": "3.1.0",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "vitest": "^4.1.4"
   }
 }
