@@ -1,6 +1,6 @@
 import express, { Router, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod/v4";
-import { textToSpeechStream, textToSpeechWithAlignment, cloneVoice, SUPPORTED_LANGUAGES } from "../lib/elevenlabs";
+import { textToSpeechStream, textToSpeechWithAlignment, cloneVoice, listClonedVoices, deleteClonedVoice, SUPPORTED_LANGUAGES } from "../lib/elevenlabs";
 import { personalityToVoiceSettings, resolveVoiceProfile, type PersonalityAxes } from "../lib/voiceConfig";
 import { analyzeEmotion } from "../lib/emotionEngine";
 import { requireAuth } from "../middlewares/requireAuth";
@@ -256,6 +256,36 @@ router.get("/voice/languages", requireAuth, async (_req: Request, res: Response,
     res.json({ data: SUPPORTED_LANGUAGES });
   } catch (error) {
     next(error);
+  }
+});
+
+router.get("/voice/cloned", requireAuth, async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const voices = await listClonedVoices();
+    res.json({ data: voices });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("ElevenLabs")) {
+      next(AppError.badRequest(error.message));
+    } else {
+      next(error);
+    }
+  }
+});
+
+router.delete("/voice/cloned/:id", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id as string;
+    if (!id || id.length > 100) {
+      throw AppError.badRequest("Invalid voice ID");
+    }
+    await deleteClonedVoice(id);
+    res.json({ success: true, voiceId: id });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("ElevenLabs")) {
+      next(AppError.badRequest(error.message));
+    } else {
+      next(error);
+    }
   }
 });
 

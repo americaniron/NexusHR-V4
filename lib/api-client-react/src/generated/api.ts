@@ -53,6 +53,7 @@ import type {
   CreateVideoProjectBody,
   CreateWorkflow,
   DashboardSummary,
+  DeleteClonedVoice200,
   DeleteProactiveRule200,
   Employee,
   EmployeeList,
@@ -79,6 +80,7 @@ import type {
   InterviewSession,
   ListApiKeys200,
   ListArticlesParams,
+  ListClonedVoices200,
   ListConsentRecords200,
   ListConversationsParams,
   ListDataRequests200,
@@ -4587,6 +4589,165 @@ export function useGetVoiceLanguages<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List all user-created cloned voices
+ */
+export const getListClonedVoicesUrl = () => {
+  return `/api/voice/cloned`;
+};
+
+export const listClonedVoices = async (
+  options?: RequestInit,
+): Promise<ListClonedVoices200> => {
+  return customFetch<ListClonedVoices200>(getListClonedVoicesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListClonedVoicesQueryKey = () => {
+  return [`/api/voice/cloned`] as const;
+};
+
+export const getListClonedVoicesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listClonedVoices>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listClonedVoices>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListClonedVoicesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listClonedVoices>>
+  > = ({ signal }) => listClonedVoices({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listClonedVoices>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListClonedVoicesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listClonedVoices>>
+>;
+export type ListClonedVoicesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all user-created cloned voices
+ */
+
+export function useListClonedVoices<
+  TData = Awaited<ReturnType<typeof listClonedVoices>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listClonedVoices>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListClonedVoicesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Delete a cloned voice from ElevenLabs
+ */
+export const getDeleteClonedVoiceUrl = (id: string) => {
+  return `/api/voice/cloned/${id}`;
+};
+
+export const deleteClonedVoice = async (
+  id: string,
+  options?: RequestInit,
+): Promise<DeleteClonedVoice200> => {
+  return customFetch<DeleteClonedVoice200>(getDeleteClonedVoiceUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteClonedVoiceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteClonedVoice>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteClonedVoice>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteClonedVoice"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteClonedVoice>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteClonedVoice(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteClonedVoiceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteClonedVoice>>
+>;
+
+export type DeleteClonedVoiceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a cloned voice from ElevenLabs
+ */
+export const useDeleteClonedVoice = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteClonedVoice>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteClonedVoice>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteClonedVoiceMutationOptions(options));
+};
 
 /**
  * @summary List notifications

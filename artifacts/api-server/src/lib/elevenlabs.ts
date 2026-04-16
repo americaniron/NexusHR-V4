@@ -265,6 +265,34 @@ export async function cloneVoice(
   return { voiceId: data.voice_id, name };
 }
 
+export async function listClonedVoices(): Promise<Array<{ voice_id: string; name: string; category: string; description?: string; created_at?: string }>> {
+  const response = await elevenLabsFetch(`/v1/voices`, { method: "GET" });
+
+  if (!response.ok) {
+    throw new Error(`ElevenLabs list voices error: ${response.status}`);
+  }
+
+  const data = await response.json() as { voices: Array<{ voice_id: string; name: string; category: string; description?: string; labels?: Record<string, string>; created_at_unix_secs?: number }> };
+  return data.voices
+    .filter(v => v.category === "cloned")
+    .map(v => ({
+      voice_id: v.voice_id,
+      name: v.name,
+      category: v.category,
+      description: v.description,
+      created_at: v.created_at_unix_secs ? new Date(v.created_at_unix_secs * 1000).toISOString() : undefined,
+    }));
+}
+
+export async function deleteClonedVoice(voiceId: string): Promise<void> {
+  const response = await elevenLabsFetch(`/v1/voices/${voiceId}`, { method: "DELETE" });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`ElevenLabs delete voice error: ${response.status} ${errorText}`);
+  }
+}
+
 export const SUPPORTED_LANGUAGES = [
   { code: "en", name: "English" },
   { code: "es", name: "Spanish" },

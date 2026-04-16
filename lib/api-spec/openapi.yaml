@@ -1108,6 +1108,50 @@ paths:
                     items:
                       $ref: "#/components/schemas/VoiceLanguage"
 
+  /voice/cloned:
+    get:
+      operationId: listClonedVoices
+      tags: [voice]
+      summary: List all user-created cloned voices
+      responses:
+        "200":
+          description: Cloned voices list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ClonedVoiceItem"
+                required: [data]
+
+  /voice/cloned/{id}:
+    delete:
+      operationId: deleteClonedVoice
+      tags: [voice]
+      summary: Delete a cloned voice from ElevenLabs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Voice deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  voiceId:
+                    type: string
+                required: [success, voiceId]
+
   /notifications:
     get:
       operationId: listNotifications
@@ -3534,6 +3578,21 @@ components:
         name:
           type: string
           description: "Human-readable language name"
+
+    ClonedVoiceItem:
+      type: object
+      required: [voice_id, name, category]
+      properties:
+        voice_id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
 
     VideoProject:
       type: object

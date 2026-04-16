@@ -1546,6 +1546,33 @@ export const GetVoiceLanguagesResponse = zod.object({
 });
 
 /**
+ * @summary List all user-created cloned voices
+ */
+export const ListClonedVoicesResponse = zod.object({
+  data: zod.array(
+    zod.object({
+      voice_id: zod.string(),
+      name: zod.string(),
+      category: zod.string(),
+      description: zod.string().optional(),
+      created_at: zod.string().optional(),
+    }),
+  ),
+});
+
+/**
+ * @summary Delete a cloned voice from ElevenLabs
+ */
+export const DeleteClonedVoiceParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteClonedVoiceResponse = zod.object({
+  success: zod.boolean(),
+  voiceId: zod.string(),
+});
+
+/**
  * @summary List notifications
  */
 export const listNotificationsQueryPageDefault = 1;

@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
-import { MessageSquare, RotateCcw, Save, Info, Sparkles, Globe, Upload, Mic, Loader2, CheckCircle2, Play, Square } from "lucide-react";
+import { MessageSquare, RotateCcw, Save, Info, Sparkles, Globe, Upload, Mic, Loader2, CheckCircle2, Play, Square, Trash2, Volume2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useVoicePreview } from "@/hooks/use-voice-preview";
 
@@ -173,17 +173,26 @@ function getAxisColor(value: number): string {
   return "bg-amber-500";
 }
 
+interface ClonedVoice {
+  voice_id: string;
+  name: string;
+  category: string;
+  description?: string;
+  created_at?: string;
+}
+
 interface PersonalityConfigProps {
   employeeId: number;
   employeeName: string;
   initialPersonality?: PersonalityAxes | null;
   initialVoiceLanguage?: string | null;
   onSave?: (personality: PersonalityAxes, voiceLanguage?: string) => Promise<void>;
+  onAssignVoice?: (voiceId: string) => Promise<void>;
   saving?: boolean;
   apiBase?: string;
 }
 
-export function PersonalityConfig({ employeeId, employeeName, initialPersonality, initialVoiceLanguage, onSave, saving, apiBase }: PersonalityConfigProps) {
+export function PersonalityConfig({ employeeId, employeeName, initialPersonality, initialVoiceLanguage, onSave, onAssignVoice, saving, apiBase }: PersonalityConfigProps) {
   const [axes, setAxes] = useState<PersonalityAxes>(initialPersonality || DEFAULT_PERSONALITY);
   const [selectedPreset, setSelectedPreset] = useState<string>("");
   const [voiceLanguage, setVoiceLanguage] = useState<string>(initialVoiceLanguage || "en");
@@ -194,6 +203,11 @@ export function PersonalityConfig({ employeeId, employeeName, initialPersonality
   const [cloneSamples, setCloneSamples] = useState<string[]>([]);
   const [isCloning, setIsCloning] = useState(false);
   const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null);
+
+  const [clonedVoices, setClonedVoices] = useState<ClonedVoice[]>([]);
+  const [loadingClonedVoices, setLoadingClonedVoices] = useState(false);
+  const [deletingVoiceId, setDeletingVoiceId] = useState<string | null>(null);
+  const [assigningVoiceId, setAssigningVoiceId] = useState<string | null>(null);
 
   const resolvedApiBase = apiBase || "/api";
 
@@ -302,6 +316,66 @@ export function PersonalityConfig({ employeeId, employeeName, initialPersonality
       setIsCloning(false);
     }
   }, [cloneVoiceName, cloneSamples, resolvedApiBase, toast]);
+
+  const fetchClonedVoices = useCallback(async () => {
+    setLoadingClonedVoices(true);
+    try {
+      const response = await fetch(`${resolvedApiBase}/voice/cloned`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch cloned voices");
+      const data = await response.json() as { data: ClonedVoice[] };
+      setClonedVoices(data.data || []);
+    } catch {
+      setClonedVoices([]);
+    } finally {
+      setLoadingClonedVoices(false);
+    }
+  }, [resolvedApiBase]);
+
+  useEffect(() => {
+    fetchClonedVoices();
+  }, [fetchClonedVoices]);
+
+  useEffect(() => {
+    if (clonedVoiceId) {
+      fetchClonedVoices();
+    }
+  }, [clonedVoiceId, fetchClonedVoices]);
+
+  const handleDeleteClonedVoice = useCallback(async (voiceId: string, voiceName: string) => {
+    setDeletingVoiceId(voiceId);
+    try {
+      const response = await fetch(`${resolvedApiBase}/voice/cloned/${voiceId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error((errData as { error?: string }).error || "Delete failed");
+      }
+      setClonedVoices(prev => prev.filter(v => v.voice_id !== voiceId));
+      toast({ title: "Voice deleted", description: `"${voiceName}" has been permanently removed.` });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete voice";
+      toast({ title: "Delete failed", description: message, variant: "destructive" });
+    } finally {
+      setDeletingVoiceId(null);
+    }
+  }, [resolvedApiBase, toast]);
+
+  const handleAssignVoice = useCallback(async (voiceId: string, voiceName: string) => {
+    if (!onAssignVoice) return;
+    setAssigningVoiceId(voiceId);
+    try {
+      await onAssignVoice(voiceId);
+      toast({ title: "Voice assigned", description: `"${voiceName}" is now assigned to ${employeeName}.` });
+    } catch {
+      toast({ title: "Assignment failed", description: "Could not assign voice.", variant: "destructive" });
+    } finally {
+      setAssigningVoiceId(null);
+    }
+  }, [onAssignVoice, employeeName, toast]);
 
   const previewText = generatePreviewText(axes);
 
@@ -521,6 +595,86 @@ export function PersonalityConfig({ employeeId, employeeName, initialPersonality
                   </span>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">My Cloned Voices</CardTitle>
+                  <CardDescription>Manage your custom cloned voices. Assign them to employees or remove them.</CardDescription>
+                </div>
+                <Button variant="ghost" size="icon" onClick={fetchClonedVoices} disabled={loadingClonedVoices}>
+                  <RefreshCw className={`h-4 w-4 ${loadingClonedVoices ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingClonedVoices && clonedVoices.length === 0 ? (
+                <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading cloned voices...
+                </div>
+              ) : clonedVoices.length === 0 ? (
+                <div className="text-center py-6">
+                  <Volume2 className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground">No cloned voices yet.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Use the voice cloning section above to create one.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {clonedVoices.map((voice) => (
+                    <div
+                      key={voice.voice_id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-background"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Volume2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-sm font-medium truncate">{voice.name}</span>
+                        </div>
+                        {voice.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5 ml-5.5 truncate">{voice.description}</p>
+                        )}
+                        {voice.created_at && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5 ml-5.5">
+                            Created {new Date(voice.created_at).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-3">
+                        {onAssignVoice && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAssignVoice(voice.voice_id, voice.name)}
+                            disabled={assigningVoiceId === voice.voice_id}
+                          >
+                            {assigningVoiceId === voice.voice_id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              "Assign"
+                            )}
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteClonedVoice(voice.voice_id, voice.name)}
+                          disabled={deletingVoiceId === voice.voice_id}
+                        >
+                          {deletingVoiceId === voice.voice_id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

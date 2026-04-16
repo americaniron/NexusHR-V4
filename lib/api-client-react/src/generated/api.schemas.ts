@@ -907,6 +907,14 @@ export interface VoiceLanguage {
   name: string;
 }
 
+export interface ClonedVoiceItem {
+  voice_id: string;
+  name: string;
+  category: string;
+  description?: string;
+  created_at?: string;
+}
+
 export type VideoProjectStatus =
   (typeof VideoProjectStatus)[keyof typeof VideoProjectStatus];
 
@@ -1377,6 +1385,15 @@ export type CloneVoiceBody = {
 
 export type GetVoiceLanguages200 = {
   data?: VoiceLanguage[];
+};
+
+export type ListClonedVoices200 = {
+  data: ClonedVoiceItem[];
+};
+
+export type DeleteClonedVoice200 = {
+  success: boolean;
+  voiceId: string;
 };
 
 export type ListNotificationsParams = {

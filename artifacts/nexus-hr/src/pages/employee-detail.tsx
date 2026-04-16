@@ -115,6 +115,13 @@ export default function EmployeeDetailPage() {
     } finally {
       setSaving(false);
     }
+  }, [employeeId, apiBase, updateEmployee, toast]);
+
+  const handleAssignVoice = useCallback(async (voiceId: string) => {
+    await updateEmployee.mutateAsync({
+      id: employeeId,
+      data: { voiceId } as any,
+    });
   }, [employeeId, apiBase, toast, updateEmployee]);
 
   const handleUpdateInstructions = async () => {
@@ -344,6 +351,7 @@ export default function EmployeeDetailPage() {
               initialPersonality={personality}
               initialVoiceLanguage={(employee as any).voiceLanguage}
               onSave={handleSavePersonality}
+              onAssignVoice={handleAssignVoice}
               saving={saving}
               apiBase={apiBase}
             />
