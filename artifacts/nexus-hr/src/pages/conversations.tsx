@@ -1,5 +1,6 @@
 import { useListConversations, useGetConversation, useSendMessage } from "@workspace/api-client-react";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useAuth } from "@clerk/react";
 import { AIAvatar } from "@/components/ai-avatar";
 import type { AvatarVisualState, EmotionState } from "@/components/ai-avatar";
 import { AvatarAnimator } from "@/components/avatar-animator";
@@ -11,16 +12,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Send, Bot, User, MessageSquare, Mic, MicOff, PhoneOff, ChevronLeft } from "lucide-react";
+import { Send, Bot, User, MessageSquare, Mic, MicOff, PhoneOff, ChevronLeft, Video } from "lucide-react";
 import { useVoiceMode } from "@/hooks/use-voice-mode";
+import { useVideoCall } from "@/hooks/use-video-call";
+import { VideoCallSession } from "@/components/video-call-session";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ConversationsPage() {
   const { data: convList } = useListConversations({ limit: 50 });
   const [activeId, setActiveId] = useState<number | null>(null);
+  const [autoVideoCall, setAutoVideoCall] = useState(false);
 
   useEffect(() => {
-    if (convList?.data?.length && !activeId) {
+    const params = new URLSearchParams(window.location.search);
+    const agentId = params.get("agentId");
+    const videoCall = params.get("videoCall") === "true";
+
+    if (agentId && convList?.data?.length) {
+      const agentConv = convList.data.find(c => c.aiEmployee?.id === parseInt(agentId, 10));
+      if (agentConv) {
+        setActiveId(agentConv.id);
+        if (videoCall) {
+          setAutoVideoCall(true);
+        }
+      }
+    } else if (convList?.data?.length && !activeId) {
       setActiveId(convList.data[0].id);
     }
   }, [convList, activeId]);
@@ -73,7 +89,7 @@ export default function ConversationsPage() {
             <button onClick={() => setActiveId(null)} className="sm:hidden flex items-center gap-2 p-3 border-b border-border text-sm text-muted-foreground hover:text-foreground" aria-label="Back to conversation list">
               <ChevronLeft className="h-4 w-4" /> Back
             </button>
-            <ChatWindow conversationId={activeId} />
+            <ChatWindow conversationId={activeId} autoStartVideoCall={autoVideoCall} onVideoCallAutoStarted={() => setAutoVideoCall(false)} />
           </div>
         ) : (
           <div className={`${activeId ? '' : 'hidden sm:flex'} flex-1 items-center justify-center text-muted-foreground flex-col`}>
@@ -86,15 +102,17 @@ export default function ConversationsPage() {
   );
 }
 
-function ChatWindow({ conversationId }: { conversationId: number }) {
+function ChatWindow({ conversationId, autoStartVideoCall, onVideoCallAutoStarted }: { conversationId: number; autoStartVideoCall?: boolean; onVideoCallAutoStarted?: () => void }) {
   const { data: conv, isLoading, refetch } = useGetConversation(conversationId);
   const sendMutation = useSendMessage();
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { getToken } = useAuth();
   const [aiAvatarState, setAiAvatarState] = useState<AvatarVisualState>("idle");
   const [currentEmotion, setCurrentEmotion] = useState<EmotionState>("neutral");
   const [activeVisemes, setActiveVisemes] = useState<VisemeData[]>([]);
+  const [isVideoCallActive, setIsVideoCallActive] = useState(false);
 
   const voiceMode = useVoiceMode({
     onTranscription: (text) => {
@@ -113,6 +131,38 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
     onVisemesReady: (visemes) => {
       setActiveVisemes(visemes);
     },
+  });
+
+  const videoCall = useVideoCall({
+    conversationId,
+    employeeId: conv?.aiEmployee?.id,
+    getToken: async () => {
+      const token = await getToken();
+      return token ?? null;
+    },
+    onTranscription: (text) => {
+      if (text.trim()) {
+        handleSendText(text);
+      }
+    },
+    onStatusChange: (status) => {
+      if (status === "connected") {
+        toast({ title: "Video Call Connected", description: `Connected to ${conv?.aiEmployee?.name}` });
+      }
+    },
+    onError: (error) => {
+      toast({ title: "Video Call Error", description: error, variant: "destructive" });
+    },
+    onFallbackToVoice: () => {
+      toast({
+        title: "Switched to Voice Mode",
+        description: "Video call connection failed. Falling back to voice mode.",
+      });
+      if (!voiceMode.isVoiceMode) {
+        voiceMode.toggleVoiceMode();
+      }
+    },
+    apiBase: `${import.meta.env.BASE_URL}api`.replace(/\/\//g, "/"),
   });
 
   useEffect(() => {
@@ -147,15 +197,38 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
 
       setAiAvatarState("idle");
 
-      if (voiceMode.isVoiceMode && refreshed.data) {
+      const shouldSynthesize = voiceMode.isVoiceMode || isVideoCallActive;
+      if (shouldSynthesize && refreshed.data) {
         const messages = refreshed.data.messages;
         if (messages && messages.length > 0) {
           const lastMsg = messages[messages.length - 1];
           if (lastMsg?.role === "assistant" && lastMsg?.content) {
-            await voiceMode.synthesizeAndPlay(
-              lastMsg.content,
-              refreshed.data.aiEmployee?.voiceId || undefined,
-            );
+            if (isVideoCallActive) {
+              setAiAvatarState("speaking");
+              const response = await fetch("/api/voice/synthesize-aligned", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                  text: lastMsg.content,
+                  voiceId: refreshed.data.aiEmployee?.voiceId || undefined,
+                }),
+              });
+              if (response.ok) {
+                const data = await response.json();
+                if (data.emotion) {
+                  setCurrentEmotion(data.emotion as EmotionState);
+                }
+                if (data.audio) {
+                  videoCall.sendTtsAudio(data.audio);
+                }
+              }
+            } else {
+              await voiceMode.synthesizeAndPlay(
+                lastMsg.content,
+                refreshed.data.aiEmployee?.voiceId || undefined,
+              );
+            }
           }
         }
       }
@@ -163,7 +236,7 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
       setAiAvatarState("idle");
       setInput(text);
     }
-  }, [conversationId, sendMutation, refetch, voiceMode]);
+  }, [conversationId, sendMutation, refetch, voiceMode, isVideoCallActive, videoCall]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,6 +299,24 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
     }
   };
 
+  const handleVideoCallToggle = async () => {
+    if (isVideoCallActive) {
+      videoCall.endCall();
+      setIsVideoCallActive(false);
+    } else {
+      if (voiceMode.isVoiceMode) {
+        await voiceMode.toggleVoiceMode();
+      }
+      setIsVideoCallActive(true);
+      await videoCall.startCall();
+    }
+  };
+
+  const handleVideoCallEnd = () => {
+    videoCall.endCall();
+    setIsVideoCallActive(false);
+  };
+
   useEffect(() => {
     if (voiceMode.isRecording) {
       setAiAvatarState("listening");
@@ -238,8 +329,82 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
     }
   }, [voiceMode.isRecording, voiceMode.isTranscribing, voiceMode.isSynthesizing, voiceMode.isPlayingAudio, sendMutation.isPending]);
 
+  useEffect(() => {
+    if (videoCall.status === "ended" || videoCall.status === "failed") {
+      setIsVideoCallActive(false);
+    }
+  }, [videoCall.status]);
+
+  useEffect(() => {
+    if (autoStartVideoCall && conv && !isVideoCallActive && videoCall.status === "idle") {
+      setIsVideoCallActive(true);
+      videoCall.startCall();
+      onVideoCallAutoStarted?.();
+    }
+  }, [autoStartVideoCall, conv, isVideoCallActive, videoCall.status]);
+
+  useEffect(() => {
+    if (isVideoCallActive) {
+      if (videoCall.isTtsSpeaking) {
+        setAiAvatarState("speaking");
+      } else if (!sendMutation.isPending && aiAvatarState === "speaking") {
+        setAiAvatarState("idle");
+      }
+    }
+  }, [videoCall.isTtsSpeaking, isVideoCallActive, sendMutation.isPending, aiAvatarState]);
+
   if (isLoading) return <div className="flex-1 flex items-center justify-center">Loading...</div>;
   if (!conv) return null;
+
+  if (isVideoCallActive && (videoCall.status === "connecting" || videoCall.status === "connected" || videoCall.status === "reconnecting" || videoCall.status === "failed")) {
+    return (
+      <div className="flex flex-col flex-1">
+        <VideoCallSession
+          status={videoCall.status}
+          localStream={videoCall.localStream}
+          ttsAudioAnalyser={videoCall.ttsAudioAnalyser}
+          isMuted={videoCall.isMuted}
+          isCameraOff={videoCall.isCameraOff}
+          connectionQuality={videoCall.connectionQuality}
+          latencyMs={videoCall.latencyMs}
+          avatarUrl={conv.aiEmployee?.avatarUrl}
+          avatarName={conv.aiEmployee?.name}
+          emotion={currentEmotion}
+          isSpeaking={aiAvatarState === "speaking"}
+          isThinking={aiAvatarState === "thinking"}
+          isListening={aiAvatarState === "listening" || videoCall.isRecording}
+          isRecording={videoCall.isRecording}
+          isTranscribing={videoCall.isTranscribing}
+          onToggleMute={videoCall.toggleMute}
+          onToggleCamera={videoCall.toggleCamera}
+          onEndCall={handleVideoCallEnd}
+          onStartRecording={videoCall.startRecording}
+          onStopRecording={videoCall.stopRecording}
+          className="flex-1"
+        />
+
+        <div className="p-4 border-t border-border bg-card">
+          <form onSubmit={handleSend} className="relative flex items-center">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={`Message ${conv.aiEmployee?.name}...`}
+              className="pr-12 h-12 bg-background border-border"
+              disabled={sendMutation.isPending}
+            />
+            <Button
+              type="submit"
+              size="icon"
+              className="absolute right-1.5 h-9 w-9"
+              disabled={!input.trim() || sendMutation.isPending}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -283,6 +448,16 @@ function ChatWindow({ conversationId }: { conversationId: number }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleVideoCallToggle}
+            disabled={voiceMode.isVoiceMode}
+            className="gap-1"
+          >
+            <Video className="h-4 w-4" />
+            <span className="hidden sm:inline">Video Call</span>
+          </Button>
           <Button
             variant={voiceMode.isVoiceMode ? "default" : "outline"}
             size="sm"

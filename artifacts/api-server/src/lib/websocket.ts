@@ -5,6 +5,7 @@ import { logger } from "./logger";
 import { db } from "@workspace/db";
 import { organizations } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import { getVideoSessionData } from "../routes/videoCall";
 
 export type DomainEvent =
   | "task:created" | "task:updated" | "task:deleted" | "task:assigned"
@@ -122,6 +123,68 @@ export function initWebSocket(httpServer: HttpServer): Server {
         socket.leave(`org:${orgId}:${room}`);
       });
       socket.emit("unsubscribed", validRooms);
+    });
+
+    const videoCallSessions = new Set<string>();
+
+    const isInVideoSession = (sessionId: string) => videoCallSessions.has(sessionId);
+
+    socket.on("video-call:join", (sessionId: string) => {
+      if (typeof sessionId !== "string" || sessionId.length > 100) return;
+
+      const sessionData = getVideoSessionData(sessionId);
+      if (!sessionData) {
+        socket.emit("video-call:error", { message: "Invalid or expired video call session" });
+        return;
+      }
+      if (sessionData.orgId !== orgId || sessionData.clerkUserId !== clerkUserId) {
+        socket.emit("video-call:error", { message: "Not authorized for this video call session" });
+        return;
+      }
+
+      const room = `video-call:${sessionId}`;
+      videoCallSessions.add(sessionId);
+      socket.join(room);
+      socket.to(room).emit("video-call:peer-joined", { socketId: socket.id });
+      logger.info({ socketId: socket.id, sessionId }, "Client joined video call");
+    });
+
+    socket.on("video-call:leave", (sessionId: string) => {
+      if (!isInVideoSession(sessionId)) return;
+      const room = `video-call:${sessionId}`;
+      socket.to(room).emit("video-call:peer-left", { socketId: socket.id });
+      socket.leave(room);
+      videoCallSessions.delete(sessionId);
+      logger.info({ socketId: socket.id, sessionId }, "Client left video call");
+    });
+
+    socket.on("video-call:offer", (payload: { sessionId: string; sdp: unknown }) => {
+      if (!payload?.sessionId || !isInVideoSession(payload.sessionId)) return;
+      const room = `video-call:${payload.sessionId}`;
+      socket.to(room).emit("video-call:offer", { sdp: payload.sdp, from: socket.id });
+    });
+
+    socket.on("video-call:answer", (payload: { sessionId: string; sdp: unknown }) => {
+      if (!payload?.sessionId || !isInVideoSession(payload.sessionId)) return;
+      const room = `video-call:${payload.sessionId}`;
+      socket.to(room).emit("video-call:answer", { sdp: payload.sdp, from: socket.id });
+    });
+
+    socket.on("video-call:ice-candidate", (payload: { sessionId: string; candidate: unknown }) => {
+      if (!payload?.sessionId || !isInVideoSession(payload.sessionId)) return;
+      const room = `video-call:${payload.sessionId}`;
+      socket.to(room).emit("video-call:ice-candidate", { candidate: payload.candidate, from: socket.id });
+    });
+
+    socket.on("video-call:audio-data", (payload: { sessionId: string; audio: string; format: string }) => {
+      if (!payload?.sessionId || !isInVideoSession(payload.sessionId)) return;
+      const room = `video-call:${payload.sessionId}`;
+      socket.to(room).emit("video-call:audio-data", { audio: payload.audio, format: payload.format, from: socket.id });
+    });
+
+    socket.on("video-call:ping", (payload: { sessionId: string; ts: number }) => {
+      if (!payload?.sessionId || !isInVideoSession(payload.sessionId)) return;
+      socket.emit("video-call:pong", { ts: payload.ts });
     });
 
     socket.on("disconnect", (reason) => {

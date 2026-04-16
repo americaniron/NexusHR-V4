@@ -29,6 +29,7 @@ import {
   Calendar,
   Shield,
   Trash2,
+  Video,
 } from "lucide-react";
 
 interface PersonalityAxes {
@@ -180,6 +181,11 @@ export default function EmployeeDetailPage() {
             <Link href={`/conversations?agentId=${employee.id}`}>
               <Button variant="secondary" size="sm">
                 <MessageSquare className="mr-2 h-4 w-4" /> Chat
+              </Button>
+            </Link>
+            <Link href={`/conversations?agentId=${employee.id}&videoCall=true`}>
+              <Button variant="secondary" size="sm">
+                <Video className="mr-2 h-4 w-4" /> Video Call
               </Button>
             </Link>
           </div>
