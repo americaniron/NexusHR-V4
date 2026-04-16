@@ -36,7 +36,10 @@ import {
   Globe,
   AlertTriangle,
   RefreshCw,
+  Play,
+  Square,
 } from "lucide-react";
+import { useVoicePreview } from "@/hooks/use-voice-preview";
 
 const WIZARD_LANGUAGES = [
   { code: "en", name: "English" },
@@ -683,6 +686,21 @@ function CustomizeStep({
   isGeneratingAvatar: boolean;
   onGenerateAvatar: () => void;
 }) {
+  const voicePreview = useVoicePreview();
+
+  const handlePlayVoice = async (voiceId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await voicePreview.play(`voice-${voiceId}`, selectedLanguage, voiceId);
+    } catch {}
+  };
+
+  const handlePlayLanguage = async () => {
+    try {
+      await voicePreview.play(`lang-${selectedLanguage}`, selectedLanguage, selectedVoiceId || undefined);
+    } catch {}
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -747,18 +765,36 @@ function CustomizeStep({
               ) : voices.length > 0 ? (
                 <div className="grid grid-cols-2 gap-2 mt-1.5">
                   {voices.slice(0, 6).map((voice) => (
-                    <button
+                    <div
                       key={voice.voice_id}
-                      onClick={() => setSelectedVoiceId(voice.voice_id)}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition-all ${
                         selectedVoiceId === voice.voice_id
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border bg-background text-muted-foreground hover:border-primary/30"
                       }`}
                     >
-                      <Volume2 className="h-3 w-3" />
-                      {voice.name}
-                    </button>
+                      <button
+                        onClick={() => setSelectedVoiceId(voice.voice_id)}
+                        className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                      >
+                        <Volume2 className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{voice.name}</span>
+                      </button>
+                      <button
+                        onClick={(e) => handlePlayVoice(voice.voice_id, e)}
+                        disabled={voicePreview.loadingKey === `voice-${voice.voice_id}`}
+                        className="shrink-0 p-0.5 rounded hover:bg-primary/10 transition-colors"
+                        title="Play sample"
+                      >
+                        {voicePreview.loadingKey === `voice-${voice.voice_id}` ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : voicePreview.playingKey === `voice-${voice.voice_id}` ? (
+                          <Square className="h-3 w-3" />
+                        ) : (
+                          <Play className="h-3 w-3" />
+                        )}
+                      </button>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -770,18 +806,38 @@ function CustomizeStep({
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 <Globe className="h-3.5 w-3.5" /> Voice Language
               </Label>
-              <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                <SelectTrigger className="mt-1.5 w-full max-w-xs">
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WIZARD_LANGUAGES.map(lang => (
-                    <SelectItem key={lang.code} value={lang.code}>
-                      {lang.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2 mt-1.5">
+                <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                  <SelectTrigger className="w-full max-w-xs">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WIZARD_LANGUAGES.map(lang => (
+                      <SelectItem key={lang.code} value={lang.code}>
+                        {lang.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePlayLanguage}
+                  disabled={voicePreview.loadingKey === `lang-${selectedLanguage}`}
+                  className="shrink-0"
+                >
+                  {voicePreview.loadingKey === `lang-${selectedLanguage}` ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : voicePreview.playingKey === `lang-${selectedLanguage}` ? (
+                    <Square className="h-3.5 w-3.5" />
+                  ) : (
+                    <Play className="h-3.5 w-3.5" />
+                  )}
+                  <span className="ml-1.5">
+                    {voicePreview.loadingKey === `lang-${selectedLanguage}` ? "Loading..." : voicePreview.playingKey === `lang-${selectedLanguage}` ? "Stop" : "Play Sample"}
+                  </span>
+                </Button>
+              </div>
               <p className="text-[10px] text-muted-foreground mt-1">Choose the language for voice synthesis. Supports 29 languages via ElevenLabs multilingual model.</p>
             </div>
           </div>

@@ -8,8 +8,9 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
-import { MessageSquare, RotateCcw, Save, Info, Sparkles, Globe, Upload, Mic, Loader2, CheckCircle2 } from "lucide-react";
+import { MessageSquare, RotateCcw, Save, Info, Sparkles, Globe, Upload, Mic, Loader2, CheckCircle2, Play, Square } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useVoicePreview } from "@/hooks/use-voice-preview";
 
 interface PersonalityAxes {
   warmth: number;
@@ -195,6 +196,16 @@ export function PersonalityConfig({ employeeId, employeeName, initialPersonality
   const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null);
 
   const resolvedApiBase = apiBase || "/api";
+
+  const voicePreview = useVoicePreview({ apiBase: resolvedApiBase });
+
+  const handlePlayLanguagePreview = useCallback(async () => {
+    try {
+      await voicePreview.play(`lang-${voiceLanguage}`, voiceLanguage);
+    } catch {
+      toast({ title: "Preview failed", description: "Could not play voice sample. Please try again.", variant: "destructive" });
+    }
+  }, [voicePreview, voiceLanguage, toast]);
 
   useEffect(() => {
     if (initialPersonality) {
@@ -394,18 +405,38 @@ export function PersonalityConfig({ employeeId, employeeName, initialPersonality
               <CardDescription>Choose the language for {employeeName}'s voice output. Uses ElevenLabs multilingual model.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Select value={voiceLanguage} onValueChange={handleLanguageChange}>
-                <SelectTrigger className="w-full max-w-xs">
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent>
-                  {VOICE_LANGUAGES.map(lang => (
-                    <SelectItem key={lang.code} value={lang.code}>
-                      {lang.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                <Select value={voiceLanguage} onValueChange={handleLanguageChange}>
+                  <SelectTrigger className="w-full max-w-xs">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VOICE_LANGUAGES.map(lang => (
+                      <SelectItem key={lang.code} value={lang.code}>
+                        {lang.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePlayLanguagePreview}
+                  disabled={voicePreview.loadingKey === `lang-${voiceLanguage}`}
+                  className="shrink-0"
+                >
+                  {voicePreview.loadingKey === `lang-${voiceLanguage}` ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : voicePreview.playingKey === `lang-${voiceLanguage}` ? (
+                    <Square className="h-3.5 w-3.5" />
+                  ) : (
+                    <Play className="h-3.5 w-3.5" />
+                  )}
+                  <span className="ml-1.5">
+                    {voicePreview.loadingKey === `lang-${voiceLanguage}` ? "Loading..." : voicePreview.playingKey === `lang-${voiceLanguage}` ? "Stop" : "Play Sample"}
+                  </span>
+                </Button>
+              </div>
               <p className="text-[10px] text-muted-foreground mt-2">
                 The AI employee's voice synthesis will use this language. All 29 ElevenLabs-supported languages are available.
               </p>
