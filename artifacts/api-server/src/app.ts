@@ -70,6 +70,9 @@ const allowedOrigins = [
   `https://${process.env.REPLIT_DEV_DOMAIN}`,
   `https://${process.env.REPLIT_DEPLOYMENT_URL}`,
   process.env.FRONTEND_URL,
+  process.env.CUSTOM_DOMAIN ? `https://${process.env.CUSTOM_DOMAIN}` : null,
+  "https://aipeoplehr.com",
+  "https://www.aipeoplehr.com",
 ].filter(Boolean) as string[];
 
 if (process.env.NODE_ENV === "production" && !process.env.REPLIT_DEV_DOMAIN && !process.env.REPLIT_DEPLOYMENT_URL) {
