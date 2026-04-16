@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { AvatarVisualState, EmotionState } from "@/components/ai-avatar";
+import { useRealtimeSTT } from "./use-realtime-stt";
 
 export interface VisemeData {
   viseme: string;
@@ -9,6 +10,7 @@ export interface VisemeData {
 
 interface UseVoiceModeOptions {
   onTranscription?: (text: string) => void;
+  onPartialTranscript?: (text: string) => void;
   onError?: (error: string) => void;
   onEmotionChange?: (emotion: EmotionState) => void;
   onVisemesReady?: (visemes: VisemeData[]) => void;
@@ -32,6 +34,7 @@ interface UseVoiceModeReturn {
   audioLevel: number;
   currentEmotion: EmotionState;
   currentVisemes: VisemeData[];
+  partialTranscript: string;
   synthesizeAndPlay: (text: string, voiceId?: string, personality?: { energy?: number; formality?: number; warmth?: number }) => Promise<void>;
   stopAudio: () => void;
   micPermissionGranted: boolean;
@@ -40,7 +43,7 @@ interface UseVoiceModeReturn {
 
 export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeReturn {
   const {
-    onTranscription, onError, onEmotionChange, onVisemesReady, onBargeIn,
+    onTranscription, onPartialTranscript, onError, onEmotionChange, onVisemesReady, onBargeIn,
     enableBargeIn = true,
     bargeInThreshold = 0.15,
   } = options;
@@ -52,21 +55,38 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isBargedIn, setIsBargedIn] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0);
   const [micPermissionGranted, setMicPermissionGranted] = useState(false);
   const [currentEmotion, setCurrentEmotion] = useState<EmotionState>("neutral");
   const [currentVisemes, setCurrentVisemes] = useState<VisemeData[]>([]);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const audioContextRef = useRef<AudioContext | null>(null);
   const bargeInStreamRef = useRef<MediaStream | null>(null);
   const bargeInContextRef = useRef<AudioContext | null>(null);
   const bargeInIntervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
-  const analyserRef = useRef<AnalyserNode | null>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
-  const levelIntervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
-  const streamRef = useRef<MediaStream | null>(null);
+
+  const pendingTranscriptRef = useRef<string | null>(null);
+  const stopResolverRef = useRef<((text: string | null) => void) | null>(null);
+
+  const realtimeSTT = useRealtimeSTT({
+    apiBase,
+    language: "en",
+    onPartialTranscript: (text) => {
+      onPartialTranscript?.(text);
+    },
+    onFinalTranscript: (text) => {
+      if (text.trim()) {
+        pendingTranscriptRef.current = text;
+        onTranscription?.(text);
+        if (stopResolverRef.current) {
+          stopResolverRef.current(text);
+          stopResolverRef.current = null;
+        }
+      }
+    },
+    onError: (err) => {
+      onError?.(err);
+    },
+  });
 
   const avatarState: AvatarVisualState = isPlayingAudio
     ? "speaking"
@@ -91,29 +111,15 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
 
   const toggleVoiceMode = useCallback(async () => {
     if (isVoiceMode) {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-        streamRef.current = null;
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close().catch(() => {});
-        audioContextRef.current = null;
-      }
+      realtimeSTT.stopStreaming();
       if (audioPlayerRef.current) {
         audioPlayerRef.current.pause();
         audioPlayerRef.current = null;
-      }
-      if (levelIntervalRef.current) {
-        clearInterval(levelIntervalRef.current);
       }
       setIsRecording(false);
       setIsTranscribing(false);
       setIsSynthesizing(false);
       setIsPlayingAudio(false);
-      setAudioLevel(0);
       setIsVoiceMode(false);
     } else {
       const granted = await requestMicPermission();
@@ -121,126 +127,43 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
         setIsVoiceMode(true);
       }
     }
-  }, [isVoiceMode, requestMicPermission]);
+  }, [isVoiceMode, requestMicPermission, realtimeSTT]);
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 16000,
-        },
-      });
-      streamRef.current = stream;
-
-      const audioCtx = new AudioContext();
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      source.connect(analyser);
-      audioContextRef.current = audioCtx;
-      analyserRef.current = analyser;
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      levelIntervalRef.current = setInterval(() => {
-        analyser.getByteFrequencyData(dataArray);
-        const avg = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length;
-        setAudioLevel(avg / 255);
-      }, 100);
-
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
-
-      const recorder = new MediaRecorder(stream, { mimeType });
-      audioChunksRef.current = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          audioChunksRef.current.push(e.data);
-        }
-      };
-
-      recorder.start(250);
-      mediaRecorderRef.current = recorder;
       setIsRecording(true);
       setMicPermissionGranted(true);
+      pendingTranscriptRef.current = null;
+      await realtimeSTT.startStreaming();
     } catch {
       onError?.("Failed to start recording. Please check your microphone.");
+      setIsRecording(false);
     }
-  }, [onError]);
+  }, [onError, realtimeSTT]);
 
   const stopRecording = useCallback(async (): Promise<string | null> => {
+    setIsRecording(false);
+
+    if (realtimeSTT.isStreaming || realtimeSTT.isConnecting) {
+      realtimeSTT.stopStreaming();
+    }
+
+    if (pendingTranscriptRef.current) {
+      const text = pendingTranscriptRef.current;
+      pendingTranscriptRef.current = null;
+      return text;
+    }
+
     return new Promise((resolve) => {
-      const recorder = mediaRecorderRef.current;
-      if (!recorder || recorder.state === "inactive") {
-        setIsRecording(false);
-        resolve(null);
-        return;
-      }
-
-      recorder.onstop = async () => {
-        setIsRecording(false);
-
-        if (levelIntervalRef.current) {
-          clearInterval(levelIntervalRef.current);
+      stopResolverRef.current = resolve;
+      setTimeout(() => {
+        if (stopResolverRef.current) {
+          stopResolverRef.current(null);
+          stopResolverRef.current = null;
         }
-        setAudioLevel(0);
-
-        if (audioContextRef.current) {
-          audioContextRef.current.close().catch(() => {});
-          audioContextRef.current = null;
-        }
-
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(t => t.stop());
-          streamRef.current = null;
-        }
-
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        audioChunksRef.current = [];
-
-        if (audioBlob.size < 100) {
-          resolve(null);
-          return;
-        }
-
-        setIsTranscribing(true);
-        try {
-          const reader = new FileReader();
-          const base64Promise = new Promise<string>((res) => {
-            reader.onload = () => res(reader.result as string);
-            reader.readAsDataURL(audioBlob);
-          });
-          const base64 = await base64Promise;
-
-          const response = await fetch(`${apiBase}/voice/transcribe`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ audio: base64 }),
-          });
-
-          if (!response.ok) {
-            throw new Error("Transcription failed");
-          }
-
-          const data = await response.json();
-          const text = data.text || "";
-          onTranscription?.(text);
-          resolve(text);
-        } catch {
-          onError?.("Failed to transcribe audio. Please try again.");
-          resolve(null);
-        } finally {
-          setIsTranscribing(false);
-        }
-      };
-
-      recorder.stop();
+      }, 500);
     });
-  }, [apiBase, onTranscription, onError]);
+  }, [realtimeSTT]);
 
   const synthesizeAndPlay = useCallback(async (
     text: string,
@@ -328,7 +251,7 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
           const audio = new Audio(audioUrl);
           audioPlayerRef.current = audio;
 
-          const cleanup = () => {
+          const cleanupPlayback = () => {
             setIsPlayingAudio(false);
             setCurrentVisemes([]);
             URL.revokeObjectURL(audioUrl);
@@ -336,9 +259,9 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
             resolvePlayback();
           };
 
-          audio.onended = cleanup;
+          audio.onended = cleanupPlayback;
           audio.onerror = () => {
-            cleanup();
+            cleanupPlayback();
             rejectPlayback(new Error("Audio playback error"));
           };
 
@@ -392,7 +315,7 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
 
               const playbackTimeout = setTimeout(() => {
                 if (audioPlayerRef.current === audio) {
-                  cleanup();
+                  cleanupPlayback();
                 }
               }, 120_000);
 
@@ -528,7 +451,7 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
         }
       }, 100);
     } catch {
-      // silently fail — barge-in is optional
+      // barge-in is optional
     }
   }, [enableBargeIn, isVoiceMode, bargeInThreshold, onBargeIn, stopBargeInMonitor]);
 
@@ -552,20 +475,8 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
 
   useEffect(() => {
     return () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close().catch(() => {});
-      }
       if (audioPlayerRef.current) {
         audioPlayerRef.current.pause();
-      }
-      if (levelIntervalRef.current) {
-        clearInterval(levelIntervalRef.current);
       }
       if (bargeInIntervalRef.current) {
         clearInterval(bargeInIntervalRef.current);
@@ -585,14 +496,15 @@ export function useVoiceMode(options: UseVoiceModeOptions = {}): UseVoiceModeRet
     isRecording,
     startRecording,
     stopRecording,
-    isTranscribing,
+    isTranscribing: realtimeSTT.isConnecting,
     isSynthesizing,
     isPlayingAudio,
     isBargedIn,
     avatarState,
-    audioLevel,
+    audioLevel: realtimeSTT.isStreaming ? realtimeSTT.audioLevel : 0,
     currentEmotion,
     currentVisemes,
+    partialTranscript: realtimeSTT.partialText,
     synthesizeAndPlay,
     stopAudio,
     micPermissionGranted,

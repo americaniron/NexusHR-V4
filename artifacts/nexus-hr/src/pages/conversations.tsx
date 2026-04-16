@@ -137,6 +137,11 @@ function ChatWindow({ conversationId, autoStartVideoCall, onVideoCallAutoStarted
         handleSendText(text);
       }
     },
+    onPartialTranscript: (text) => {
+      if (text.trim()) {
+        setInput(text);
+      }
+    },
     onError: (error) => {
       toast({ title: "Voice Error", description: error, variant: "destructive" });
     },

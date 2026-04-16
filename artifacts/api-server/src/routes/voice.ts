@@ -1,6 +1,6 @@
 import express, { Router, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod/v4";
-import { textToSpeechStream, textToSpeechWithAlignment, cloneVoice, listClonedVoices, deleteClonedVoice, SUPPORTED_LANGUAGES } from "../lib/elevenlabs";
+import { textToSpeechStream, textToSpeechWithAlignment, cloneVoice, listClonedVoices, deleteClonedVoice, generateSttToken, SUPPORTED_LANGUAGES } from "../lib/elevenlabs";
 import { personalityToVoiceSettings, resolveVoiceProfile, type PersonalityAxes } from "../lib/voiceConfig";
 import { analyzeEmotion } from "../lib/emotionEngine";
 import { requireAuth } from "../middlewares/requireAuth";
@@ -192,6 +192,21 @@ router.post("/voice/synthesize-aligned", requireAuth, synthesizeLimit, validate(
       emotionIntensity: emotionAnalysis.intensity,
       voiceProfile: profile.label,
     });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("ElevenLabs")) {
+      next(AppError.badRequest(error.message));
+    } else {
+      next(error);
+    }
+  }
+});
+
+const sttTokenLimit = rateLimit({ windowMs: 60_000, max: 10, keyPrefix: "voice-stt-token" });
+
+router.get("/voice/stt-token", requireAuth, sttTokenLimit, async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const token = await generateSttToken();
+    res.json({ token });
   } catch (error) {
     if (error instanceof Error && error.message.includes("ElevenLabs")) {
       next(AppError.badRequest(error.message));

@@ -293,6 +293,20 @@ export async function deleteClonedVoice(voiceId: string): Promise<void> {
   }
 }
 
+export async function generateSttToken(): Promise<string> {
+  const response = await elevenLabsFetch(`/v1/speech-to-text/get-websocket-token`, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`ElevenLabs STT token error: ${response.status} ${errorText}`);
+  }
+
+  const data = await response.json() as { token: string };
+  return data.token;
+}
+
 export const SUPPORTED_LANGUAGES = [
   { code: "en", name: "English" },
   { code: "es", name: "Spanish" },
