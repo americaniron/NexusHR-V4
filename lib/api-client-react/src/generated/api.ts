@@ -41,11 +41,13 @@ import type {
   CreateBillingPortal200,
   CreateConversation,
   CreateInterview,
+  CreateProactiveRuleBody,
   CreateTask,
   CreateTicket,
   CreateVideoProjectBody,
   CreateWorkflow,
   DashboardSummary,
+  DeleteProactiveRule200,
   Employee,
   EmployeeList,
   GetAnalyticsOverviewParams,
@@ -67,6 +69,9 @@ import type {
   ListEmployeesParams,
   ListInvoices200,
   ListNotificationsParams,
+  ListProactiveExecutions200,
+  ListProactiveExecutionsParams,
+  ListProactiveRules200,
   ListRolesParams,
   ListTasksParams,
   ListTicketsParams,
@@ -80,6 +85,7 @@ import type {
   NotificationItem,
   NotificationList,
   Organization,
+  ProactiveRule,
   RevokeApiKey200,
   Role,
   RoleList,
@@ -95,6 +101,7 @@ import type {
   TranscriptionResult,
   UpdateEmployee,
   UpdateOrganization,
+  UpdateProactiveRuleBody,
   UpdateTask,
   UpdateWorkflow,
   UploadUrlRequest,
@@ -6049,6 +6056,646 @@ export function useListVideoTemplates<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListVideoTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List proactive rules for an AI employee
+ */
+export const getListProactiveRulesUrl = (employeeId: number) => {
+  return `/api/proactive-rules/employee/${employeeId}`;
+};
+
+export const listProactiveRules = async (
+  employeeId: number,
+  options?: RequestInit,
+): Promise<ListProactiveRules200> => {
+  return customFetch<ListProactiveRules200>(
+    getListProactiveRulesUrl(employeeId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListProactiveRulesQueryKey = (employeeId: number) => {
+  return [`/api/proactive-rules/employee/${employeeId}`] as const;
+};
+
+export const getListProactiveRulesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listProactiveRules>>,
+  TError = ErrorType<unknown>,
+>(
+  employeeId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listProactiveRules>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListProactiveRulesQueryKey(employeeId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listProactiveRules>>
+  > = ({ signal }) =>
+    listProactiveRules(employeeId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!employeeId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listProactiveRules>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListProactiveRulesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listProactiveRules>>
+>;
+export type ListProactiveRulesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List proactive rules for an AI employee
+ */
+
+export function useListProactiveRules<
+  TData = Awaited<ReturnType<typeof listProactiveRules>>,
+  TError = ErrorType<unknown>,
+>(
+  employeeId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listProactiveRules>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListProactiveRulesQueryOptions(employeeId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a proactive rule
+ */
+export const getCreateProactiveRuleUrl = () => {
+  return `/api/proactive-rules`;
+};
+
+export const createProactiveRule = async (
+  createProactiveRuleBody: CreateProactiveRuleBody,
+  options?: RequestInit,
+): Promise<ProactiveRule> => {
+  return customFetch<ProactiveRule>(getCreateProactiveRuleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createProactiveRuleBody),
+  });
+};
+
+export const getCreateProactiveRuleMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProactiveRule>>,
+    TError,
+    { data: BodyType<CreateProactiveRuleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createProactiveRule>>,
+  TError,
+  { data: BodyType<CreateProactiveRuleBody> },
+  TContext
+> => {
+  const mutationKey = ["createProactiveRule"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createProactiveRule>>,
+    { data: BodyType<CreateProactiveRuleBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createProactiveRule(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateProactiveRuleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createProactiveRule>>
+>;
+export type CreateProactiveRuleMutationBody = BodyType<CreateProactiveRuleBody>;
+export type CreateProactiveRuleMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a proactive rule
+ */
+export const useCreateProactiveRule = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProactiveRule>>,
+    TError,
+    { data: BodyType<CreateProactiveRuleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createProactiveRule>>,
+  TError,
+  { data: BodyType<CreateProactiveRuleBody> },
+  TContext
+> => {
+  return useMutation(getCreateProactiveRuleMutationOptions(options));
+};
+
+/**
+ * @summary Get a proactive rule
+ */
+export const getGetProactiveRuleUrl = (id: number) => {
+  return `/api/proactive-rules/${id}`;
+};
+
+export const getProactiveRule = async (
+  id: number,
+  options?: RequestInit,
+): Promise<ProactiveRule> => {
+  return customFetch<ProactiveRule>(getGetProactiveRuleUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProactiveRuleQueryKey = (id: number) => {
+  return [`/api/proactive-rules/${id}`] as const;
+};
+
+export const getGetProactiveRuleQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProactiveRule>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProactiveRule>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetProactiveRuleQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProactiveRule>>
+  > = ({ signal }) => getProactiveRule(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProactiveRule>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProactiveRuleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProactiveRule>>
+>;
+export type GetProactiveRuleQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get a proactive rule
+ */
+
+export function useGetProactiveRule<
+  TData = Awaited<ReturnType<typeof getProactiveRule>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProactiveRule>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProactiveRuleQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a proactive rule
+ */
+export const getUpdateProactiveRuleUrl = (id: number) => {
+  return `/api/proactive-rules/${id}`;
+};
+
+export const updateProactiveRule = async (
+  id: number,
+  updateProactiveRuleBody: UpdateProactiveRuleBody,
+  options?: RequestInit,
+): Promise<ProactiveRule> => {
+  return customFetch<ProactiveRule>(getUpdateProactiveRuleUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateProactiveRuleBody),
+  });
+};
+
+export const getUpdateProactiveRuleMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProactiveRule>>,
+    TError,
+    { id: number; data: BodyType<UpdateProactiveRuleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateProactiveRule>>,
+  TError,
+  { id: number; data: BodyType<UpdateProactiveRuleBody> },
+  TContext
+> => {
+  const mutationKey = ["updateProactiveRule"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateProactiveRule>>,
+    { id: number; data: BodyType<UpdateProactiveRuleBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateProactiveRule(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateProactiveRuleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateProactiveRule>>
+>;
+export type UpdateProactiveRuleMutationBody = BodyType<UpdateProactiveRuleBody>;
+export type UpdateProactiveRuleMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a proactive rule
+ */
+export const useUpdateProactiveRule = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProactiveRule>>,
+    TError,
+    { id: number; data: BodyType<UpdateProactiveRuleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateProactiveRule>>,
+  TError,
+  { id: number; data: BodyType<UpdateProactiveRuleBody> },
+  TContext
+> => {
+  return useMutation(getUpdateProactiveRuleMutationOptions(options));
+};
+
+/**
+ * @summary Delete a proactive rule
+ */
+export const getDeleteProactiveRuleUrl = (id: number) => {
+  return `/api/proactive-rules/${id}`;
+};
+
+export const deleteProactiveRule = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeleteProactiveRule200> => {
+  return customFetch<DeleteProactiveRule200>(getDeleteProactiveRuleUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteProactiveRuleMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteProactiveRule>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteProactiveRule>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteProactiveRule"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteProactiveRule>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteProactiveRule(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteProactiveRuleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteProactiveRule>>
+>;
+
+export type DeleteProactiveRuleMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a proactive rule
+ */
+export const useDeleteProactiveRule = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteProactiveRule>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteProactiveRule>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteProactiveRuleMutationOptions(options));
+};
+
+/**
+ * @summary Toggle a proactive rule enabled/disabled
+ */
+export const getToggleProactiveRuleUrl = (id: number) => {
+  return `/api/proactive-rules/${id}/toggle`;
+};
+
+export const toggleProactiveRule = async (
+  id: number,
+  options?: RequestInit,
+): Promise<ProactiveRule> => {
+  return customFetch<ProactiveRule>(getToggleProactiveRuleUrl(id), {
+    ...options,
+    method: "PATCH",
+  });
+};
+
+export const getToggleProactiveRuleMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof toggleProactiveRule>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof toggleProactiveRule>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["toggleProactiveRule"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof toggleProactiveRule>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return toggleProactiveRule(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ToggleProactiveRuleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof toggleProactiveRule>>
+>;
+
+export type ToggleProactiveRuleMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Toggle a proactive rule enabled/disabled
+ */
+export const useToggleProactiveRule = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof toggleProactiveRule>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof toggleProactiveRule>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getToggleProactiveRuleMutationOptions(options));
+};
+
+/**
+ * @summary List executions for a proactive rule
+ */
+export const getListProactiveExecutionsUrl = (
+  id: number,
+  params?: ListProactiveExecutionsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/proactive-rules/${id}/executions?${stringifiedParams}`
+    : `/api/proactive-rules/${id}/executions`;
+};
+
+export const listProactiveExecutions = async (
+  id: number,
+  params?: ListProactiveExecutionsParams,
+  options?: RequestInit,
+): Promise<ListProactiveExecutions200> => {
+  return customFetch<ListProactiveExecutions200>(
+    getListProactiveExecutionsUrl(id, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListProactiveExecutionsQueryKey = (
+  id: number,
+  params?: ListProactiveExecutionsParams,
+) => {
+  return [
+    `/api/proactive-rules/${id}/executions`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListProactiveExecutionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listProactiveExecutions>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params?: ListProactiveExecutionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listProactiveExecutions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListProactiveExecutionsQueryKey(id, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listProactiveExecutions>>
+  > = ({ signal }) =>
+    listProactiveExecutions(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listProactiveExecutions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListProactiveExecutionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listProactiveExecutions>>
+>;
+export type ListProactiveExecutionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List executions for a proactive rule
+ */
+
+export function useListProactiveExecutions<
+  TData = Awaited<ReturnType<typeof listProactiveExecutions>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params?: ListProactiveExecutionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listProactiveExecutions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListProactiveExecutionsQueryOptions(
+    id,
+    params,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

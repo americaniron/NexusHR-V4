@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AIAvatar } from "@/components/ai-avatar";
 import { AudioWaveformPlayer } from "@/components/audio-waveform-player";
-import { User } from "lucide-react";
+import { User, Sparkles } from "lucide-react";
 import type { ChatMessageData } from "./types";
 import { TextMessage } from "./text-message";
 import { VoiceTranscription } from "./voice-transcription";
@@ -46,6 +46,7 @@ export function ChatMessage({
   const emotion = message.metadata?.emotion;
   const quickReplies = message.metadata?.quickReplies || [];
   const emotionBadge = emotion && emotion !== "neutral" ? EMOTION_BADGES[emotion] : null;
+  const isProactive = messageType === "proactive" || message.metadata?.proactive;
 
   if (messageType === "status_update") {
     return (
@@ -72,13 +73,20 @@ export function ChatMessage({
       )}
 
       <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
-        {emotionBadge && !isUser && (
+        {isProactive && !isUser && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 mb-1 text-[10px] font-medium rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20">
+            <Sparkles className="h-3 w-3" />
+            Proactive{message.metadata?.proactiveRuleName ? ` — ${message.metadata.proactiveRuleName}` : ""}
+          </span>
+        )}
+
+        {emotionBadge && !isUser && !isProactive && (
           <span className={`inline-flex items-center px-2 py-0.5 mb-1 text-[10px] font-medium rounded-full border ${emotionBadge.className}`}>
             {emotionBadge.label}
           </span>
         )}
 
-        {messageType === "text" && <TextMessage message={message} isUser={isUser} />}
+        {(messageType === "text" || messageType === "proactive") && <TextMessage message={message} isUser={isUser} />}
         {messageType === "voice_transcription" && <VoiceTranscription message={message} isUser={isUser} />}
         {messageType === "data_card" && <DataCard message={message} />}
         {messageType === "file_attachment" && <FileAttachment message={message} />}

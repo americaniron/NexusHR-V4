@@ -26,6 +26,7 @@ import apiKeysRouter from "./api-keys";
 import ariaRouter from "./aria";
 import videoCallRouter from "./videoCall";
 import memoryRouter from "./memory";
+import proactiveRulesRouter from "./proactive-rules";
 
 const router: IRouter = Router();
 
@@ -56,5 +57,6 @@ router.use(apiKeysRouter);
 router.use(ariaRouter);
 router.use(videoCallRouter);
 router.use(memoryRouter);
+router.use(proactiveRulesRouter);
 
 export default router;

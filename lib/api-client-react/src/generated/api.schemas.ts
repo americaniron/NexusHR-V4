@@ -850,6 +850,138 @@ export interface VideoTemplate {
   duration?: number;
 }
 
+export type ProactiveRuleType =
+  (typeof ProactiveRuleType)[keyof typeof ProactiveRuleType];
+
+export const ProactiveRuleType = {
+  scheduled: "scheduled",
+  trigger: "trigger",
+} as const;
+
+export type ProactiveRuleTriggerConditions = { [key: string]: unknown } | null;
+
+export type ProactiveRuleActionType =
+  (typeof ProactiveRuleActionType)[keyof typeof ProactiveRuleActionType];
+
+export const ProactiveRuleActionType = {
+  send_message: "send_message",
+  create_task: "create_task",
+  send_summary: "send_summary",
+} as const;
+
+export type ProactiveRuleActionConfig = { [key: string]: unknown } | null;
+
+export interface ProactiveRule {
+  id: number;
+  orgId: number;
+  aiEmployeeId: number;
+  name: string;
+  description?: string | null;
+  type: ProactiveRuleType;
+  schedule?: string | null;
+  triggerEvent?: string | null;
+  triggerConditions?: ProactiveRuleTriggerConditions;
+  actionType: ProactiveRuleActionType;
+  actionConfig?: ProactiveRuleActionConfig;
+  messageTemplate?: string | null;
+  enabled: boolean;
+  maxPerDay: number;
+  lastFiredAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateProactiveRuleBodyType =
+  (typeof CreateProactiveRuleBodyType)[keyof typeof CreateProactiveRuleBodyType];
+
+export const CreateProactiveRuleBodyType = {
+  scheduled: "scheduled",
+  trigger: "trigger",
+} as const;
+
+export type CreateProactiveRuleBodyTriggerConditions = {
+  [key: string]: unknown;
+};
+
+export type CreateProactiveRuleBodyActionType =
+  (typeof CreateProactiveRuleBodyActionType)[keyof typeof CreateProactiveRuleBodyActionType];
+
+export const CreateProactiveRuleBodyActionType = {
+  send_message: "send_message",
+  create_task: "create_task",
+  send_summary: "send_summary",
+} as const;
+
+export type CreateProactiveRuleBodyActionConfig = { [key: string]: unknown };
+
+export interface CreateProactiveRuleBody {
+  aiEmployeeId: number;
+  name: string;
+  description?: string;
+  type: CreateProactiveRuleBodyType;
+  schedule?: string;
+  triggerEvent?: string;
+  triggerConditions?: CreateProactiveRuleBodyTriggerConditions;
+  actionType?: CreateProactiveRuleBodyActionType;
+  actionConfig?: CreateProactiveRuleBodyActionConfig;
+  messageTemplate?: string;
+  enabled?: boolean;
+  maxPerDay?: number;
+}
+
+export type UpdateProactiveRuleBodyTriggerConditions = {
+  [key: string]: unknown;
+};
+
+export type UpdateProactiveRuleBodyActionType =
+  (typeof UpdateProactiveRuleBodyActionType)[keyof typeof UpdateProactiveRuleBodyActionType];
+
+export const UpdateProactiveRuleBodyActionType = {
+  send_message: "send_message",
+  create_task: "create_task",
+  send_summary: "send_summary",
+} as const;
+
+export type UpdateProactiveRuleBodyActionConfig = { [key: string]: unknown };
+
+export interface UpdateProactiveRuleBody {
+  name?: string;
+  description?: string;
+  schedule?: string;
+  triggerEvent?: string;
+  triggerConditions?: UpdateProactiveRuleBodyTriggerConditions;
+  actionType?: UpdateProactiveRuleBodyActionType;
+  actionConfig?: UpdateProactiveRuleBodyActionConfig;
+  messageTemplate?: string;
+  enabled?: boolean;
+  maxPerDay?: number;
+}
+
+export type ProactiveExecutionStatus =
+  (typeof ProactiveExecutionStatus)[keyof typeof ProactiveExecutionStatus];
+
+export const ProactiveExecutionStatus = {
+  pending: "pending",
+  completed: "completed",
+  failed: "failed",
+} as const;
+
+export type ProactiveExecutionTriggerData = { [key: string]: unknown } | null;
+
+export interface ProactiveExecution {
+  id: number;
+  ruleId: number;
+  orgId: number;
+  aiEmployeeId: number;
+  status: ProactiveExecutionStatus;
+  triggerData?: ProactiveExecutionTriggerData;
+  messageContent?: string | null;
+  conversationId?: number | null;
+  messageId?: number | null;
+  error?: string | null;
+  executedAt: string;
+}
+
 export type PageParamParameter = number;
 
 export type LimitParamParameter = number;
@@ -1084,4 +1216,22 @@ export type CreateVideoProjectBody = {
 
 export type ListVideoTemplates200 = {
   data?: VideoTemplate[];
+};
+
+export type ListProactiveRules200 = {
+  data?: ProactiveRule[];
+};
+
+export type DeleteProactiveRule200 = {
+  success?: boolean;
+};
+
+export type ListProactiveExecutionsParams = {
+  page?: number;
+  limit?: number;
+};
+
+export type ListProactiveExecutions200 = {
+  data?: ProactiveExecution[];
+  pagination?: Pagination;
 };

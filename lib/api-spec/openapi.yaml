@@ -46,6 +46,8 @@ tags:
     description: AI avatar generation and management
   - name: video-studio
     description: HeyGen Video Agent with Seedance 2.0 integration
+  - name: proactive-rules
+    description: Proactive AI employee behavior rules
 
 paths:
   /healthz:
@@ -1451,6 +1453,164 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/VideoTemplate"
+
+  /proactive-rules/employee/{employeeId}:
+    get:
+      tags: [proactive-rules]
+      operationId: listProactiveRules
+      summary: List proactive rules for an AI employee
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of proactive rules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProactiveRule"
+
+  /proactive-rules:
+    post:
+      tags: [proactive-rules]
+      operationId: createProactiveRule
+      summary: Create a proactive rule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProactiveRuleBody"
+      responses:
+        "201":
+          description: Created proactive rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProactiveRule"
+
+  /proactive-rules/{id}:
+    get:
+      tags: [proactive-rules]
+      operationId: getProactiveRule
+      summary: Get a proactive rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Proactive rule detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProactiveRule"
+    put:
+      tags: [proactive-rules]
+      operationId: updateProactiveRule
+      summary: Update a proactive rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProactiveRuleBody"
+      responses:
+        "200":
+          description: Updated proactive rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProactiveRule"
+    delete:
+      tags: [proactive-rules]
+      operationId: deleteProactiveRule
+      summary: Delete a proactive rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deletion result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /proactive-rules/{id}/toggle:
+    patch:
+      tags: [proactive-rules]
+      operationId: toggleProactiveRule
+      summary: Toggle a proactive rule enabled/disabled
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Toggled proactive rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProactiveRule"
+
+  /proactive-rules/{id}/executions:
+    get:
+      tags: [proactive-rules]
+      operationId: listProactiveExecutions
+      summary: List executions for a proactive rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated execution history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProactiveExecution"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
 
 components:
   parameters:
@@ -2865,3 +3025,146 @@ components:
           type: string
         duration:
           type: integer
+
+    ProactiveRule:
+      type: object
+      required: [id, orgId, aiEmployeeId, name, type, actionType, enabled, maxPerDay, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        orgId:
+          type: integer
+        aiEmployeeId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [scheduled, trigger]
+        schedule:
+          type: string
+          nullable: true
+        triggerEvent:
+          type: string
+          nullable: true
+        triggerConditions:
+          type: object
+          nullable: true
+        actionType:
+          type: string
+          enum: [send_message, create_task, send_summary]
+        actionConfig:
+          type: object
+          nullable: true
+        messageTemplate:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+        maxPerDay:
+          type: integer
+        lastFiredAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateProactiveRuleBody:
+      type: object
+      required: [aiEmployeeId, name, type]
+      properties:
+        aiEmployeeId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [scheduled, trigger]
+        schedule:
+          type: string
+        triggerEvent:
+          type: string
+        triggerConditions:
+          type: object
+        actionType:
+          type: string
+          enum: [send_message, create_task, send_summary]
+        actionConfig:
+          type: object
+        messageTemplate:
+          type: string
+        enabled:
+          type: boolean
+          default: true
+        maxPerDay:
+          type: integer
+          default: 5
+
+    UpdateProactiveRuleBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        schedule:
+          type: string
+        triggerEvent:
+          type: string
+        triggerConditions:
+          type: object
+        actionType:
+          type: string
+          enum: [send_message, create_task, send_summary]
+        actionConfig:
+          type: object
+        messageTemplate:
+          type: string
+        enabled:
+          type: boolean
+        maxPerDay:
+          type: integer
+
+    ProactiveExecution:
+      type: object
+      required: [id, ruleId, orgId, aiEmployeeId, status, executedAt]
+      properties:
+        id:
+          type: integer
+        ruleId:
+          type: integer
+        orgId:
+          type: integer
+        aiEmployeeId:
+          type: integer
+        status:
+          type: string
+          enum: [pending, completed, failed]
+        triggerData:
+          type: object
+          nullable: true
+        messageContent:
+          type: string
+          nullable: true
+        conversationId:
+          type: integer
+          nullable: true
+        messageId:
+          type: integer
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        executedAt:
+          type: string
+          format: date-time

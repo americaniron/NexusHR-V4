@@ -7,6 +7,7 @@ import { initializeEmailTransport } from "./lib/email";
 import { startBillingScheduler } from "./lib/billing/scheduler";
 import { startMemoryConsolidation } from "./lib/memoryConsolidation";
 import { ensurePgvector } from "./lib/ensurePgvector";
+import { startProactiveScheduler } from "./services/proactive/scheduler";
 
 const rawPort = process.env["PORT"];
 
@@ -27,6 +28,7 @@ const httpServer = createServer(app);
 initWebSocket(httpServer);
 initializeEmailTransport();
 startBillingScheduler();
+startProactiveScheduler();
 
 ensurePgvector()
   .then(() => startMemoryConsolidation(30))

@@ -2056,3 +2056,206 @@ export const ListVideoTemplatesResponse = zod.object({
     )
     .optional(),
 });
+
+/**
+ * @summary List proactive rules for an AI employee
+ */
+export const ListProactiveRulesParams = zod.object({
+  employeeId: zod.coerce.number(),
+});
+
+export const ListProactiveRulesResponse = zod.object({
+  data: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        orgId: zod.number(),
+        aiEmployeeId: zod.number(),
+        name: zod.string(),
+        description: zod.string().nullish(),
+        type: zod.enum(["scheduled", "trigger"]),
+        schedule: zod.string().nullish(),
+        triggerEvent: zod.string().nullish(),
+        triggerConditions: zod.object({}).passthrough().nullish(),
+        actionType: zod.enum(["send_message", "create_task", "send_summary"]),
+        actionConfig: zod.object({}).passthrough().nullish(),
+        messageTemplate: zod.string().nullish(),
+        enabled: zod.boolean(),
+        maxPerDay: zod.number(),
+        lastFiredAt: zod.coerce.date().nullish(),
+        createdAt: zod.coerce.date(),
+        updatedAt: zod.coerce.date(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Create a proactive rule
+ */
+export const createProactiveRuleBodyEnabledDefault = true;
+export const createProactiveRuleBodyMaxPerDayDefault = 5;
+
+export const CreateProactiveRuleBody = zod.object({
+  aiEmployeeId: zod.number(),
+  name: zod.string(),
+  description: zod.string().optional(),
+  type: zod.enum(["scheduled", "trigger"]),
+  schedule: zod.string().optional(),
+  triggerEvent: zod.string().optional(),
+  triggerConditions: zod.object({}).passthrough().optional(),
+  actionType: zod
+    .enum(["send_message", "create_task", "send_summary"])
+    .optional(),
+  actionConfig: zod.object({}).passthrough().optional(),
+  messageTemplate: zod.string().optional(),
+  enabled: zod.boolean().default(createProactiveRuleBodyEnabledDefault),
+  maxPerDay: zod.number().default(createProactiveRuleBodyMaxPerDayDefault),
+});
+
+/**
+ * @summary Get a proactive rule
+ */
+export const GetProactiveRuleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetProactiveRuleResponse = zod.object({
+  id: zod.number(),
+  orgId: zod.number(),
+  aiEmployeeId: zod.number(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  type: zod.enum(["scheduled", "trigger"]),
+  schedule: zod.string().nullish(),
+  triggerEvent: zod.string().nullish(),
+  triggerConditions: zod.object({}).passthrough().nullish(),
+  actionType: zod.enum(["send_message", "create_task", "send_summary"]),
+  actionConfig: zod.object({}).passthrough().nullish(),
+  messageTemplate: zod.string().nullish(),
+  enabled: zod.boolean(),
+  maxPerDay: zod.number(),
+  lastFiredAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Update a proactive rule
+ */
+export const UpdateProactiveRuleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateProactiveRuleBody = zod.object({
+  name: zod.string().optional(),
+  description: zod.string().optional(),
+  schedule: zod.string().optional(),
+  triggerEvent: zod.string().optional(),
+  triggerConditions: zod.object({}).passthrough().optional(),
+  actionType: zod
+    .enum(["send_message", "create_task", "send_summary"])
+    .optional(),
+  actionConfig: zod.object({}).passthrough().optional(),
+  messageTemplate: zod.string().optional(),
+  enabled: zod.boolean().optional(),
+  maxPerDay: zod.number().optional(),
+});
+
+export const UpdateProactiveRuleResponse = zod.object({
+  id: zod.number(),
+  orgId: zod.number(),
+  aiEmployeeId: zod.number(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  type: zod.enum(["scheduled", "trigger"]),
+  schedule: zod.string().nullish(),
+  triggerEvent: zod.string().nullish(),
+  triggerConditions: zod.object({}).passthrough().nullish(),
+  actionType: zod.enum(["send_message", "create_task", "send_summary"]),
+  actionConfig: zod.object({}).passthrough().nullish(),
+  messageTemplate: zod.string().nullish(),
+  enabled: zod.boolean(),
+  maxPerDay: zod.number(),
+  lastFiredAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete a proactive rule
+ */
+export const DeleteProactiveRuleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteProactiveRuleResponse = zod.object({
+  success: zod.boolean().optional(),
+});
+
+/**
+ * @summary Toggle a proactive rule enabled/disabled
+ */
+export const ToggleProactiveRuleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ToggleProactiveRuleResponse = zod.object({
+  id: zod.number(),
+  orgId: zod.number(),
+  aiEmployeeId: zod.number(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  type: zod.enum(["scheduled", "trigger"]),
+  schedule: zod.string().nullish(),
+  triggerEvent: zod.string().nullish(),
+  triggerConditions: zod.object({}).passthrough().nullish(),
+  actionType: zod.enum(["send_message", "create_task", "send_summary"]),
+  actionConfig: zod.object({}).passthrough().nullish(),
+  messageTemplate: zod.string().nullish(),
+  enabled: zod.boolean(),
+  maxPerDay: zod.number(),
+  lastFiredAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary List executions for a proactive rule
+ */
+export const ListProactiveExecutionsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListProactiveExecutionsQueryParams = zod.object({
+  page: zod.coerce.number().optional(),
+  limit: zod.coerce.number().optional(),
+});
+
+export const ListProactiveExecutionsResponse = zod.object({
+  data: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        ruleId: zod.number(),
+        orgId: zod.number(),
+        aiEmployeeId: zod.number(),
+        status: zod.enum(["pending", "completed", "failed"]),
+        triggerData: zod.object({}).passthrough().nullish(),
+        messageContent: zod.string().nullish(),
+        conversationId: zod.number().nullish(),
+        messageId: zod.number().nullish(),
+        error: zod.string().nullish(),
+        executedAt: zod.coerce.date(),
+      }),
+    )
+    .optional(),
+  pagination: zod
+    .object({
+      page: zod.number(),
+      limit: zod.number(),
+      total: zod.number(),
+      totalPages: zod.number(),
+    })
+    .optional(),
+});

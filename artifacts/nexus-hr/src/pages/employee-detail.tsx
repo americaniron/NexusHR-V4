@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AIAvatar } from "@/components/ai-avatar";
 import { PersonalityConfig } from "@/components/personality-config";
+import { ProactiveBehaviors } from "@/components/proactive-behaviors";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +31,7 @@ import {
   Shield,
   Trash2,
   Video,
+  Sparkles,
 } from "lucide-react";
 
 interface PersonalityAxes {
@@ -241,6 +243,9 @@ export default function EmployeeDetailPage() {
           <TabsTrigger value="activity" className="gap-2">
             <Activity className="h-4 w-4" /> Activity
           </TabsTrigger>
+          <TabsTrigger value="proactive" className="gap-2">
+            <Sparkles className="h-4 w-4" /> Proactive
+          </TabsTrigger>
           <TabsTrigger value="personality" className="gap-2">
             <Brain className="h-4 w-4" /> Personality
           </TabsTrigger>
@@ -294,6 +299,14 @@ export default function EmployeeDetailPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="proactive" className="mt-6">
+          <ProactiveBehaviors
+            employeeId={employeeId}
+            employeeName={employee.name}
+            apiBase={apiBase}
+          />
         </TabsContent>
 
         <TabsContent value="personality" className="mt-6">

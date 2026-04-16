@@ -14,7 +14,8 @@ export type DomainEvent =
   | "conversation:message" | "conversation:typing"
   | "workflow:started" | "workflow:completed" | "workflow:failed"
   | "integration:connected" | "integration:disconnected"
-  | "billing:alert_email" | "billing:plan_changed" | "billing:payment_failed";
+  | "billing:alert_email" | "billing:plan_changed" | "billing:payment_failed"
+  | "proactive:rule_fired" | "proactive:rule_created" | "proactive:rule_updated";
 
 export type Room = "tasks" | "employees" | "notifications" | "conversations" | "workflows" | "integrations" | "billing";
 

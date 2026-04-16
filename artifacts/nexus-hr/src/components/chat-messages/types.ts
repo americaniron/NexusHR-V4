@@ -6,7 +6,8 @@ export type MessageType =
   | "action_confirmation"
   | "status_update"
   | "quick_reply"
-  | "escalation_notice";
+  | "escalation_notice"
+  | "proactive";
 
 export type EmotionState =
   | "neutral"
@@ -38,6 +39,10 @@ export interface ChatMessageData {
     progressLabel?: string;
     escalationLevel?: "low" | "medium" | "high" | "critical";
     escalationReason?: string;
+    proactive?: boolean;
+    proactiveRuleName?: string;
+    proactiveType?: string;
+    triggerEvent?: string;
   };
   audioUrl?: string | null;
   createdAt?: string;
