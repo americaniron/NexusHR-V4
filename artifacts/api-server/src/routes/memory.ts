@@ -138,7 +138,8 @@ router.post("/memory/backfill", requireAuth, async (req, res, next) => {
     }
 
     const batchSize = Math.min(500, Math.max(1, parseInt(req.body?.batchSize) || 100));
-    const result = await backfillEmbeddings(batchSize, orgId);
+    const reembedAll = req.body?.reembedAll === true;
+    const result = await backfillEmbeddings(batchSize, orgId, reembedAll);
 
     res.json({
       message: "Embedding backfill complete",

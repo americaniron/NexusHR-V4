@@ -1,6 +1,6 @@
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { relationalMemories } from "@workspace/db/schema";
-import { eq, and, desc, sql, isNull } from "drizzle-orm";
+import { eq, and, desc, sql, isNull, gt, asc } from "drizzle-orm";
 import { generateEmbedding, formatVectorForPg, EMBEDDING_DIMENSIONS } from "./embeddingService";
 import { logger } from "./logger";
 
@@ -49,7 +49,7 @@ export async function storeMemory(
 
   let embedding: number[] | null = null;
   try {
-    embedding = generateEmbedding(entry.content);
+    embedding = await generateEmbedding(entry.content);
   } catch (err) {
     logger.warn({ err }, "Failed to generate embedding for memory, storing without vector");
   }
@@ -137,7 +137,7 @@ async function retrieveMemoriesHybrid(
 ): Promise<Array<typeof relationalMemories.$inferSelect>> {
   let queryEmbedding: number[];
   try {
-    queryEmbedding = generateEmbedding(queryText);
+    queryEmbedding = await generateEmbedding(queryText);
   } catch (err) {
     logger.warn({ err }, "Failed to generate query embedding, falling back to non-vector retrieval");
     return retrieveMemories(userId, aiEmployeeId, {
@@ -232,35 +232,70 @@ export async function deleteUserMemories(userId: number, aiEmployeeId: number): 
   );
 }
 
-export async function backfillEmbeddings(batchSize: number = 100, orgId?: number): Promise<{ processed: number; errors: number }> {
-  let processed = 0;
-  let errors = 0;
+export async function backfillEmbeddings(batchSize: number = 100, orgId?: number, reembedAll: boolean = false): Promise<{ processed: number; errors: number }> {
+  let totalProcessed = 0;
+  let totalErrors = 0;
+  let cursor = 0;
 
-  const conditions = [isNull(relationalMemories.embedding)];
-  if (orgId) {
-    conditions.push(eq(relationalMemories.orgId, orgId));
-  }
-
-  const unembedded = await db
-    .select({ id: relationalMemories.id, content: relationalMemories.content })
-    .from(relationalMemories)
-    .where(and(...conditions))
-    .limit(batchSize);
-
-  for (const memory of unembedded) {
-    try {
-      const embedding = generateEmbedding(memory.content);
-      await db
-        .update(relationalMemories)
-        .set({ embedding })
-        .where(eq(relationalMemories.id, memory.id));
-      processed++;
-    } catch (err) {
-      logger.warn({ err, memoryId: memory.id }, "Failed to backfill embedding");
-      errors++;
+  while (true) {
+    const conditions: ReturnType<typeof eq>[] = [];
+    if (!reembedAll) {
+      conditions.push(isNull(relationalMemories.embedding));
     }
+    if (orgId) {
+      conditions.push(eq(relationalMemories.orgId, orgId));
+    }
+    conditions.push(gt(relationalMemories.id, cursor));
+
+    const records = await db
+      .select({ id: relationalMemories.id, content: relationalMemories.content })
+      .from(relationalMemories)
+      .where(and(...conditions))
+      .orderBy(asc(relationalMemories.id))
+      .limit(batchSize);
+
+    if (records.length === 0) break;
+
+    for (const memory of records) {
+      try {
+        const embedding = await generateEmbedding(memory.content);
+        await db
+          .update(relationalMemories)
+          .set({ embedding })
+          .where(eq(relationalMemories.id, memory.id));
+        totalProcessed++;
+      } catch (err) {
+        logger.warn({ err, memoryId: memory.id }, "Failed to backfill embedding");
+        totalErrors++;
+      }
+    }
+
+    cursor = records[records.length - 1].id;
+    logger.info({ batch: records.length, totalProcessed, totalErrors, cursor, reembedAll }, "Embedding backfill batch progress");
+
+    if (records.length < batchSize) break;
   }
 
-  logger.info({ processed, errors, total: unembedded.length }, "Embedding backfill batch complete");
-  return { processed, errors };
+  logger.info({ processed: totalProcessed, errors: totalErrors, reembedAll }, "Embedding backfill complete");
+
+  if (reembedAll && totalProcessed > 0) {
+    await rebuildEmbeddingIndex();
+  }
+
+  return { processed: totalProcessed, errors: totalErrors };
+}
+
+export async function rebuildEmbeddingIndex(): Promise<void> {
+  try {
+    await pool.query(`DROP INDEX IF EXISTS idx_relational_memories_embedding`);
+    await pool.query(`
+      CREATE INDEX idx_relational_memories_embedding
+      ON relational_memories
+      USING ivfflat (embedding vector_cosine_ops)
+      WITH (lists = 100)
+    `);
+    logger.info("Rebuilt ivfflat embedding index after backfill");
+  } catch (err) {
+    logger.warn({ err }, "Failed to rebuild embedding index (non-critical, queries still work)");
+  }
 }

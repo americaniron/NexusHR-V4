@@ -29,6 +29,7 @@
     "@workspace/db": "workspace:*",
     "@workspace/integrations-anthropic-ai": "workspace:*",
     "@workspace/integrations-openai-ai-server": "workspace:*",
+    "@xenova/transformers": "^2.17.2",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2",

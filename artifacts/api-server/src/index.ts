@@ -7,6 +7,7 @@ import { initializeEmailTransport } from "./lib/email";
 import { startBillingScheduler } from "./lib/billing/scheduler";
 import { startMemoryConsolidation } from "./lib/memoryConsolidation";
 import { ensurePgvector } from "./lib/ensurePgvector";
+import { warmupEmbeddings } from "./lib/embeddingService";
 import { startProactiveScheduler } from "./services/proactive/scheduler";
 import { seedRolesIfEmpty } from "./lib/seedRoles";
 
@@ -34,7 +35,12 @@ startProactiveScheduler();
 seedRolesIfEmpty().catch((err) => logger.error({ err }, "Role seeding failed"));
 
 ensurePgvector()
-  .then(() => startMemoryConsolidation(30))
+  .then(() => {
+    warmupEmbeddings().catch((err) =>
+      logger.warn({ err }, "Embedding model warmup failed, will retry lazily on first use")
+    );
+    startMemoryConsolidation(30);
+  })
   .catch((err) => logger.error({ err }, "pgvector setup failed, memory consolidation disabled"));
 
 httpServer.listen(port, () => {
