@@ -47,13 +47,13 @@ const WIZARD_STEPS = [
 
 const AI_GUIDE: Record<string, string[]> = {
   welcome: [
-    "Welcome to NexsusHR! I'm your AI guide, and I'll walk you through hiring your first AI professional.",
-    "The whole process takes about 3 minutes. We'll set up your organization, find the perfect role for your needs, customize their personality, connect your tools, and have them working for you — instantly.",
+    "Hi there! I'm Aria Lawson, your Admin and Onboarding Director here at NexsusHR. I'll personally walk you through bringing your first AI professional onboard.",
+    "This will only take about 3 minutes. We'll set up your organization, find the perfect role, customize their personality and appearance, connect your tools, and have them ready to work alongside your team.",
     "Let's get started! Click 'Begin Setup' whenever you're ready.",
   ],
   profile: [
-    "First, let me learn about your organization so I can recommend the best AI professionals for your team.",
-    "Your industry and team size help me understand what roles will have the biggest impact. For example, a healthcare company typically benefits most from Medical Records Analysts and Patient Coordinators, while tech startups often start with DevOps Engineers or Data Analysts.",
+    "First, tell me a bit about your organization so I can recommend the best AI professionals for your needs.",
+    "Your industry and team size help me understand what roles will deliver the biggest impact. For example, healthcare companies typically benefit most from Medical Records Analysts and Patient Coordinators, while tech startups often start with DevOps Engineers or Data Analysts.",
     "Don't worry about getting everything perfect — you can always update this later in Settings.",
   ],
   browse: [
@@ -68,7 +68,7 @@ const AI_GUIDE: Record<string, string[]> = {
   ],
   integrations: [
     "Great choice! Now let's connect the tools your team already uses so your new AI professional can work in your existing workflow.",
-    "The most common first connections are Slack (for real-time communication), Google Workspace (for document collaboration), and your project management tool like Jira or Asana.",
+    "The most common first connections are Slack for real-time communication, Google Workspace for document collaboration, and your project management tool like Jira or Asana.",
     "You can skip this step and connect tools later from the Integrations page. Your AI professional will still work perfectly through the NexsusHR chat and voice interface.",
   ],
   deploy: [
