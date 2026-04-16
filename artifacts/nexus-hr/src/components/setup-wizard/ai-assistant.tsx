@@ -45,8 +45,9 @@ export function AIAssistant({ messages, stepTitle }: AIAssistantProps) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoPlaying, setVideoPlaying] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
-  const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
+  const [showVideo, setShowVideo] = useState(stepTitle === "welcome");
+  const [videoMuted, setVideoMuted] = useState(true);
+  const [videoNeedsInteraction, setVideoNeedsInteraction] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -66,13 +67,42 @@ export function AIAssistant({ messages, stepTitle }: AIAssistantProps) {
   }, [visibleCount, typingDone]);
 
   useEffect(() => {
-    if (stepTitle === "welcome" && !hasPlayedIntro) {
+    if (stepTitle === "welcome") {
       setShowVideo(true);
-      setHasPlayedIntro(true);
+      setVideoMuted(true);
+      setVideoNeedsInteraction(true);
     } else {
       setShowVideo(false);
     }
-  }, [stepTitle, hasPlayedIntro]);
+  }, [stepTitle]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !showVideo) return;
+    v.muted = true;
+    const p = v.play();
+    if (p) {
+      p.then(() => {
+        setVideoPlaying(true);
+        setVideoNeedsInteraction(true);
+      }).catch(() => {
+        setVideoPlaying(false);
+        setVideoNeedsInteraction(true);
+      });
+    }
+  }, [showVideo]);
+
+  const handleUnmuteAndPlay = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = false;
+    setVideoMuted(false);
+    setVideoNeedsInteraction(false);
+    if (v.paused) {
+      v.currentTime = 0;
+      v.play().then(() => setVideoPlaying(true)).catch(() => {});
+    }
+  }, []);
 
   const speakText = useCallback(async (text: string) => {
     if (!audioEnabled) return;
@@ -183,7 +213,6 @@ export function AIAssistant({ messages, stepTitle }: AIAssistantProps) {
   const handleVideoPause = () => setVideoPlaying(false);
   const handleVideoEnd = () => {
     setVideoPlaying(false);
-    setShowVideo(false);
   };
 
   return (
@@ -233,26 +262,40 @@ export function AIAssistant({ messages, stepTitle }: AIAssistantProps) {
             ref={videoRef}
             src={ADMIN_VIDEO}
             className="w-full aspect-video object-cover"
-            autoPlay
-            muted
             playsInline
+            muted={videoMuted}
             onPlay={handleVideoPlay}
             onPause={handleVideoPause}
             onEnded={handleVideoEnd}
           />
-          <button
-            onClick={toggleVideo}
-            className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
-          >
-            {videoPlaying ? (
-              <Pause className="h-4 w-4 text-white" />
-            ) : (
-              <Play className="h-4 w-4 text-white" />
-            )}
-          </button>
-          <div className="absolute bottom-2 left-3 flex items-center gap-2">
-            <span className="text-xs text-white/80 bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded">{ADMIN_NAME}</span>
-          </div>
+          {videoNeedsInteraction && (
+            <button
+              onClick={handleUnmuteAndPlay}
+              className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] transition-all hover:bg-black/30 cursor-pointer group"
+            >
+              <div className="h-14 w-14 rounded-full bg-primary/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <Play className="h-6 w-6 text-primary-foreground ml-0.5" />
+              </div>
+              <span className="mt-3 text-sm font-medium text-white/90">Watch Aria's Introduction</span>
+            </button>
+          )}
+          {!videoNeedsInteraction && (
+            <>
+              <button
+                onClick={toggleVideo}
+                className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
+              >
+                {videoPlaying ? (
+                  <Pause className="h-4 w-4 text-white" />
+                ) : (
+                  <Play className="h-4 w-4 text-white" />
+                )}
+              </button>
+              <div className="absolute bottom-2 left-3 flex items-center gap-2">
+                <span className="text-xs text-white/80 bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded">{ADMIN_NAME}</span>
+              </div>
+            </>
+          )}
         </div>
       )}
 
