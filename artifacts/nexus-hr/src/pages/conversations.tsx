@@ -1,5 +1,6 @@
 import { useListConversations, useGetConversation, useSendMessage } from "@workspace/api-client-react";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@clerk/react";
 import { AIAvatar } from "@/components/ai-avatar";
 import type { AvatarVisualState, EmotionState } from "@/components/ai-avatar";
@@ -13,11 +14,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Send, Bot, User, MessageSquare, Mic, MicOff, PhoneOff, ChevronLeft, Video } from "lucide-react";
+import { Send, Bot, User, MessageSquare, Mic, MicOff, PhoneOff, ChevronLeft, Video, Film, Play, Trash2, Clock, Loader2 } from "lucide-react";
 import { useVoiceMode } from "@/hooks/use-voice-mode";
 import { useVideoCall } from "@/hooks/use-video-call";
 import { VideoCallSession } from "@/components/video-call-session";
+import { RecordingPlayback } from "@/components/recording-playback";
 import { useToast } from "@/hooks/use-toast";
+
+function formatRecordingDuration(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+  const s = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
 
 export default function ConversationsPage() {
   const { data: convList } = useListConversations({ limit: 50 });
@@ -116,6 +125,10 @@ function ChatWindow({ conversationId, autoStartVideoCall, onVideoCallAutoStarted
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const [showCsatSurvey, setShowCsatSurvey] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
+  const [showRecordings, setShowRecordings] = useState(false);
+  const [recordings, setRecordings] = useState<Array<{id: number; sessionId: string; title?: string; durationMs?: number; sizeBytes?: number; mimeType: string; createdAt: string}>>([]);
+  const [loadingRecordings, setLoadingRecordings] = useState(false);
+  const [playingRecordingId, setPlayingRecordingId] = useState<number | null>(null);
 
   const voiceMode = useVoiceMode({
     onTranscription: (text) => {
@@ -310,6 +323,49 @@ function ChatWindow({ conversationId, autoStartVideoCall, onVideoCallAutoStarted
     }
   };
 
+  const apiBase = `${import.meta.env.BASE_URL}api`.replace(/\/\//g, "/");
+
+  const fetchRecordings = useCallback(async () => {
+    setLoadingRecordings(true);
+    try {
+      const response = await fetch(`${apiBase}/video-call/recordings?conversationId=${conversationId}`, {
+        credentials: "include",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRecordings(data.recordings || []);
+      }
+    } catch {
+      console.error("[Recordings] Failed to fetch recordings");
+    } finally {
+      setLoadingRecordings(false);
+    }
+  }, [conversationId, apiBase]);
+
+  const deleteRecording = useCallback(async (recordingId: number) => {
+    try {
+      const response = await fetch(`${apiBase}/video-call/recordings/${recordingId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (response.ok) {
+        setRecordings(prev => prev.filter(r => r.id !== recordingId));
+        if (playingRecordingId === recordingId) {
+          setPlayingRecordingId(null);
+        }
+        toast({ title: "Recording Deleted", description: "The recording has been removed." });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to delete recording.", variant: "destructive" });
+    }
+  }, [apiBase, playingRecordingId, toast]);
+
+  useEffect(() => {
+    if (showRecordings) {
+      fetchRecordings();
+    }
+  }, [showRecordings, fetchRecordings]);
+
   const handleVideoCallToggle = async () => {
     if (isVideoCallActive) {
       videoCall.endCall();
@@ -386,11 +442,16 @@ function ChatWindow({ conversationId, autoStartVideoCall, onVideoCallAutoStarted
           isListening={aiAvatarState === "listening" || videoCall.isRecording}
           isRecording={videoCall.isRecording}
           isTranscribing={videoCall.isTranscribing}
+          isSessionRecording={videoCall.isSessionRecording}
+          isUploadingRecording={videoCall.isUploadingRecording}
+          sessionRecordingDuration={videoCall.sessionRecordingDuration}
           onToggleMute={videoCall.toggleMute}
           onToggleCamera={videoCall.toggleCamera}
           onEndCall={handleVideoCallEnd}
           onStartRecording={videoCall.startRecording}
           onStopRecording={videoCall.stopRecording}
+          onStartSessionRecording={videoCall.startSessionRecording}
+          onStopSessionRecording={videoCall.stopSessionRecording}
           className="flex-1"
         />
 
@@ -460,6 +521,15 @@ function ChatWindow({ conversationId, autoStartVideoCall, onVideoCallAutoStarted
         </div>
         <div className="flex items-center gap-2">
           <Button
+            variant={showRecordings ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowRecordings(!showRecordings)}
+            className="gap-1"
+          >
+            <Film className="h-4 w-4" />
+            <span className="hidden sm:inline">Recordings</span>
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             onClick={handleVideoCallToggle}
@@ -483,6 +553,92 @@ function ChatWindow({ conversationId, autoStartVideoCall, onVideoCallAutoStarted
           </Button>
         </div>
       </div>
+
+      {showRecordings && (
+        <div className="border-b border-border bg-muted/30">
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Film className="h-4 w-4" />
+                Session Recordings
+              </h3>
+              <Button variant="ghost" size="sm" onClick={fetchRecordings} disabled={loadingRecordings} className="h-7 text-xs">
+                {loadingRecordings ? <Loader2 className="h-3 w-3 animate-spin" /> : "Refresh"}
+              </Button>
+            </div>
+
+            {playingRecordingId && (
+              <div className="mb-3">
+                <RecordingPlayback
+                  src={`${apiBase}/video-call/recordings/${playingRecordingId}/stream`}
+                  title={recordings.find(r => r.id === playingRecordingId)?.title || `Recording #${playingRecordingId}`}
+                  duration={recordings.find(r => r.id === playingRecordingId)?.durationMs}
+                  onClose={() => setPlayingRecordingId(null)}
+                  className="max-h-[300px]"
+                />
+              </div>
+            )}
+
+            {loadingRecordings ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : recordings.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">
+                No recordings yet. Use the record button during a video call to capture sessions.
+              </p>
+            ) : (
+              <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                {recordings.map(recording => (
+                  <div
+                    key={recording.id}
+                    className={cn(
+                      "flex items-center gap-3 p-2.5 rounded-lg border transition-colors",
+                      playingRecordingId === recording.id
+                        ? "bg-primary/10 border-primary/30"
+                        : "bg-background border-border hover:bg-muted/50",
+                    )}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={() => setPlayingRecordingId(playingRecordingId === recording.id ? null : recording.id)}
+                    >
+                      <Play className="h-4 w-4" />
+                    </Button>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-foreground truncate">
+                        {recording.title || `Session Recording`}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {recording.durationMs ? formatRecordingDuration(recording.durationMs) : "Unknown"}
+                        </span>
+                        <span>
+                          {new Date(recording.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        {recording.sizeBytes && (
+                          <span>{(recording.sizeBytes / (1024 * 1024)).toFixed(1)} MB</span>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+                      onClick={() => deleteRecording(recording.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6" ref={scrollRef}>
         {conv.messages?.map((msg) => {

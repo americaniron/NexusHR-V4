@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Mic, MicOff, Video, VideoOff, PhoneOff, Maximize2, Minimize2,
-  Wifi, WifiOff, AlertTriangle,
+  Wifi, WifiOff, AlertTriangle, Circle, Loader2,
 } from "lucide-react";
 import type { EmotionState } from "@/components/ai-avatar";
 import type { VideoCallStatus } from "@/hooks/use-video-call";
@@ -31,11 +31,16 @@ interface VideoCallSessionProps {
   avatarAnimationStatus?: AvatarAnimationStatus;
   avatarRemoteStream?: MediaStream | null;
   avatarProvider?: string | null;
+  isSessionRecording?: boolean;
+  isUploadingRecording?: boolean;
+  sessionRecordingDuration?: number;
   onToggleMute: () => void;
   onToggleCamera: () => void;
   onEndCall: () => void;
   onStartRecording?: () => void;
   onStopRecording?: () => void;
+  onStartSessionRecording?: () => void;
+  onStopSessionRecording?: () => void;
   className?: string;
 }
 
@@ -64,11 +69,16 @@ export function VideoCallSession({
   avatarAnimationStatus = "idle",
   avatarRemoteStream = null,
   avatarProvider = null,
+  isSessionRecording = false,
+  isUploadingRecording = false,
+  sessionRecordingDuration = 0,
   onToggleMute,
   onToggleCamera,
   onEndCall,
   onStartRecording,
   onStopRecording,
+  onStartSessionRecording,
+  onStopSessionRecording,
   className,
 }: VideoCallSessionProps) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -196,6 +206,18 @@ export function VideoCallSession({
             <div className="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5 animate-pulse" />
             {formatDuration(callDuration)}
           </Badge>
+          {isSessionRecording && (
+            <Badge variant="secondary" className="text-xs bg-red-500/30 text-red-300 border-red-500/40">
+              <Circle className="h-2 w-2 mr-1 fill-red-500 text-red-500 animate-pulse" />
+              REC {formatDuration(Math.floor(sessionRecordingDuration / 1000))}
+            </Badge>
+          )}
+          {isUploadingRecording && (
+            <Badge variant="secondary" className="text-xs bg-blue-500/20 text-blue-400 border-blue-500/30">
+              <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
+              Saving...
+            </Badge>
+          )}
           {avatarName && (
             <span className="text-sm text-white/80">{avatarName}</span>
           )}
@@ -323,6 +345,28 @@ export function VideoCallSession({
           >
             {isCameraOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
           </Button>
+
+          {onStartSessionRecording && onStopSessionRecording && (
+            <Button
+              variant="outline"
+              size="icon"
+              className={cn(
+                "h-12 w-12 rounded-full border-2 transition-all",
+                isSessionRecording
+                  ? "bg-red-500/30 border-red-500 text-red-400 hover:bg-red-500/40"
+                  : "border-white/30 text-white hover:bg-white/10",
+              )}
+              onClick={isSessionRecording ? onStopSessionRecording : onStartSessionRecording}
+              disabled={isUploadingRecording}
+              title={isSessionRecording ? "Stop recording" : "Record session"}
+            >
+              {isUploadingRecording ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Circle className={cn("h-5 w-5", isSessionRecording ? "fill-red-500 text-red-500" : "")} />
+              )}
+            </Button>
+          )}
 
           <Button
             variant="destructive"

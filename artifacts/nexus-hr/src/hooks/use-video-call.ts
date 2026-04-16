@@ -42,6 +42,11 @@ interface UseVideoCallReturn {
   isTranscribing: boolean;
   isTtsSpeaking: boolean;
   avatarAnimationAvailable: boolean;
+  isSessionRecording: boolean;
+  isUploadingRecording: boolean;
+  sessionRecordingDuration: number;
+  startSessionRecording: () => void;
+  stopSessionRecording: () => Promise<void>;
 }
 
 export function useVideoCall(options: UseVideoCallOptions): UseVideoCallReturn {
@@ -69,6 +74,9 @@ export function useVideoCall(options: UseVideoCallOptions): UseVideoCallReturn {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isTtsSpeaking, setIsTtsSpeaking] = useState(false);
   const [avatarAnimationAvailable, setAvatarAnimationAvailable] = useState(false);
+  const [isSessionRecording, setIsSessionRecording] = useState(false);
+  const [isUploadingRecording, setIsUploadingRecording] = useState(false);
+  const [sessionRecordingDuration, setSessionRecordingDuration] = useState(0);
 
   const socketRef = useRef<Socket | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -84,6 +92,10 @@ export function useVideoCall(options: UseVideoCallOptions): UseVideoCallReturn {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const sessionIdRef = useRef<string | null>(null);
+  const sessionRecorderRef = useRef<MediaRecorder | null>(null);
+  const sessionRecordingChunksRef = useRef<Blob[]>([]);
+  const sessionRecordingStartRef = useRef<number>(0);
+  const sessionRecordingTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const updateStatus = useCallback((newStatus: VideoCallStatus) => {
     statusRef.current = newStatus;
@@ -95,6 +107,16 @@ export function useVideoCall(options: UseVideoCallOptions): UseVideoCallReturn {
     if (latencyCheckRef.current) {
       clearInterval(latencyCheckRef.current);
       latencyCheckRef.current = undefined;
+    }
+
+    if (sessionRecorderRef.current && sessionRecorderRef.current.state !== "inactive") {
+      sessionRecorderRef.current.stop();
+      sessionRecorderRef.current = null;
+      sessionRecordingChunksRef.current = [];
+    }
+    if (sessionRecordingTimerRef.current) {
+      clearInterval(sessionRecordingTimerRef.current);
+      sessionRecordingTimerRef.current = undefined;
     }
 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -146,6 +168,9 @@ export function useVideoCall(options: UseVideoCallOptions): UseVideoCallReturn {
     setIsRecording(false);
     setIsTranscribing(false);
     setIsTtsSpeaking(false);
+    setIsSessionRecording(false);
+    setIsUploadingRecording(false);
+    setSessionRecordingDuration(0);
     reconnectAttempts.current = 0;
   }, []);
 
@@ -515,6 +540,124 @@ export function useVideoCall(options: UseVideoCallOptions): UseVideoCallReturn {
     }).catch(() => {});
   }, []);
 
+  const startSessionRecording = useCallback(() => {
+    if (!streamRef.current || isSessionRecording) return;
+
+    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+      ? "video/webm;codecs=vp9,opus"
+      : MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
+        ? "video/webm;codecs=vp8,opus"
+        : "video/webm";
+
+    const recorder = new MediaRecorder(streamRef.current, { mimeType });
+    sessionRecordingChunksRef.current = [];
+    sessionRecordingStartRef.current = Date.now();
+    setSessionRecordingDuration(0);
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        sessionRecordingChunksRef.current.push(e.data);
+      }
+    };
+
+    recorder.start(1000);
+    sessionRecorderRef.current = recorder;
+    setIsSessionRecording(true);
+
+    sessionRecordingTimerRef.current = setInterval(() => {
+      setSessionRecordingDuration(Date.now() - sessionRecordingStartRef.current);
+    }, 1000);
+  }, [isSessionRecording]);
+
+  const stopSessionRecording = useCallback(async () => {
+    const recorder = sessionRecorderRef.current;
+    if (!recorder || recorder.state === "inactive") {
+      setIsSessionRecording(false);
+      return;
+    }
+
+    if (sessionRecordingTimerRef.current) {
+      clearInterval(sessionRecordingTimerRef.current);
+      sessionRecordingTimerRef.current = undefined;
+    }
+
+    const durationMs = Date.now() - sessionRecordingStartRef.current;
+
+    return new Promise<void>((resolve) => {
+      recorder.onstop = async () => {
+        setIsSessionRecording(false);
+
+        const chunks = sessionRecordingChunksRef.current;
+        sessionRecordingChunksRef.current = [];
+
+        if (chunks.length === 0) {
+          resolve();
+          return;
+        }
+
+        const blob = new Blob(chunks, { type: recorder.mimeType || "video/webm" });
+        if (blob.size < 1000) {
+          resolve();
+          return;
+        }
+
+        setIsUploadingRecording(true);
+        try {
+          const mType = recorder.mimeType || "video/webm";
+
+          const requestRes = await fetch(`${apiBase}/video-call/recordings/request-upload`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              sessionId: sessionIdRef.current || "",
+              conversationId,
+              durationMs,
+              sizeBytes: blob.size,
+              mimeType: mType,
+            }),
+          });
+
+          if (!requestRes.ok) {
+            throw new Error("Failed to request upload URL");
+          }
+
+          const { recordingId, uploadUrl } = await requestRes.json();
+
+          const uploadRes = await fetch(uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": mType },
+            body: blob,
+          });
+
+          if (!uploadRes.ok) {
+            throw new Error("Failed to upload recording to storage");
+          }
+
+          const confirmRes = await fetch(`${apiBase}/video-call/recordings/confirm-upload`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ recordingId }),
+          });
+
+          if (!confirmRes.ok) {
+            throw new Error("Failed to confirm recording upload");
+          }
+        } catch (err) {
+          console.error("[VideoCall] Failed to upload session recording:", err);
+          onError?.("Failed to save session recording. Please try again.");
+        } finally {
+          setIsUploadingRecording(false);
+          setSessionRecordingDuration(0);
+        }
+        resolve();
+      };
+
+      recorder.stop();
+    });
+  }, [conversationId, apiBase, onError]);
+
   useEffect(() => {
     return () => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -576,5 +719,10 @@ export function useVideoCall(options: UseVideoCallOptions): UseVideoCallReturn {
     isTranscribing,
     isTtsSpeaking,
     avatarAnimationAvailable,
+    isSessionRecording,
+    isUploadingRecording,
+    sessionRecordingDuration,
+    startSessionRecording,
+    stopSessionRecording,
   };
 }

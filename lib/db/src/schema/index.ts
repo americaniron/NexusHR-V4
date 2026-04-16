@@ -21,3 +21,4 @@ export * from "./api-keys";
 export * from "./proactive-rules";
 export * from "./analytics";
 export * from "./compliance";
+export * from "./video-call-recordings";

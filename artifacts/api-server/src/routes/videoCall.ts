@@ -5,8 +5,8 @@ import { validate } from "../middlewares/validate";
 import { getAuthContext } from "../lib/auth-helpers";
 import { AppError } from "../middlewares/errorHandler";
 import { db } from "@workspace/db";
-import { conversations } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { conversations, videoCallRecordings } from "@workspace/db/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
   isAvatarAnimationAvailable,
@@ -20,8 +20,10 @@ import {
   getEmotionExpression,
 } from "../lib/avatarAnimation";
 import type { EmotionState } from "../lib/emotionEngine";
+import { ObjectStorageService } from "../lib/objectStorage";
 
 const router = Router();
+const objectStorageService = new ObjectStorageService();
 
 interface VideoCallSessionData {
   conversationId: number;
@@ -58,7 +60,7 @@ router.post("/video-call/session", requireAuth, validate({ body: createSessionBo
     const { conversationId, employeeId } = req.body;
     const { orgId, userId, clerkUserId } = await getAuthContext(req);
 
-    if (!orgId || !userId) {
+    if (!orgId || !userId || !clerkUserId) {
       throw new AppError(403, "FORBIDDEN", "Organization context required for video calls");
     }
 
@@ -241,6 +243,227 @@ router.post("/video-call/avatar-stream/expression", requireAuth, validate({ body
     const { emotion } = req.body;
     const expression = getEmotionExpression(emotion);
     res.json(expression);
+  } catch (error) {
+    next(error);
+  }
+});
+
+const requestRecordingUploadBody = z.object({
+  sessionId: z.string().min(1),
+  conversationId: z.number().int().positive(),
+  durationMs: z.number().int().min(0),
+  sizeBytes: z.number().int().positive(),
+  mimeType: z.string().default("video/webm"),
+});
+
+router.post("/video-call/recordings/request-upload", requireAuth, validate({ body: requestRecordingUploadBody }), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { sessionId, conversationId, durationMs, sizeBytes, mimeType } = req.body;
+    const { orgId, userId } = await getAuthContext(req);
+
+    if (!orgId || !userId) {
+      throw new AppError(403, "FORBIDDEN", "Organization context required");
+    }
+
+    const [conv] = await db
+      .select({ id: conversations.id })
+      .from(conversations)
+      .where(
+        and(
+          eq(conversations.id, conversationId),
+          eq(conversations.orgId, orgId),
+          eq(conversations.userId, userId),
+        )
+      );
+
+    if (!conv) {
+      throw new AppError(404, "NOT_FOUND", "Conversation not found or access denied");
+    }
+
+    const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
+    const storagePath = objectStorageService.normalizeObjectEntityPath(uploadUrl);
+
+    const [recording] = await db
+      .insert(videoCallRecordings)
+      .values({
+        orgId,
+        userId,
+        conversationId,
+        sessionId,
+        durationMs,
+        sizeBytes,
+        mimeType,
+        storagePath,
+        status: "uploading",
+      })
+      .returning();
+
+    res.json({
+      recordingId: recording.id,
+      uploadUrl,
+      storagePath,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const confirmRecordingUploadBody = z.object({
+  recordingId: z.number().int().positive(),
+});
+
+router.post("/video-call/recordings/confirm-upload", requireAuth, validate({ body: confirmRecordingUploadBody }), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { recordingId } = req.body;
+    const { orgId, userId } = await getAuthContext(req);
+
+    if (!orgId || !userId) {
+      throw new AppError(403, "FORBIDDEN", "Organization context required");
+    }
+
+    const [recording] = await db
+      .select()
+      .from(videoCallRecordings)
+      .where(
+        and(
+          eq(videoCallRecordings.id, recordingId),
+          eq(videoCallRecordings.orgId, orgId),
+          eq(videoCallRecordings.userId, userId),
+        )
+      );
+
+    if (!recording) {
+      throw new AppError(404, "NOT_FOUND", "Recording not found");
+    }
+
+    await db
+      .update(videoCallRecordings)
+      .set({ status: "ready" })
+      .where(eq(videoCallRecordings.id, recordingId));
+
+    res.json({ confirmed: true, recordingId });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/video-call/recordings", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { orgId, userId } = await getAuthContext(req);
+
+    if (!orgId || !userId) {
+      throw new AppError(403, "FORBIDDEN", "Organization context required");
+    }
+
+    const conversationId = req.query.conversationId ? parseInt(req.query.conversationId as string, 10) : undefined;
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 20, 100);
+
+    const conditions = [
+      eq(videoCallRecordings.orgId, orgId),
+      eq(videoCallRecordings.status, "ready"),
+    ];
+
+    if (conversationId) {
+      conditions.push(eq(videoCallRecordings.conversationId, conversationId));
+    }
+
+    const recordings = await db
+      .select()
+      .from(videoCallRecordings)
+      .where(and(...conditions))
+      .orderBy(desc(videoCallRecordings.createdAt))
+      .limit(limit);
+
+    res.json({ recordings });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/video-call/recordings/:id/stream", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const recordingId = parseInt(String(req.params.id), 10);
+    if (isNaN(recordingId)) {
+      throw new AppError(400, "INVALID_INPUT", "Invalid recording ID");
+    }
+
+    const { orgId } = await getAuthContext(req);
+
+    if (!orgId) {
+      throw new AppError(403, "FORBIDDEN", "Organization context required");
+    }
+
+    const [recording] = await db
+      .select()
+      .from(videoCallRecordings)
+      .where(
+        and(
+          eq(videoCallRecordings.id, recordingId),
+          eq(videoCallRecordings.orgId, orgId),
+          eq(videoCallRecordings.status, "ready"),
+        )
+      );
+
+    if (!recording) {
+      throw new AppError(404, "NOT_FOUND", "Recording not found");
+    }
+
+    const objectFile = await objectStorageService.getObjectEntityFile(recording.storagePath);
+    const downloadResponse = await objectStorageService.downloadObject(objectFile);
+    const { Readable } = await import("stream");
+
+    res.status(downloadResponse.status);
+    res.setHeader("Content-Type", recording.mimeType);
+    downloadResponse.headers.forEach((value, key) => {
+      if (key !== "content-type") {
+        res.setHeader(key, value);
+      }
+    });
+
+    if (downloadResponse.body) {
+      const nodeStream = Readable.fromWeb(downloadResponse.body as ReadableStream<Uint8Array>);
+      nodeStream.pipe(res);
+    } else {
+      res.end();
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/video-call/recordings/:id", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const recordingId = parseInt(String(req.params.id), 10);
+    if (isNaN(recordingId)) {
+      throw new AppError(400, "INVALID_INPUT", "Invalid recording ID");
+    }
+
+    const { orgId, userId } = await getAuthContext(req);
+
+    if (!orgId || !userId) {
+      throw new AppError(403, "FORBIDDEN", "Organization context required");
+    }
+
+    const [recording] = await db
+      .select()
+      .from(videoCallRecordings)
+      .where(
+        and(
+          eq(videoCallRecordings.id, recordingId),
+          eq(videoCallRecordings.orgId, orgId),
+          eq(videoCallRecordings.userId, userId),
+        )
+      );
+
+    if (!recording) {
+      throw new AppError(404, "NOT_FOUND", "Recording not found");
+    }
+
+    await db
+      .delete(videoCallRecordings)
+      .where(eq(videoCallRecordings.id, recordingId));
+
+    res.json({ deleted: true });
   } catch (error) {
     next(error);
   }
