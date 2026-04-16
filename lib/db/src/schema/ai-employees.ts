@@ -12,6 +12,7 @@ export const aiEmployees = pgTable("ai_employees", {
   avatarUrl: text("avatar_url"),
   avatarConfig: jsonb("avatar_config"),
   voiceId: text("voice_id"),
+  voiceLanguage: text("voice_language").default("en"),
   department: text("department"),
   team: text("team"),
   status: text("status").default("active").notNull(),

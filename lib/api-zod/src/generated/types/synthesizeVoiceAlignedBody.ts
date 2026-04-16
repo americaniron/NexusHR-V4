@@ -16,5 +16,7 @@ export type SynthesizeVoiceAlignedBody = {
   voiceId?: string;
   roleTitle?: string;
   department?: string;
+  /** Language code for multilingual TTS */
+  language?: string;
   personality?: SynthesizeVoiceAlignedBodyPersonality;
 };

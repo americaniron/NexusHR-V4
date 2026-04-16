@@ -16,4 +16,6 @@ export interface HireEmployee {
   customInstructions?: string;
   avatarUrl?: string;
   voiceId?: string;
+  /** Language code for voice synthesis (e.g. en, es, fr) */
+  voiceLanguage?: string;
 }

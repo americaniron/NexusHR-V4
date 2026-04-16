@@ -20,6 +20,8 @@ export interface Employee {
   personality?: EmployeePersonality;
   customInstructions?: string | null;
   voiceId?: string | null;
+  /** Language code for voice synthesis (e.g. en, es, fr) */
+  voiceLanguage?: string | null;
   hiredAt: string;
   role?: Role;
 }

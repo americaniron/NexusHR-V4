@@ -253,6 +253,10 @@ export const ListEmployeesResponse = zod.object({
       personality: zod.object({}).passthrough().nullish(),
       customInstructions: zod.string().nullish(),
       voiceId: zod.string().nullish(),
+      voiceLanguage: zod
+        .string()
+        .nullish()
+        .describe("Language code for voice synthesis (e.g. en, es, fr)"),
       hiredAt: zod.string(),
       role: zod
         .object({
@@ -296,6 +300,10 @@ export const HireEmployeeBody = zod.object({
   customInstructions: zod.string().optional(),
   avatarUrl: zod.string().url().optional(),
   voiceId: zod.string().optional(),
+  voiceLanguage: zod
+    .string()
+    .optional()
+    .describe("Language code for voice synthesis (e.g. en, es, fr)"),
 });
 
 /**
@@ -317,6 +325,10 @@ export const GetEmployeeResponse = zod.object({
   personality: zod.object({}).passthrough().nullish(),
   customInstructions: zod.string().nullish(),
   voiceId: zod.string().nullish(),
+  voiceLanguage: zod
+    .string()
+    .nullish()
+    .describe("Language code for voice synthesis (e.g. en, es, fr)"),
   hiredAt: zod.string(),
   role: zod
     .object({
@@ -355,6 +367,10 @@ export const UpdateEmployeeBody = zod.object({
   personality: zod.object({}).passthrough().optional(),
   avatarUrl: zod.string().url().optional(),
   voiceId: zod.string().optional(),
+  voiceLanguage: zod
+    .string()
+    .optional()
+    .describe("Language code for voice synthesis"),
   customInstructions: zod.string().optional(),
 });
 
@@ -370,6 +386,10 @@ export const UpdateEmployeeResponse = zod.object({
   personality: zod.object({}).passthrough().nullish(),
   customInstructions: zod.string().nullish(),
   voiceId: zod.string().nullish(),
+  voiceLanguage: zod
+    .string()
+    .nullish()
+    .describe("Language code for voice synthesis (e.g. en, es, fr)"),
   hiredAt: zod.string(),
   role: zod
     .object({
@@ -412,6 +432,10 @@ export const DeactivateEmployeeResponse = zod.object({
   personality: zod.object({}).passthrough().nullish(),
   customInstructions: zod.string().nullish(),
   voiceId: zod.string().nullish(),
+  voiceLanguage: zod
+    .string()
+    .nullish()
+    .describe("Language code for voice synthesis (e.g. en, es, fr)"),
   hiredAt: zod.string(),
   role: zod
     .object({
@@ -535,6 +559,10 @@ export const ListTasksResponse = zod.object({
           personality: zod.object({}).passthrough().nullish(),
           customInstructions: zod.string().nullish(),
           voiceId: zod.string().nullish(),
+          voiceLanguage: zod
+            .string()
+            .nullish()
+            .describe("Language code for voice synthesis (e.g. en, es, fr)"),
           hiredAt: zod.string(),
           role: zod
             .object({
@@ -612,6 +640,10 @@ export const GetTaskResponse = zod.object({
       personality: zod.object({}).passthrough().nullish(),
       customInstructions: zod.string().nullish(),
       voiceId: zod.string().nullish(),
+      voiceLanguage: zod
+        .string()
+        .nullish()
+        .describe("Language code for voice synthesis (e.g. en, es, fr)"),
       hiredAt: zod.string(),
       role: zod
         .object({
@@ -678,6 +710,10 @@ export const UpdateTaskResponse = zod.object({
       personality: zod.object({}).passthrough().nullish(),
       customInstructions: zod.string().nullish(),
       voiceId: zod.string().nullish(),
+      voiceLanguage: zod
+        .string()
+        .nullish()
+        .describe("Language code for voice synthesis (e.g. en, es, fr)"),
       hiredAt: zod.string(),
       role: zod
         .object({
@@ -819,6 +855,10 @@ export const ListConversationsResponse = zod.object({
           personality: zod.object({}).passthrough().nullish(),
           customInstructions: zod.string().nullish(),
           voiceId: zod.string().nullish(),
+          voiceLanguage: zod
+            .string()
+            .nullish()
+            .describe("Language code for voice synthesis (e.g. en, es, fr)"),
           hiredAt: zod.string(),
           role: zod
             .object({
@@ -900,6 +940,10 @@ export const GetConversationResponse = zod.object({
       personality: zod.object({}).passthrough().nullish(),
       customInstructions: zod.string().nullish(),
       voiceId: zod.string().nullish(),
+      voiceLanguage: zod
+        .string()
+        .nullish()
+        .describe("Language code for voice synthesis (e.g. en, es, fr)"),
       hiredAt: zod.string(),
       role: zod
         .object({
@@ -1006,6 +1050,10 @@ export const ConfirmConversationTaskResponse = zod.object({
           personality: zod.object({}).passthrough().nullish(),
           customInstructions: zod.string().nullish(),
           voiceId: zod.string().nullish(),
+          voiceLanguage: zod
+            .string()
+            .nullish()
+            .describe("Language code for voice synthesis (e.g. en, es, fr)"),
           hiredAt: zod.string(),
           role: zod
             .object({
@@ -1351,6 +1399,10 @@ export const SynthesizeVoiceBody = zod.object({
   voiceId: zod.string().optional(),
   roleTitle: zod.string().optional(),
   department: zod.string().optional(),
+  language: zod
+    .string()
+    .optional()
+    .describe("Language code for multilingual TTS (e.g. en, es, fr)"),
   personality: zod
     .object({
       energy: zod
@@ -1397,6 +1449,10 @@ export const SynthesizeVoiceAlignedBody = zod.object({
   voiceId: zod.string().optional(),
   roleTitle: zod.string().optional(),
   department: zod.string().optional(),
+  language: zod
+    .string()
+    .optional()
+    .describe("Language code for multilingual TTS"),
   personality: zod
     .object({
       energy: zod.number().optional(),
@@ -1452,6 +1508,35 @@ export const GetVoiceProfilesResponse = zod.object({
         label: zod.string(),
         description: zod.string(),
         voiceId: zod.string(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Clone a voice from audio samples via ElevenLabs
+ */
+export const CloneVoiceBody = zod.object({
+  name: zod.string().describe("Name for the cloned voice"),
+  description: zod.string().optional().describe("Description of the voice"),
+  samples: zod.array(zod.string()).describe("Base64-encoded audio samples"),
+});
+
+export const CloneVoiceResponse = zod.object({
+  voiceId: zod.string(),
+  name: zod.string(),
+  description: zod.string().optional(),
+});
+
+/**
+ * @summary Get supported voice languages for ElevenLabs
+ */
+export const GetVoiceLanguagesResponse = zod.object({
+  data: zod
+    .array(
+      zod.object({
+        code: zod.string().describe("ISO language code (e.g. en, es, fr)"),
+        name: zod.string().describe("Human-readable language name"),
       }),
     )
     .optional(),

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AIAvatar } from "@/components/ai-avatar";
 import { AIAssistant } from "./ai-assistant";
 import {
@@ -32,9 +33,42 @@ import {
   ChevronRight,
   Loader2,
   Volume2,
+  Globe,
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
+
+const WIZARD_LANGUAGES = [
+  { code: "en", name: "English" },
+  { code: "es", name: "Spanish" },
+  { code: "fr", name: "French" },
+  { code: "de", name: "German" },
+  { code: "it", name: "Italian" },
+  { code: "pt", name: "Portuguese" },
+  { code: "ja", name: "Japanese" },
+  { code: "ko", name: "Korean" },
+  { code: "zh", name: "Chinese" },
+  { code: "ar", name: "Arabic" },
+  { code: "hi", name: "Hindi" },
+  { code: "ru", name: "Russian" },
+  { code: "nl", name: "Dutch" },
+  { code: "pl", name: "Polish" },
+  { code: "sv", name: "Swedish" },
+  { code: "tr", name: "Turkish" },
+  { code: "da", name: "Danish" },
+  { code: "fi", name: "Finnish" },
+  { code: "el", name: "Greek" },
+  { code: "cs", name: "Czech" },
+  { code: "hu", name: "Hungarian" },
+  { code: "id", name: "Indonesian" },
+  { code: "ms", name: "Malay" },
+  { code: "no", name: "Norwegian" },
+  { code: "ro", name: "Romanian" },
+  { code: "sk", name: "Slovak" },
+  { code: "ta", name: "Tamil" },
+  { code: "uk", name: "Ukrainian" },
+  { code: "vi", name: "Vietnamese" },
+];
 
 const WIZARD_STEPS = [
   { id: "welcome", label: "Welcome", icon: Rocket },
@@ -104,6 +138,7 @@ export function SetupWizard() {
 
   const [employeeName, setEmployeeName] = useState("");
   const [selectedVoiceId, setSelectedVoiceId] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [generatedAvatarUrl, setGeneratedAvatarUrl] = useState("");
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
 
@@ -169,6 +204,7 @@ export function SetupWizard() {
           roleId: selectedRoleId,
           name: employeeName.trim(),
           voiceId: selectedVoiceId || undefined,
+          voiceLanguage: selectedLanguage || "en",
           avatarUrl: generatedAvatarUrl || undefined,
         },
       });
@@ -326,6 +362,8 @@ export function SetupWizard() {
                   setEmployeeName={setEmployeeName}
                   selectedVoiceId={selectedVoiceId}
                   setSelectedVoiceId={setSelectedVoiceId}
+                  selectedLanguage={selectedLanguage}
+                  setSelectedLanguage={setSelectedLanguage}
                   voices={voices}
                   isLoadingVoices={isLoadingVoices}
                   generatedAvatarUrl={generatedAvatarUrl}
@@ -629,6 +667,7 @@ function BrowseStep({
 
 function CustomizeStep({
   role, employeeName, setEmployeeName, selectedVoiceId, setSelectedVoiceId,
+  selectedLanguage, setSelectedLanguage,
   voices, isLoadingVoices, generatedAvatarUrl, isGeneratingAvatar, onGenerateAvatar,
 }: {
   role: Role;
@@ -636,6 +675,8 @@ function CustomizeStep({
   setEmployeeName: (v: string) => void;
   selectedVoiceId: string;
   setSelectedVoiceId: (v: string) => void;
+  selectedLanguage: string;
+  setSelectedLanguage: (v: string) => void;
   voices: VoiceItem[];
   isLoadingVoices: boolean;
   generatedAvatarUrl: string;
@@ -723,6 +764,25 @@ function CustomizeStep({
               ) : (
                 <p className="text-xs text-muted-foreground mt-1.5 italic">Voice profiles will be available after setup.</p>
               )}
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <Globe className="h-3.5 w-3.5" /> Voice Language
+              </Label>
+              <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                <SelectTrigger className="mt-1.5 w-full max-w-xs">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WIZARD_LANGUAGES.map(lang => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground mt-1">Choose the language for voice synthesis. Supports 29 languages via ElevenLabs multilingual model.</p>
             </div>
           </div>
         </CardContent>

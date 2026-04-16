@@ -109,6 +109,8 @@ export interface Employee {
   personality?: EmployeePersonality;
   customInstructions?: string | null;
   voiceId?: string | null;
+  /** Language code for voice synthesis (e.g. en, es, fr) */
+  voiceLanguage?: string | null;
   hiredAt: string;
   role?: Role;
 }
@@ -129,6 +131,8 @@ export interface HireEmployee {
   customInstructions?: string;
   avatarUrl?: string;
   voiceId?: string;
+  /** Language code for voice synthesis (e.g. en, es, fr) */
+  voiceLanguage?: string;
 }
 
 export type UpdateEmployeePersonality = { [key: string]: unknown };
@@ -141,6 +145,8 @@ export interface UpdateEmployee {
   personality?: UpdateEmployeePersonality;
   avatarUrl?: string;
   voiceId?: string;
+  /** Language code for voice synthesis */
+  voiceLanguage?: string;
   customInstructions?: string;
 }
 
@@ -740,6 +746,8 @@ export interface VoiceSynthesizeRequest {
   voiceId?: string;
   roleTitle?: string;
   department?: string;
+  /** Language code for multilingual TTS (e.g. en, es, fr) */
+  language?: string;
   personality?: VoiceSynthesizeRequestPersonality;
   /**
    * @minimum 0
@@ -790,6 +798,19 @@ export interface VoiceProfile {
   label: string;
   description: string;
   voiceId: string;
+}
+
+export interface ClonedVoiceResult {
+  voiceId: string;
+  name: string;
+  description?: string;
+}
+
+export interface VoiceLanguage {
+  /** ISO language code (e.g. en, es, fr) */
+  code: string;
+  /** Human-readable language name */
+  name: string;
 }
 
 export type VideoProjectStatus =
@@ -956,6 +977,8 @@ export type SynthesizeVoiceAlignedBody = {
   voiceId?: string;
   roleTitle?: string;
   department?: string;
+  /** Language code for multilingual TTS */
+  language?: string;
   personality?: SynthesizeVoiceAlignedBodyPersonality;
 };
 
@@ -966,6 +989,19 @@ export type TranscribeAudioBody = {
 
 export type GetVoiceProfiles200 = {
   data?: VoiceProfile[];
+};
+
+export type CloneVoiceBody = {
+  /** Name for the cloned voice */
+  name: string;
+  /** Description of the voice */
+  description?: string;
+  /** Base64-encoded audio samples */
+  samples: string[];
+};
+
+export type GetVoiceLanguages200 = {
+  data?: VoiceLanguage[];
 };
 
 export type ListNotificationsParams = {

@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { MessageSquare, RotateCcw, Save, Info, Sparkles } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { MessageSquare, RotateCcw, Save, Info, Sparkles, Globe, Upload, Mic, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface PersonalityAxes {
@@ -73,6 +74,38 @@ const PRESETS: Record<string, { label: string; axes: PersonalityAxes; descriptio
   },
 };
 
+const VOICE_LANGUAGES = [
+  { code: "en", name: "English" },
+  { code: "es", name: "Spanish" },
+  { code: "fr", name: "French" },
+  { code: "de", name: "German" },
+  { code: "it", name: "Italian" },
+  { code: "pt", name: "Portuguese" },
+  { code: "pl", name: "Polish" },
+  { code: "hi", name: "Hindi" },
+  { code: "ar", name: "Arabic" },
+  { code: "cs", name: "Czech" },
+  { code: "da", name: "Danish" },
+  { code: "nl", name: "Dutch" },
+  { code: "fi", name: "Finnish" },
+  { code: "el", name: "Greek" },
+  { code: "hu", name: "Hungarian" },
+  { code: "id", name: "Indonesian" },
+  { code: "ja", name: "Japanese" },
+  { code: "ko", name: "Korean" },
+  { code: "ms", name: "Malay" },
+  { code: "no", name: "Norwegian" },
+  { code: "ro", name: "Romanian" },
+  { code: "ru", name: "Russian" },
+  { code: "sk", name: "Slovak" },
+  { code: "sv", name: "Swedish" },
+  { code: "ta", name: "Tamil" },
+  { code: "tr", name: "Turkish" },
+  { code: "uk", name: "Ukrainian" },
+  { code: "vi", name: "Vietnamese" },
+  { code: "zh", name: "Chinese" },
+];
+
 const DEFAULT_PERSONALITY: PersonalityAxes = {
   warmth: 0.5,
   formality: 0.5,
@@ -123,7 +156,7 @@ function generatePreviewText(axes: PersonalityAxes): string {
   }
 
   if (axes.humor >= 0.6) {
-    parts.push("And between us, the numbers are looking so good they might need their own celebration. 😊");
+    parts.push("And between us, the numbers are looking so good they might need their own celebration.");
   }
 
   if (axes.empathy >= 0.7) {
@@ -143,21 +176,37 @@ interface PersonalityConfigProps {
   employeeId: number;
   employeeName: string;
   initialPersonality?: PersonalityAxes | null;
-  onSave?: (personality: PersonalityAxes) => Promise<void>;
+  initialVoiceLanguage?: string | null;
+  onSave?: (personality: PersonalityAxes, voiceLanguage?: string) => Promise<void>;
   saving?: boolean;
+  apiBase?: string;
 }
 
-export function PersonalityConfig({ employeeId, employeeName, initialPersonality, onSave, saving }: PersonalityConfigProps) {
+export function PersonalityConfig({ employeeId, employeeName, initialPersonality, initialVoiceLanguage, onSave, saving, apiBase }: PersonalityConfigProps) {
   const [axes, setAxes] = useState<PersonalityAxes>(initialPersonality || DEFAULT_PERSONALITY);
   const [selectedPreset, setSelectedPreset] = useState<string>("");
+  const [voiceLanguage, setVoiceLanguage] = useState<string>(initialVoiceLanguage || "en");
   const [hasChanges, setHasChanges] = useState(false);
   const { toast } = useToast();
+
+  const [cloneVoiceName, setCloneVoiceName] = useState("");
+  const [cloneSamples, setCloneSamples] = useState<string[]>([]);
+  const [isCloning, setIsCloning] = useState(false);
+  const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null);
+
+  const resolvedApiBase = apiBase || "/api";
 
   useEffect(() => {
     if (initialPersonality) {
       setAxes(initialPersonality);
     }
   }, [initialPersonality]);
+
+  useEffect(() => {
+    if (initialVoiceLanguage) {
+      setVoiceLanguage(initialVoiceLanguage);
+    }
+  }, [initialVoiceLanguage]);
 
   const handleAxisChange = useCallback((key: keyof PersonalityAxes, value: number) => {
     setAxes(prev => ({ ...prev, [key]: value }));
@@ -174,23 +223,74 @@ export function PersonalityConfig({ employeeId, employeeName, initialPersonality
     }
   }, []);
 
+  const handleLanguageChange = useCallback((lang: string) => {
+    setVoiceLanguage(lang);
+    setHasChanges(true);
+  }, []);
+
   const handleReset = useCallback(() => {
     setAxes(initialPersonality || DEFAULT_PERSONALITY);
+    setVoiceLanguage(initialVoiceLanguage || "en");
     setSelectedPreset("");
     setHasChanges(false);
-  }, [initialPersonality]);
+  }, [initialPersonality, initialVoiceLanguage]);
 
   const handleSave = useCallback(async () => {
     if (onSave) {
       try {
-        await onSave(axes);
+        await onSave(axes, voiceLanguage);
         setHasChanges(false);
-        toast({ title: "Personality saved", description: `${employeeName}'s personality has been updated.` });
+        toast({ title: "Settings saved", description: `${employeeName}'s personality and voice settings have been updated.` });
       } catch {
-        toast({ title: "Save failed", description: "Could not update personality settings.", variant: "destructive" });
+        toast({ title: "Save failed", description: "Could not update settings.", variant: "destructive" });
       }
     }
-  }, [axes, onSave, employeeName, toast]);
+  }, [axes, voiceLanguage, onSave, employeeName, toast]);
+
+  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        setCloneSamples(prev => [...prev, result]);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = "";
+  }, []);
+
+  const handleCloneVoice = useCallback(async () => {
+    if (!cloneVoiceName.trim() || cloneSamples.length === 0) return;
+    setIsCloning(true);
+    try {
+      const response = await fetch(`${resolvedApiBase}/voice/clone`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: cloneVoiceName.trim(),
+          samples: cloneSamples,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error((errData as { error?: string }).error || "Voice cloning failed");
+      }
+
+      const data = await response.json() as { voiceId: string };
+      setClonedVoiceId(data.voiceId);
+      toast({ title: "Voice cloned", description: `Custom voice "${cloneVoiceName}" created successfully. You can now assign it to this employee.` });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Voice cloning failed";
+      toast({ title: "Cloning failed", description: message, variant: "destructive" });
+    } finally {
+      setIsCloning(false);
+    }
+  }, [cloneVoiceName, cloneSamples, resolvedApiBase, toast]);
 
   const previewText = generatePreviewText(axes);
 
@@ -284,6 +384,114 @@ export function PersonalityConfig({ employeeId, employeeName, initialPersonality
               </TooltipProvider>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Voice Language</CardTitle>
+                <Globe className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <CardDescription>Choose the language for {employeeName}'s voice output. Uses ElevenLabs multilingual model.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Select value={voiceLanguage} onValueChange={handleLanguageChange}>
+                <SelectTrigger className="w-full max-w-xs">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {VOICE_LANGUAGES.map(lang => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground mt-2">
+                The AI employee's voice synthesis will use this language. All 29 ElevenLabs-supported languages are available.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Custom Voice Cloning</CardTitle>
+                <Mic className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <CardDescription>Create a custom branded voice by uploading audio samples. Requires at least one sample.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Voice Name</Label>
+                <Input
+                  value={cloneVoiceName}
+                  onChange={(e) => setCloneVoiceName(e.target.value)}
+                  placeholder="e.g., Company Brand Voice"
+                  className="mt-1.5 max-w-xs"
+                />
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Audio Samples</Label>
+                <div className="mt-1.5 flex items-center gap-3">
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-background text-xs text-muted-foreground hover:border-primary/30 transition-colors">
+                    <Upload className="h-3.5 w-3.5" />
+                    Upload Audio Files
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                  </label>
+                  {cloneSamples.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {cloneSamples.length} sample{cloneSamples.length > 1 ? "s" : ""} uploaded
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Upload 1-25 audio samples (MP3, WAV, or WebM). Longer, clearer samples produce better results.
+                </p>
+              </div>
+
+              {cloneSamples.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {cloneSamples.map((_, idx) => (
+                    <Badge key={idx} variant="secondary" className="text-xs">
+                      Sample {idx + 1}
+                      <button
+                        className="ml-1.5 text-muted-foreground hover:text-foreground"
+                        onClick={() => setCloneSamples(prev => prev.filter((_, i) => i !== idx))}
+                      >
+                        x
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <Button
+                  size="sm"
+                  onClick={handleCloneVoice}
+                  disabled={isCloning || !cloneVoiceName.trim() || cloneSamples.length === 0}
+                >
+                  {isCloning ? (
+                    <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Cloning...</>
+                  ) : (
+                    <><Mic className="h-3.5 w-3.5 mr-1.5" /> Clone Voice</>
+                  )}
+                </Button>
+                {clonedVoiceId && (
+                  <span className="text-xs text-green-500 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Voice created (ID: {clonedVoiceId.slice(0, 8)}...)
+                  </span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="space-y-6">
@@ -318,6 +526,31 @@ export function PersonalityConfig({ employeeId, employeeName, initialPersonality
                   </div>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-base">Voice Settings</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Language</span>
+                <Badge variant="outline" className="text-xs">
+                  {VOICE_LANGUAGES.find(l => l.code === voiceLanguage)?.name || voiceLanguage}
+                </Badge>
+              </div>
+              {clonedVoiceId && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Custom Voice</span>
+                  <Badge variant="outline" className="text-xs text-green-500">
+                    Active
+                  </Badge>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

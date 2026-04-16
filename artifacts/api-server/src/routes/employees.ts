@@ -28,6 +28,7 @@ const createEmployeeBody = z.object({
   customInstructions: z.string().optional(),
   avatarUrl: z.string().url().optional(),
   voiceId: z.string().optional(),
+  voiceLanguage: z.string().max(10).optional(),
 });
 
 const updateEmployeeBody = z.object({
@@ -39,6 +40,7 @@ const updateEmployeeBody = z.object({
   customInstructions: z.string().optional(),
   avatarUrl: z.string().url().optional(),
   voiceId: z.string().optional(),
+  voiceLanguage: z.string().max(10).optional(),
 });
 
 router.get("/employees", requireAuth, validate({ query: listEmployeesQuery }), async (req, res, next) => {
@@ -79,7 +81,7 @@ router.post("/employees", requireAuth, requirePlanLimit("ai_employees"), validat
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.badRequest("No organization");
 
-    const { roleId, name, department, team, personality, customInstructions, avatarUrl, voiceId } = req.body;
+    const { roleId, name, department, team, personality, customInstructions, avatarUrl, voiceId, voiceLanguage } = req.body;
 
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, roleId));
     if (!role) throw AppError.notFound("Role not found");
@@ -111,6 +113,7 @@ router.post("/employees", requireAuth, requirePlanLimit("ai_employees"), validat
       avatarUrl: resolvedAvatarUrl,
       avatarConfig: aip,
       voiceId: voiceId || null,
+      voiceLanguage: voiceLanguage || "en",
     }).returning();
 
     await recordUsage(orgId, "ai_employees", 1, { employeeId: employee.id, roleId: role.id });
@@ -147,7 +150,7 @@ router.patch("/employees/:id", requireAuth, validate({ params: idParam, body: up
     const [existing] = await db.select().from(aiEmployees).where(and(eq(aiEmployees.id, id), eq(aiEmployees.orgId, orgId)));
     if (!existing) throw AppError.notFound("Employee not found");
 
-    const { name, department, team, status, personality, customInstructions, avatarUrl, voiceId } = req.body;
+    const { name, department, team, status, personality, customInstructions, avatarUrl, voiceId, voiceLanguage } = req.body;
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (name) updates.name = name;
     if (department !== undefined) updates.department = department;
@@ -172,6 +175,7 @@ router.patch("/employees/:id", requireAuth, validate({ params: idParam, body: up
       const existingAip = (updates.avatarConfig || existing.avatarConfig || {}) as Record<string, unknown>;
       updates.avatarConfig = { ...existingAip, voiceId };
     }
+    if (voiceLanguage !== undefined) updates.voiceLanguage = voiceLanguage;
 
     const [updated] = await db.update(aiEmployees).set(updates).where(eq(aiEmployees.id, id)).returning();
     const [role] = await db.select().from(aiEmployeeRoles).where(eq(aiEmployeeRoles.id, updated.roleId));

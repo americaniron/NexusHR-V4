@@ -218,3 +218,81 @@ export async function listVoices() {
   const data = await response.json() as { voices: Array<Record<string, unknown>> };
   return data.voices;
 }
+
+export async function cloneVoice(
+  name: string,
+  samples: Buffer[],
+  description?: string
+): Promise<{ voiceId: string; name: string }> {
+  const boundary = `----ElevenLabsBoundary${Date.now()}`;
+  const parts: Buffer[] = [];
+
+  const addField = (fieldName: string, value: string) => {
+    parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${fieldName}"\r\n\r\n${value}\r\n`));
+  };
+
+  addField("name", name);
+  if (description) {
+    addField("description", description);
+  }
+
+  for (let i = 0; i < samples.length; i++) {
+    parts.push(Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="files"; filename="sample_${i}.mp3"\r\nContent-Type: audio/mpeg\r\n\r\n`
+    ));
+    parts.push(samples[i]);
+    parts.push(Buffer.from("\r\n"));
+  }
+
+  parts.push(Buffer.from(`--${boundary}--\r\n`));
+
+  const body = Buffer.concat(parts);
+
+  const response = await elevenLabsFetch(`/v1/voices/add`, {
+    method: "POST",
+    headers: {
+      "Content-Type": `multipart/form-data; boundary=${boundary}`,
+    },
+    body: body as unknown as string,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`ElevenLabs voice cloning error: ${response.status} ${errorText}`);
+  }
+
+  const data = await response.json() as { voice_id: string };
+  return { voiceId: data.voice_id, name };
+}
+
+export const SUPPORTED_LANGUAGES = [
+  { code: "en", name: "English" },
+  { code: "es", name: "Spanish" },
+  { code: "fr", name: "French" },
+  { code: "de", name: "German" },
+  { code: "it", name: "Italian" },
+  { code: "pt", name: "Portuguese" },
+  { code: "pl", name: "Polish" },
+  { code: "hi", name: "Hindi" },
+  { code: "ar", name: "Arabic" },
+  { code: "cs", name: "Czech" },
+  { code: "da", name: "Danish" },
+  { code: "nl", name: "Dutch" },
+  { code: "fi", name: "Finnish" },
+  { code: "el", name: "Greek" },
+  { code: "hu", name: "Hungarian" },
+  { code: "id", name: "Indonesian" },
+  { code: "ja", name: "Japanese" },
+  { code: "ko", name: "Korean" },
+  { code: "ms", name: "Malay" },
+  { code: "no", name: "Norwegian" },
+  { code: "ro", name: "Romanian" },
+  { code: "ru", name: "Russian" },
+  { code: "sk", name: "Slovak" },
+  { code: "sv", name: "Swedish" },
+  { code: "ta", name: "Tamil" },
+  { code: "tr", name: "Turkish" },
+  { code: "uk", name: "Ukrainian" },
+  { code: "vi", name: "Vietnamese" },
+  { code: "zh", name: "Chinese" },
+];

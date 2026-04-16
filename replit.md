@@ -39,7 +39,7 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
     -   **ElevenLabs Alignment API:** Used for character-level timing data to drive lip sync.
     -   **Collaboration Visibility Panel:** Real-time inter-professional workflow progress with dependency graphs and assignments.
 -   **WebRTC Video Call System:** Real-time video calls with AI employees via WebRTC signaling (RTCPeerConnection + SDP offer/answer + ICE candidates) over Socket.IO. Canvas-based animated avatar (`VideoAvatar`) with real-time lip sync driven by TTS audio via Web Audio API analyser, facial expressions from the emotion engine (7 states), eye movement/blinking, and head gestures. `useVideoCall` hook manages full session lifecycle including RTCPeerConnection negotiation, media capture with audio-only fallback, push-to-talk STT from mic via MediaRecorder + transcription API, latency monitoring, reconnection (max 3 attempts), and graceful fallback to voice mode. `VideoCallSession` component displays user camera feed alongside animated avatar with call controls (mute, camera toggle, push-to-talk mic recording, fullscreen). Video call sessions created via `/api/video-call/session` with conversation ownership validation. Server-side session authorization binds sessionId to the creating user's org+clerkUserId — only authorized sockets can join. Entry points on both conversations page (Video Call button) and employee detail page (Video Call button linking with `?videoCall=true`). Graceful fallback to voice mode on WebRTC failure.
--   **Voice & Visual States:** ElevenLabs TTS with personality-mapped voice settings and emotion-aware modulation. Claude Opus 4.6 for audio transcription. `useVoiceMode` hook for managing the full voice pipeline.
+-   **Voice & Visual States:** ElevenLabs TTS with personality-mapped voice settings, emotion-aware modulation, and multilingual support (29 languages via `eleven_multilingual_v2`). OpenAI Whisper (`gpt-4o-mini-transcribe`) for audio transcription. Voice cloning via ElevenLabs `POST /voice/clone`. Per-employee `voiceLanguage` column for language selection. `useVoiceMode` hook for managing the full voice pipeline.
 -   **AI Personality Engine:** 7-Axis personality system with customizable sliders, dynamic tone control, culture alignment, and a relational memory engine.
 -   **Prompt Architecture & Assembly Pipeline:** 9-layer prompt assembly, 7-stage assembly pipeline for context injection and token management, PII redaction, audit logging, and template versioning.
 -   **AI Orchestration Layer:** Task router for AI employee assignment, assignment engine, progress tracker, dependency manager, and workflow execution engine.
@@ -50,8 +50,9 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
 ## External Dependencies
 
 -   **Authentication:** Clerk
--   **AI (Exclusive):** Anthropic Claude Opus 4.6 via Replit AI Integrations (all reasoning, chat, prompt refinement, transcription). Model, provider, and token limits are configurable via env vars (`AI_PROVIDER`, `AI_MODEL`, `AI_DEFAULT_MAX_TOKENS`, `AI_REFINEMENT_MAX_TOKENS`) in `artifacts/api-server/src/lib/aiConfig.ts`.
--   **Voice Synthesis:** ElevenLabs (via Replit integration connector)
+-   **AI:** Anthropic Claude Opus 4.6 via Replit AI Integrations (reasoning, chat, prompt refinement). OpenAI Whisper (`gpt-4o-mini-transcribe`) via Replit AI Integrations for speech-to-text. Model, provider, and token limits are configurable via env vars (`AI_PROVIDER`, `AI_MODEL`, `AI_DEFAULT_MAX_TOKENS`, `AI_REFINEMENT_MAX_TOKENS`) in `artifacts/api-server/src/lib/aiConfig.ts`.
+-   **Voice Synthesis:** ElevenLabs (via Replit integration connector) — multilingual TTS (`eleven_multilingual_v2`), voice cloning, and alignment API
+-   **Speech-to-Text:** OpenAI Whisper (`gpt-4o-mini-transcribe`) via `@workspace/integrations-openai-ai-server`
 -   **Image Generation:** Replit AI proxy (Claude Opus 4.6 prompt refinement)
 -   **Database:** PostgreSQL
 -   **ORM:** Drizzle ORM

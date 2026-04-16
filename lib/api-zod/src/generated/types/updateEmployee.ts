@@ -15,5 +15,7 @@ export interface UpdateEmployee {
   personality?: UpdateEmployeePersonality;
   avatarUrl?: string;
   voiceId?: string;
+  /** Language code for voice synthesis */
+  voiceLanguage?: string;
   customInstructions?: string;
 }

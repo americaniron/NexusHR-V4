@@ -16,6 +16,8 @@ export interface VoiceSynthesizeRequest {
   voiceId?: string;
   roleTitle?: string;
   department?: string;
+  /** Language code for multilingual TTS (e.g. en, es, fr) */
+  language?: string;
   personality?: VoiceSynthesizeRequestPersonality;
   /**
    * @minimum 0

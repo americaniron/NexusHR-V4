@@ -990,6 +990,9 @@ paths:
                   type: string
                 department:
                   type: string
+                language:
+                  type: string
+                  description: "Language code for multilingual TTS"
                 personality:
                   type: object
                   properties:
@@ -1050,6 +1053,56 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/VoiceProfile"
+
+  /voice/clone:
+    post:
+      operationId: cloneVoice
+      tags: [voice]
+      summary: Clone a voice from audio samples via ElevenLabs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name for the cloned voice
+                description:
+                  type: string
+                  description: Description of the voice
+                samples:
+                  type: array
+                  items:
+                    type: string
+                  description: Base64-encoded audio samples
+              required: [name, samples]
+      responses:
+        "200":
+          description: Cloned voice result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClonedVoiceResult"
+
+  /voice/languages:
+    get:
+      operationId: getVoiceLanguages
+      tags: [voice]
+      summary: Get supported voice languages for ElevenLabs
+      responses:
+        "200":
+          description: List of supported languages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/VoiceLanguage"
 
   /notifications:
     get:
@@ -1610,6 +1663,10 @@ components:
         voiceId:
           type: string
           nullable: true
+        voiceLanguage:
+          type: string
+          nullable: true
+          description: "Language code for voice synthesis (e.g. en, es, fr)"
         hiredAt:
           type: string
         role:
@@ -1647,6 +1704,9 @@ components:
           format: uri
         voiceId:
           type: string
+        voiceLanguage:
+          type: string
+          description: "Language code for voice synthesis (e.g. en, es, fr)"
       required: [roleId, name]
 
     UpdateEmployee:
@@ -1667,6 +1727,9 @@ components:
           format: uri
         voiceId:
           type: string
+        voiceLanguage:
+          type: string
+          description: "Language code for voice synthesis"
         customInstructions:
           type: string
 
@@ -2625,6 +2688,9 @@ components:
           type: string
         department:
           type: string
+        language:
+          type: string
+          description: "Language code for multilingual TTS (e.g. en, es, fr)"
         personality:
           type: object
           properties:
@@ -2715,6 +2781,28 @@ components:
           type: string
         voiceId:
           type: string
+
+    ClonedVoiceResult:
+      type: object
+      required: [voiceId, name]
+      properties:
+        voiceId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+
+    VoiceLanguage:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          description: "ISO language code (e.g. en, es, fr)"
+        name:
+          type: string
+          description: "Human-readable language name"
 
     VideoProject:
       type: object

@@ -1,6 +1,6 @@
 import express, { Router, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod/v4";
-import { textToSpeechStream, textToSpeechWithAlignment } from "../lib/elevenlabs";
+import { textToSpeechStream, textToSpeechWithAlignment, cloneVoice, SUPPORTED_LANGUAGES } from "../lib/elevenlabs";
 import { personalityToVoiceSettings, resolveVoiceProfile, type PersonalityAxes } from "../lib/voiceConfig";
 import { analyzeEmotion } from "../lib/emotionEngine";
 import { requireAuth } from "../middlewares/requireAuth";
@@ -13,14 +13,17 @@ const router = Router();
 
 const synthesizeLimit = rateLimit({ windowMs: 60_000, max: 20, keyPrefix: "voice-synthesize" });
 const transcribeLimit = rateLimit({ windowMs: 60_000, max: 15, keyPrefix: "voice-transcribe" });
+const cloneLimit = rateLimit({ windowMs: 60_000, max: 5, keyPrefix: "voice-clone" });
 
 const transcribeJsonParser = express.json({ limit: "10mb" });
+const cloneJsonParser = express.json({ limit: "50mb" });
 
 const synthesizeBody = z.object({
   text: z.string().min(1).max(5000),
   voiceId: z.string().max(100).optional(),
   roleTitle: z.string().max(200).optional(),
   department: z.string().max(200).optional(),
+  language: z.string().max(10).optional(),
   personality: z.object({
     energy: z.number().min(0).max(1).optional(),
     formality: z.number().min(0).max(1).optional(),
@@ -35,9 +38,15 @@ const transcribeBody = z.object({
   audio: z.string().min(1),
 });
 
+const cloneBody = z.object({
+  name: z.string().min(1).max(200),
+  description: z.string().max(500).optional(),
+  samples: z.array(z.string().min(1)).min(1).max(25),
+});
+
 router.post("/voice/synthesize", requireAuth, synthesizeLimit, validate({ body: synthesizeBody }), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { text, voiceId, roleTitle, department, personality, stability, similarityBoost, speed } = req.body;
+    const { text, voiceId, roleTitle, department, language, personality, stability, similarityBoost, speed } = req.body;
 
     const profile = resolveVoiceProfile(roleTitle, department);
     const personalitySettings = personalityToVoiceSettings(personality as PersonalityAxes | undefined);
@@ -49,8 +58,13 @@ router.post("/voice/synthesize", requireAuth, synthesizeLimit, validate({ body: 
     const finalSpeed = speed ?? personalitySettings.speed;
     const finalStyle = personalitySettings.style;
 
+    const modelId = language && language !== "en"
+      ? "eleven_multilingual_v2"
+      : undefined;
+
     const { body: audioStream, contentType } = await textToSpeechStream(text, {
       voiceId: resolvedVoiceId,
+      modelId,
       stability: finalStability,
       similarityBoost: finalSimilarityBoost,
       speed: finalSpeed,
@@ -117,36 +131,11 @@ router.post("/voice/transcribe", requireAuth, transcribeLimit, transcribeJsonPar
       throw AppError.badRequest("Audio file too large (max 10MB)");
     }
 
-    const { getAnthropicClient } = await import("@workspace/integrations-anthropic-ai/client");
-    const { AI_CONFIG } = await import("../lib/aiConfig");
-    const anthropic = getAnthropicClient();
+    const { ensureCompatibleFormat } = await import("@workspace/integrations-openai-ai-server/audio");
+    const { speechToText } = await import("@workspace/integrations-openai-ai-server/audio");
 
-    const base64Audio = audioBuffer.toString("base64");
-    const mediaType = mimeType as "audio/webm" | "audio/wav" | "audio/mp3" | "audio/mpeg" | "audio/ogg" | "audio/flac";
-
-    const response = await anthropic.messages.create({
-      model: AI_CONFIG.model,
-      max_tokens: AI_CONFIG.defaultMaxTokens,
-      messages: [{
-        role: "user",
-        content: [
-          {
-            type: "input_audio" as any,
-            source: {
-              type: "base64",
-              media_type: mediaType,
-              data: base64Audio,
-            },
-          } as any,
-          {
-            type: "text",
-            text: "Please transcribe the audio exactly as spoken. Return ONLY the transcribed text, nothing else. If the audio is unclear, transcribe what you can hear.",
-          },
-        ],
-      }],
-    });
-
-    const transcribedText = response.content[0].type === "text" ? response.content[0].text : "";
+    const { buffer: compatBuffer, format } = await ensureCompatibleFormat(audioBuffer);
+    const transcribedText = await speechToText(compatBuffer, format);
 
     res.json({
       text: transcribedText,
@@ -162,6 +151,7 @@ const synthesizeAlignedBody = z.object({
   voiceId: z.string().max(100).optional(),
   roleTitle: z.string().max(200).optional(),
   department: z.string().max(200).optional(),
+  language: z.string().max(10).optional(),
   personality: z.object({
     energy: z.number().min(0).max(1).optional(),
     formality: z.number().min(0).max(1).optional(),
@@ -171,7 +161,7 @@ const synthesizeAlignedBody = z.object({
 
 router.post("/voice/synthesize-aligned", requireAuth, synthesizeLimit, validate({ body: synthesizeAlignedBody }), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { text, voiceId, roleTitle, department, personality } = req.body;
+    const { text, voiceId, roleTitle, department, language, personality } = req.body;
 
     const profile = resolveVoiceProfile(roleTitle, department);
     const personalitySettings = personalityToVoiceSettings(personality as PersonalityAxes | undefined);
@@ -179,8 +169,13 @@ router.post("/voice/synthesize-aligned", requireAuth, synthesizeLimit, validate(
 
     const resolvedVoiceId = voiceId || personalitySettings.warmthVoiceId || profile.voiceId;
 
+    const modelId = language && language !== "en"
+      ? "eleven_multilingual_v2"
+      : undefined;
+
     const result = await textToSpeechWithAlignment(text, {
       voiceId: resolvedVoiceId,
+      modelId,
       stability: emotionAnalysis.voiceParams.stability,
       similarityBoost: personalitySettings.similarity_boost,
       speed: emotionAnalysis.voiceParams.speed,
@@ -217,6 +212,48 @@ router.get("/voice/profiles", requireAuth, async (_req: Request, res: Response, 
     ];
 
     res.json({ data: profiles });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/voice/clone", requireAuth, cloneLimit, cloneJsonParser, validate({ body: cloneBody }), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name, description, samples } = req.body;
+
+    const sampleBuffers = samples.map((sample: string) => {
+      const base64Data = sample.replace(/^data:audio\/[^;]+;base64,/, "");
+      return Buffer.from(base64Data, "base64");
+    });
+
+    for (const buf of sampleBuffers) {
+      if (buf.length < 100) {
+        throw AppError.badRequest("One or more audio samples are too small or empty");
+      }
+      if (buf.length > 10 * 1024 * 1024) {
+        throw AppError.badRequest("Each audio sample must be under 10MB");
+      }
+    }
+
+    const result = await cloneVoice(name, sampleBuffers, description);
+
+    res.json({
+      voiceId: result.voiceId,
+      name: result.name,
+      description: description || "",
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("ElevenLabs")) {
+      next(AppError.badRequest(error.message));
+    } else {
+      next(error);
+    }
+  }
+});
+
+router.get("/voice/languages", requireAuth, async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json({ data: SUPPORTED_LANGUAGES });
   } catch (error) {
     next(error);
   }

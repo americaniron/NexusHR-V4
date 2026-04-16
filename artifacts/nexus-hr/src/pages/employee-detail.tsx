@@ -84,7 +84,7 @@ export default function EmployeeDetailPage() {
       .finally(() => setLoadingPersonality(false));
   }, [employeeId, apiBase]);
 
-  const handleSavePersonality = useCallback(async (axes: PersonalityAxes) => {
+  const handleSavePersonality = useCallback(async (axes: PersonalityAxes, voiceLanguage?: string) => {
     setSaving(true);
     try {
       const res = await fetch(`${apiBase}/personality/employee/${employeeId}`, {
@@ -95,13 +95,21 @@ export default function EmployeeDetailPage() {
       });
       if (!res.ok) throw new Error("Save failed");
       setPersonality(axes);
+
+      if (voiceLanguage) {
+        await updateEmployee.mutateAsync({
+          id: employeeId,
+          data: { voiceLanguage },
+        });
+      }
+
       toast({ title: "Personality updated" });
     } catch {
       toast({ title: "Failed to save personality", variant: "destructive" });
     } finally {
       setSaving(false);
     }
-  }, [employeeId, apiBase, toast]);
+  }, [employeeId, apiBase, toast, updateEmployee]);
 
   const handleUpdateInstructions = async () => {
     try {
@@ -296,8 +304,10 @@ export default function EmployeeDetailPage() {
               employeeId={employeeId}
               employeeName={employee.name}
               initialPersonality={personality}
+              initialVoiceLanguage={(employee as any).voiceLanguage}
               onSave={handleSavePersonality}
               saving={saving}
+              apiBase={apiBase}
             />
           )}
         </TabsContent>
