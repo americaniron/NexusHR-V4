@@ -191,6 +191,7 @@ router.put("/prompts/templates/:id", requireAuth, validate({ body: updateTemplat
 const assembleBody = z.object({
   aiEmployeeId: z.number(),
   conversationId: z.number().optional(),
+  currentMessage: z.string().max(10000).optional(),
   activeTask: z.object({
     id: z.number(),
     title: z.string(),
@@ -215,6 +216,7 @@ router.post("/prompts/assemble", requireAuth, validate({ body: assembleBody }), 
       orgId,
       userId,
       conversationId: req.body.conversationId,
+      currentMessage: req.body.currentMessage,
       activeTask: req.body.activeTask,
       tokenBudget: req.body.tokenBudget,
       contextOverrides: req.body.contextOverrides,
@@ -243,6 +245,7 @@ router.post("/prompts/preview", requireAuth, validate({ body: assembleBody }), a
       orgId,
       userId,
       conversationId: req.body.conversationId,
+      currentMessage: req.body.currentMessage,
       activeTask: req.body.activeTask,
       tokenBudget: req.body.tokenBudget,
       contextOverrides: req.body.contextOverrides,

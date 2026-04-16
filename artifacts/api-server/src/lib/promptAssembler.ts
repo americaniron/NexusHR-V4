@@ -24,6 +24,7 @@ export interface AssemblyInput {
   orgId: number;
   userId: number;
   conversationId?: number;
+  currentMessage?: string;
   activeTask?: {
     id: number;
     title: string;
@@ -246,8 +247,12 @@ function assembleLayer4TaskInstructions(task: AssemblyInput["activeTask"]): stri
   return sections.join("\n");
 }
 
-async function assembleLayer5Memory(userId: number, aiEmployeeId: number): Promise<string> {
-  const memories = await retrieveMemories(userId, aiEmployeeId, { limit: 20 });
+async function assembleLayer5Memory(userId: number, aiEmployeeId: number, currentMessage?: string): Promise<string> {
+  const memories = await retrieveMemories(userId, aiEmployeeId, {
+    limit: 20,
+    queryText: currentMessage,
+    vectorWeight: currentMessage ? 0.5 : 0,
+  });
   return formatMemoriesForPrompt(memories);
 }
 
@@ -597,7 +602,7 @@ export async function assemblePrompt(input: AssemblyInput): Promise<AssembledPro
     assembleLayer1System(roleData),
     assembleLayer2RoleDefinition(roleData),
     assembleLayer3JobInstructions(roleData),
-    assembleLayer5Memory(input.userId, input.aiEmployeeId),
+    assembleLayer5Memory(input.userId, input.aiEmployeeId, input.currentMessage),
     assembleLayer6UserContext(user, input.conversationId, input.orgId, input.userId, input.aiEmployeeId),
     assembleLayer7CompanyContext(input.orgId),
     assembleLayer8ToolAccess(input.orgId, input.aiEmployeeId),

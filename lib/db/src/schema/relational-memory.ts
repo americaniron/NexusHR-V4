@@ -1,9 +1,22 @@
-import { pgTable, text, serial, integer, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, real, customType } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { organizations } from "./organizations";
 import { users } from "./users";
 import { aiEmployees } from "./ai-employees";
+
+const vector = customType<{ data: number[]; driverParam: string }>({
+  dataType() {
+    return "vector(384)";
+  },
+  toDriver(value: number[]): string {
+    return `[${value.join(",")}]`;
+  },
+  fromDriver(value: string): number[] {
+    const str = typeof value === "string" ? value : String(value);
+    return str.replace(/[\[\]]/g, "").split(",").map(Number);
+  },
+});
 
 export const relationalMemories = pgTable("relational_memories", {
   id: serial("id").primaryKey(),
@@ -13,6 +26,7 @@ export const relationalMemories = pgTable("relational_memories", {
   memoryType: text("memory_type").notNull(),
   category: text("category"),
   content: text("content").notNull(),
+  embedding: vector("embedding"),
   relevanceScore: real("relevance_score").default(0.5).notNull(),
   accessCount: integer("access_count").default(0).notNull(),
   lastAccessedAt: timestamp("last_accessed_at").defaultNow().notNull(),

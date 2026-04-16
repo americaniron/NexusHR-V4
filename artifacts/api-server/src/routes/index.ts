@@ -25,6 +25,7 @@ import videoStudioRouter from "./video-studio";
 import apiKeysRouter from "./api-keys";
 import ariaRouter from "./aria";
 import videoCallRouter from "./videoCall";
+import memoryRouter from "./memory";
 
 const router: IRouter = Router();
 
@@ -54,5 +55,6 @@ router.use(videoStudioRouter);
 router.use(apiKeysRouter);
 router.use(ariaRouter);
 router.use(videoCallRouter);
+router.use(memoryRouter);
 
 export default router;

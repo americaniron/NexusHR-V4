@@ -5,6 +5,8 @@ import { logger } from "./lib/logger";
 import { initWebSocket } from "./lib/websocket";
 import { initializeEmailTransport } from "./lib/email";
 import { startBillingScheduler } from "./lib/billing/scheduler";
+import { startMemoryConsolidation } from "./lib/memoryConsolidation";
+import { ensurePgvector } from "./lib/ensurePgvector";
 
 const rawPort = process.env["PORT"];
 
@@ -25,6 +27,10 @@ const httpServer = createServer(app);
 initWebSocket(httpServer);
 initializeEmailTransport();
 startBillingScheduler();
+
+ensurePgvector()
+  .then(() => startMemoryConsolidation(30))
+  .catch((err) => logger.error({ err }, "pgvector setup failed, memory consolidation disabled"));
 
 httpServer.listen(port, () => {
   logger.info(

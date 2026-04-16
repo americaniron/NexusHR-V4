@@ -1,6 +1,8 @@
 import { db } from "@workspace/db";
 import { relationalMemories } from "@workspace/db/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, isNull } from "drizzle-orm";
+import { generateEmbedding, formatVectorForPg, EMBEDDING_DIMENSIONS } from "./embeddingService";
+import { logger } from "./logger";
 
 export type MemoryType = "preference" | "personal_context" | "interaction_pattern";
 
@@ -45,6 +47,13 @@ export async function storeMemory(
     return updated;
   }
 
+  let embedding: number[] | null = null;
+  try {
+    embedding = generateEmbedding(entry.content);
+  } catch (err) {
+    logger.warn({ err }, "Failed to generate embedding for memory, storing without vector");
+  }
+
   const [memory] = await db
     .insert(relationalMemories)
     .values({
@@ -54,6 +63,7 @@ export async function storeMemory(
       memoryType: entry.memoryType,
       category: entry.category || null,
       content: entry.content,
+      embedding,
       relevanceScore: entry.relevanceScore ?? 0.5,
     })
     .returning();
@@ -67,9 +77,23 @@ export async function retrieveMemories(
   options?: {
     limit?: number;
     memoryType?: MemoryType;
+    queryText?: string;
+    vectorWeight?: number;
+    timeDecayWeight?: number;
   },
 ): Promise<Array<typeof relationalMemories.$inferSelect>> {
   const limit = options?.limit ?? 20;
+  const vectorWeight = options?.vectorWeight ?? 0.5;
+  const timeDecayWeight = 1 - vectorWeight;
+
+  if (options?.queryText) {
+    return retrieveMemoriesHybrid(userId, aiEmployeeId, options.queryText, {
+      limit,
+      memoryType: options.memoryType,
+      vectorWeight,
+      timeDecayWeight,
+    });
+  }
 
   const conditions = [
     eq(relationalMemories.userId, userId),
@@ -88,6 +112,64 @@ export async function retrieveMemories(
       desc(sql`(${relationalMemories.relevanceScore} * 0.6) + (1.0 / (1.0 + EXTRACT(EPOCH FROM (NOW() - ${relationalMemories.lastAccessedAt})) / 86400.0)) * 0.4`),
     )
     .limit(limit);
+
+  if (memories.length > 0) {
+    const memoryIds = memories.map(m => m.id);
+    await db
+      .update(relationalMemories)
+      .set({ lastAccessedAt: new Date() })
+      .where(sql`${relationalMemories.id} = ANY(${memoryIds})`);
+  }
+
+  return memories;
+}
+
+async function retrieveMemoriesHybrid(
+  userId: number,
+  aiEmployeeId: number,
+  queryText: string,
+  options: {
+    limit: number;
+    memoryType?: MemoryType;
+    vectorWeight: number;
+    timeDecayWeight: number;
+  },
+): Promise<Array<typeof relationalMemories.$inferSelect>> {
+  let queryEmbedding: number[];
+  try {
+    queryEmbedding = generateEmbedding(queryText);
+  } catch (err) {
+    logger.warn({ err }, "Failed to generate query embedding, falling back to non-vector retrieval");
+    return retrieveMemories(userId, aiEmployeeId, {
+      limit: options.limit,
+      memoryType: options.memoryType,
+    });
+  }
+
+  const vecStr = formatVectorForPg(queryEmbedding);
+
+  const typeFilter = options.memoryType
+    ? sql`AND ${relationalMemories.memoryType} = ${options.memoryType}`
+    : sql``;
+
+  const results = await db.execute(sql`
+    SELECT *,
+      CASE
+        WHEN embedding IS NOT NULL THEN
+          (1 - (embedding <=> ${vecStr}::vector)) * ${options.vectorWeight}
+          + (${relationalMemories.relevanceScore} * 0.3 + (1.0 / (1.0 + EXTRACT(EPOCH FROM (NOW() - ${relationalMemories.lastAccessedAt})) / 86400.0)) * 0.2) * ${options.timeDecayWeight}
+        ELSE
+          (${relationalMemories.relevanceScore} * 0.6 + (1.0 / (1.0 + EXTRACT(EPOCH FROM (NOW() - ${relationalMemories.lastAccessedAt})) / 86400.0)) * 0.4) * ${options.timeDecayWeight}
+      END as hybrid_score
+    FROM relational_memories
+    WHERE ${relationalMemories.userId} = ${userId}
+      AND ${relationalMemories.aiEmployeeId} = ${aiEmployeeId}
+      ${typeFilter}
+    ORDER BY hybrid_score DESC
+    LIMIT ${options.limit}
+  `);
+
+  const memories = (results.rows || []) as Array<typeof relationalMemories.$inferSelect>;
 
   if (memories.length > 0) {
     const memoryIds = memories.map(m => m.id);
@@ -148,4 +230,37 @@ export async function deleteUserMemories(userId: number, aiEmployeeId: number): 
       eq(relationalMemories.aiEmployeeId, aiEmployeeId),
     ),
   );
+}
+
+export async function backfillEmbeddings(batchSize: number = 100, orgId?: number): Promise<{ processed: number; errors: number }> {
+  let processed = 0;
+  let errors = 0;
+
+  const conditions = [isNull(relationalMemories.embedding)];
+  if (orgId) {
+    conditions.push(eq(relationalMemories.orgId, orgId));
+  }
+
+  const unembedded = await db
+    .select({ id: relationalMemories.id, content: relationalMemories.content })
+    .from(relationalMemories)
+    .where(and(...conditions))
+    .limit(batchSize);
+
+  for (const memory of unembedded) {
+    try {
+      const embedding = generateEmbedding(memory.content);
+      await db
+        .update(relationalMemories)
+        .set({ embedding })
+        .where(eq(relationalMemories.id, memory.id));
+      processed++;
+    } catch (err) {
+      logger.warn({ err, memoryId: memory.id }, "Failed to backfill embedding");
+      errors++;
+    }
+  }
+
+  logger.info({ processed, errors, total: unembedded.length }, "Embedding backfill batch complete");
+  return { processed, errors };
 }
