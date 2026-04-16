@@ -8,6 +8,7 @@ import { startBillingScheduler } from "./lib/billing/scheduler";
 import { startMemoryConsolidation } from "./lib/memoryConsolidation";
 import { ensurePgvector } from "./lib/ensurePgvector";
 import { startProactiveScheduler } from "./services/proactive/scheduler";
+import { seedRolesIfEmpty } from "./lib/seedRoles";
 
 const rawPort = process.env["PORT"];
 
@@ -29,6 +30,8 @@ initWebSocket(httpServer);
 initializeEmailTransport();
 startBillingScheduler();
 startProactiveScheduler();
+
+seedRolesIfEmpty().catch((err) => logger.error({ err }, "Role seeding failed"));
 
 ensurePgvector()
   .then(() => startMemoryConsolidation(30))

@@ -23,7 +23,9 @@ export function validate(schemas: ValidationSchemas) {
     }
 
     if (schemas.query) {
-      const schema = schemas.query instanceof z.ZodObject ? schemas.query.passthrough() : schemas.query;
+      const schema = typeof (schemas.query as any).passthrough === "function"
+        ? (schemas.query as any).passthrough()
+        : schemas.query;
       const result = schema.safeParse(req.query);
       if (!result.success) {
         for (const issue of result.error.issues) {
