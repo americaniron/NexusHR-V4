@@ -1,6 +1,6 @@
 import { createServer } from "http";
 import app from "./app";
-import { AI_CONFIG } from "./lib/aiConfig";
+import { AI_CONFIG, AI_CONFIG_ALL_DEFAULTS } from "./lib/aiConfig";
 import { logger } from "./lib/logger";
 import { initWebSocket } from "./lib/websocket";
 import { initializeEmailTransport } from "./lib/email";
@@ -38,6 +38,11 @@ httpServer.listen(port, () => {
     },
     "AI configuration loaded",
   );
+  if (AI_CONFIG_ALL_DEFAULTS) {
+    logger.warn(
+      "AI configuration is using all default values. Set AI_PROVIDER, AI_MODEL, AI_DEFAULT_MAX_TOKENS, or AI_REFINEMENT_MAX_TOKENS environment variables to customize.",
+    );
+  }
   logger.info({ port }, "Server listening");
 });
 
