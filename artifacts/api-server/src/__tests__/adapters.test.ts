@@ -130,6 +130,59 @@ describe("Slack Adapter", () => {
     expect(result.success).toBe(false);
     expect(result.error).toContain("Unsupported Slack operation");
   });
+
+  it("handles Slack token refresh", async () => {
+    process.env.SLACK_CLIENT_ID = "test-slack-client-id";
+    process.env.SLACK_CLIENT_SECRET = "test-slack-client-secret";
+
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({
+        ok: true,
+        access_token: "xoxb-new-token",
+        refresh_token: "xoxr-new-refresh",
+        token_type: "Bearer",
+        expires_in: 43200,
+        scope: "channels:read,chat:write",
+      }),
+    }) as Mock;
+
+    const expiredCreds: OAuthCredentials = {
+      accessToken: "xoxb-expired",
+      refreshToken: "xoxr-old-refresh",
+      expiresAt: Date.now() - 1000,
+    };
+
+    const refreshed = await slackAdapter.refreshToken!(expiredCreds);
+    expect(refreshed).not.toBeNull();
+    expect(refreshed!.accessToken).toBe("xoxb-new-token");
+    expect(refreshed!.refreshToken).toBe("xoxr-new-refresh");
+
+    delete process.env.SLACK_CLIENT_ID;
+    delete process.env.SLACK_CLIENT_SECRET;
+  });
+
+  it("returns null for Slack refresh without refresh token", async () => {
+    const result = await slackAdapter.refreshToken!({ accessToken: "test" });
+    expect(result).toBeNull();
+  });
+
+  it("returns null for Slack refresh when API fails", async () => {
+    process.env.SLACK_CLIENT_ID = "test-id";
+    process.env.SLACK_CLIENT_SECRET = "test-secret";
+
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({ ok: false, error: "invalid_refresh_token" }),
+    }) as Mock;
+
+    const result = await slackAdapter.refreshToken!({
+      accessToken: "expired",
+      refreshToken: "bad-refresh",
+    });
+    expect(result).toBeNull();
+
+    delete process.env.SLACK_CLIENT_ID;
+    delete process.env.SLACK_CLIENT_SECRET;
+  });
 });
 
 describe("Google Adapter", () => {

@@ -56,12 +56,57 @@ router.get("/integrations", requireAuth, async (req, res, next) => {
   }
 });
 
+const OAUTH_CONFIGS: Record<string, {
+  authUrl: string;
+  tokenUrl: string;
+  clientIdEnv: string;
+  clientSecretEnv: string;
+  scopes: string[];
+}> = {
+  slack: {
+    authUrl: "https://slack.com/oauth/v2/authorize",
+    tokenUrl: "https://slack.com/api/oauth.v2.access",
+    clientIdEnv: "SLACK_CLIENT_ID",
+    clientSecretEnv: "SLACK_CLIENT_SECRET",
+    scopes: [
+      "channels:read", "channels:history", "chat:write",
+      "users:read", "groups:read", "groups:history",
+    ],
+  },
+  "google-workspace": {
+    authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenUrl: "https://oauth2.googleapis.com/token",
+    clientIdEnv: "GOOGLE_CLIENT_ID",
+    clientSecretEnv: "GOOGLE_CLIENT_SECRET",
+    scopes: [
+      "https://www.googleapis.com/auth/gmail.modify",
+      "https://www.googleapis.com/auth/calendar",
+      "https://www.googleapis.com/auth/drive",
+    ],
+  },
+};
+
+const OAUTH_REQUIRED_TOOLS = new Set(Object.keys(OAUTH_CONFIGS));
+
 router.post("/integrations/:toolId/connect", requireAuth, requirePlanLimit("integrations"), validate({ params: toolIdParam }), async (req, res, next) => {
   try {
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.badRequest("No organization");
 
     const toolId = parseInt(String(req.params.toolId));
+
+    const [tool] = await db.select().from(toolRegistry).where(eq(toolRegistry.id, toolId));
+    if (!tool) throw AppError.notFound("Tool not found");
+
+    if (OAUTH_REQUIRED_TOOLS.has(tool.name)) {
+      const clientId = process.env[OAUTH_CONFIGS[tool.name].clientIdEnv];
+      if (!clientId) {
+        throw AppError.badRequest(`${tool.displayName} requires OAuth configuration. Set ${OAUTH_CONFIGS[tool.name].clientIdEnv} and ${OAUTH_CONFIGS[tool.name].clientSecretEnv} environment variables.`);
+      }
+      res.json({ requiresOAuth: true, provider: tool.name, authorizeUrl: `/api/integrations/oauth/${tool.name}/authorize` });
+      return;
+    }
+
     const [existing] = await db.select().from(integrations)
       .where(and(eq(integrations.orgId, orgId), eq(integrations.toolId, toolId)));
 
@@ -105,36 +150,6 @@ router.post("/integrations/:toolId/disconnect", requireAuth, validate({ params: 
 });
 
 const oauthStateStore = new Map<string, { orgId: number; toolName: string; expiresAt: number }>();
-
-const OAUTH_CONFIGS: Record<string, {
-  authUrl: string;
-  tokenUrl: string;
-  clientIdEnv: string;
-  clientSecretEnv: string;
-  scopes: string[];
-}> = {
-  slack: {
-    authUrl: "https://slack.com/oauth/v2/authorize",
-    tokenUrl: "https://slack.com/api/oauth.v2.access",
-    clientIdEnv: "SLACK_CLIENT_ID",
-    clientSecretEnv: "SLACK_CLIENT_SECRET",
-    scopes: [
-      "channels:read", "channels:history", "chat:write",
-      "users:read", "groups:read", "groups:history",
-    ],
-  },
-  "google-workspace": {
-    authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
-    tokenUrl: "https://oauth2.googleapis.com/token",
-    clientIdEnv: "GOOGLE_CLIENT_ID",
-    clientSecretEnv: "GOOGLE_CLIENT_SECRET",
-    scopes: [
-      "https://www.googleapis.com/auth/gmail.modify",
-      "https://www.googleapis.com/auth/calendar",
-      "https://www.googleapis.com/auth/drive",
-    ],
-  },
-};
 
 router.get("/integrations/oauth/:provider/authorize", requireAuth, async (req, res, next) => {
   try {

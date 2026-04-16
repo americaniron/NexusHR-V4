@@ -25,11 +25,23 @@ export default function IntegrationsPage() {
       if (currentlyConnected) {
         await disconnectTool.mutateAsync({ toolId });
         toast({ title: "Integration disconnected" });
+        refetch();
       } else {
-        await connectTool.mutateAsync({ toolId });
+        const result = await connectTool.mutateAsync({ toolId });
+        if (result && (result as any).requiresOAuth) {
+          const authorizeUrl = (result as any).authorizeUrl;
+          const response = await fetch(`${import.meta.env.BASE_URL}api${authorizeUrl}`.replace(/\/+/g, '/'), {
+            credentials: "include",
+          });
+          const data = await response.json();
+          if (data.url) {
+            window.location.href = data.url;
+            return;
+          }
+        }
         toast({ title: "Integration connected successfully" });
+        refetch();
       }
-      refetch();
     } catch {
       toast({ title: "Action failed", variant: "destructive" });
     }

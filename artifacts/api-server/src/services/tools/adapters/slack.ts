@@ -23,8 +23,40 @@ async function slackRequest(
   return { success: true, data };
 }
 
+const SLACK_TOKEN_URL = "https://slack.com/api/oauth.v2.access";
+
 export const slackAdapter: ToolAdapter = {
   provider: "Slack",
+
+  async refreshToken(credentials: OAuthCredentials): Promise<OAuthCredentials | null> {
+    if (!credentials.refreshToken) return null;
+
+    const clientId = process.env.SLACK_CLIENT_ID;
+    const clientSecret = process.env.SLACK_CLIENT_SECRET;
+    if (!clientId || !clientSecret) return null;
+
+    const response = await fetch(SLACK_TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: credentials.refreshToken,
+        client_id: clientId,
+        client_secret: clientSecret,
+      }),
+    });
+
+    const data = await response.json();
+    if (!data.ok) return null;
+
+    return {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token || credentials.refreshToken,
+      tokenType: data.token_type || "Bearer",
+      expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined,
+      scope: data.scope,
+    };
+  },
 
   async execute(
     operation: string,
