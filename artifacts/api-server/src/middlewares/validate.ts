@@ -21,7 +21,8 @@ export function validate(schemas: ValidationSchemas) {
     }
 
     if (schemas.query) {
-      const result = schemas.query.safeParse(req.query);
+      const schema = schemas.query instanceof z.ZodObject ? schemas.query.passthrough() : schemas.query;
+      const result = schema.safeParse(req.query);
       if (!result.success) {
         for (const issue of result.error.issues) {
           errors.push({ field: `query.${issue.path.join(".")}`, message: issue.message });
