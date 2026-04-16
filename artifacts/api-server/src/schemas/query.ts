@@ -14,6 +14,6 @@ export const listTasksQuery = paginationQuery.extend({
   status: z
     .enum(["pending", "in_progress", "completed", "failed", "cancelled"])
     .optional(),
-  assigneeId: z.coerce.number().int().optional(),
+  assigneeId: z.coerce.number().int().min(1).optional(),
   priority: z.enum(["low", "medium", "high", "critical"]).optional(),
 });
