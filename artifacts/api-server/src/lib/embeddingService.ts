@@ -1,8 +1,9 @@
-import { pipeline, type FeatureExtractionPipeline } from "@xenova/transformers";
 import { logger } from "./logger";
 
 const EMBEDDING_DIM = 384;
 const MODEL_NAME = "Xenova/all-MiniLM-L6-v2";
+
+type FeatureExtractionPipeline = (text: string, options?: Record<string, unknown>) => Promise<{ data: Float32Array }>;
 
 let extractor: FeatureExtractionPipeline | null = null;
 let initPromise: Promise<FeatureExtractionPipeline> | null = null;
@@ -11,13 +12,16 @@ async function getExtractor(): Promise<FeatureExtractionPipeline> {
   if (extractor) return extractor;
   if (initPromise) return initPromise;
 
-  initPromise = pipeline("feature-extraction", MODEL_NAME, {
-    quantized: true,
-  }).then((ext) => {
-    extractor = ext;
+  initPromise = (async () => {
+    const { env, pipeline } = await import("@xenova/transformers");
+    env.backends.onnx.wasm.numThreads = 1;
+    const ext = await pipeline("feature-extraction", MODEL_NAME, {
+      quantized: true,
+    });
+    extractor = ext as unknown as FeatureExtractionPipeline;
     logger.info({ model: MODEL_NAME, dimensions: EMBEDDING_DIM }, "Neural embedding model loaded");
-    return ext;
-  }).catch((err) => {
+    return extractor;
+  })().catch((err) => {
     initPromise = null;
     logger.error({ err, model: MODEL_NAME }, "Failed to load neural embedding model, will retry on next call");
     throw err;
@@ -60,6 +64,4 @@ export function formatVectorForPg(vec: number[]): string {
   return `[${vec.join(",")}]`;
 }
 
-export const EMBEDDING_DIMENSIONS = EMBEDDING_DIM;
-
-logger.info({ model: MODEL_NAME, dimensions: EMBEDDING_DIM }, "Embedding service initialized (neural - all-MiniLM-L6-v2)");
+export { EMBEDDING_DIM };

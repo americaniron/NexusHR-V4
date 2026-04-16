@@ -12,9 +12,17 @@
     "deploy:cloudflare": "pnpm run build:frontend && wrangler pages deploy artifacts/nexus-hr/dist/public --project-name=nexus-hr-buddy"
   },
   "private": true,
+  "pnpm": {
+    "overrides": {
+      "sharp": "0.33.5"
+    }
+  },
   "devDependencies": {
-    "typescript": "~5.9.2",
     "prettier": "^3.8.1",
+    "typescript": "~5.9.2",
     "wrangler": "^3.0.0"
+  },
+  "dependencies": {
+    "sharp": "0.33.5"
   }
 }
