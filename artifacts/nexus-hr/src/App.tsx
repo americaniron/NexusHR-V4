@@ -30,6 +30,8 @@ const HelpPage = lazy(() => import("@/pages/help"));
 const OnboardingPage = lazy(() => import("@/pages/onboarding"));
 const EmployeeDetailPage = lazy(() => import("@/pages/employee-detail"));
 const VideoStudioPage = lazy(() => import("@/pages/video-studio"));
+const CompliancePage = lazy(() => import("@/pages/compliance"));
+const AuditLogsPage = lazy(() => import("@/pages/audit-logs"));
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
@@ -211,6 +213,12 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route path="/video-studio">
               <ProtectedRoute component={VideoStudioPage} />
+            </Route>
+            <Route path="/compliance">
+              <ProtectedRoute component={CompliancePage} />
+            </Route>
+            <Route path="/audit-logs">
+              <ProtectedRoute component={AuditLogsPage} />
             </Route>
             <Route path="/help">
               <ProtectedRoute component={HelpPage} />

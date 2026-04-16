@@ -11,6 +11,7 @@ export const organizations = pgTable("organizations", {
   industry: text("industry"),
   timezone: text("timezone").default("UTC"),
   cultureProfile: jsonb("culture_profile"),
+  dataRegion: text("data_region").default("us"),
   settings: jsonb("settings"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

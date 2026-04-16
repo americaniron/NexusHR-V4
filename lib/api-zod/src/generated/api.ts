@@ -72,6 +72,7 @@ export const GetCurrentOrganizationResponse = zod.object({
   logoUrl: zod.string().nullish(),
   industry: zod.string().nullish(),
   timezone: zod.string(),
+  dataRegion: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -83,6 +84,7 @@ export const UpdateOrganizationBody = zod.object({
   logoUrl: zod.string().optional(),
   industry: zod.string().optional(),
   timezone: zod.string().optional(),
+  dataRegion: zod.enum(["us", "eu", "apac"]).optional(),
 });
 
 export const UpdateOrganizationResponse = zod.object({
@@ -93,6 +95,7 @@ export const UpdateOrganizationResponse = zod.object({
   logoUrl: zod.string().nullish(),
   industry: zod.string().nullish(),
   timezone: zod.string(),
+  dataRegion: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -2440,4 +2443,238 @@ export const ListProactiveExecutionsResponse = zod.object({
       totalPages: zod.number(),
     })
     .optional(),
+});
+
+/**
+ * @summary Get compliance posture dashboard
+ */
+export const GetCompliancePostureResponse = zod.object({
+  frameworks: zod
+    .array(
+      zod.object({
+        name: zod.string().optional(),
+        status: zod
+          .enum(["compliant", "partial", "not_applicable", "action_required"])
+          .optional(),
+        description: zod.string().optional(),
+        relevance: zod.string().optional(),
+        checks: zod
+          .array(
+            zod.object({
+              name: zod.string().optional(),
+              status: zod
+                .enum(["pass", "fail", "warning", "not_applicable"])
+                .optional(),
+              detail: zod.string().optional(),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .optional(),
+  dataRegion: zod.string().nullish(),
+  industry: zod.string().nullish(),
+  lastUpdated: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary List GDPR data requests
+ */
+export const ListDataRequestsResponse = zod.object({
+  data: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        orgId: zod.number(),
+        type: zod.enum(["export", "deletion"]),
+        status: zod.enum([
+          "pending",
+          "processing",
+          "completed",
+          "cancelled",
+          "expired",
+        ]),
+        requestedBy: zod.string(),
+        requestedAt: zod.coerce.date(),
+        scheduledAt: zod.coerce.date().nullish(),
+        completedAt: zod.coerce.date().nullish(),
+        expiresAt: zod.coerce.date().nullish(),
+        downloadUrl: zod.string().nullish(),
+        notes: zod.string().nullish(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Create a data export or deletion request
+ */
+export const CreateDataRequestBody = zod.object({
+  type: zod.enum(["export", "deletion"]),
+  notes: zod.string().optional(),
+});
+
+/**
+ * @summary Cancel a pending data request
+ */
+export const CancelDataRequestParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const CancelDataRequestResponse = zod.object({
+  id: zod.number(),
+  orgId: zod.number(),
+  type: zod.enum(["export", "deletion"]),
+  status: zod.enum([
+    "pending",
+    "processing",
+    "completed",
+    "cancelled",
+    "expired",
+  ]),
+  requestedBy: zod.string(),
+  requestedAt: zod.coerce.date(),
+  scheduledAt: zod.coerce.date().nullish(),
+  completedAt: zod.coerce.date().nullish(),
+  expiresAt: zod.coerce.date().nullish(),
+  downloadUrl: zod.string().nullish(),
+  notes: zod.string().nullish(),
+});
+
+/**
+ * @summary List consent records
+ */
+export const ListConsentRecordsResponse = zod.object({
+  data: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        orgId: zod.number(),
+        userId: zod.string().optional(),
+        consentType: zod.string(),
+        granted: zod.boolean(),
+        version: zod.string().optional(),
+        grantedAt: zod.coerce.date().nullish(),
+        revokedAt: zod.coerce.date().nullish(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Update consent preference
+ */
+export const UpdateConsentBody = zod.object({
+  consentType: zod.string(),
+  granted: zod.boolean(),
+});
+
+export const UpdateConsentResponse = zod.object({
+  id: zod.number(),
+  orgId: zod.number(),
+  userId: zod.string().optional(),
+  consentType: zod.string(),
+  granted: zod.boolean(),
+  version: zod.string().optional(),
+  grantedAt: zod.coerce.date().nullish(),
+  revokedAt: zod.coerce.date().nullish(),
+});
+
+/**
+ * @summary List data retention policies
+ */
+export const ListRetentionPoliciesResponse = zod.object({
+  data: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        orgId: zod.number(),
+        dataType: zod.string(),
+        retentionDays: zod.number(),
+        enabled: zod.boolean(),
+        lastPurgedAt: zod.coerce.date().nullish(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Update data retention policies
+ */
+export const UpdateRetentionPoliciesBody = zod.object({
+  policies: zod.array(
+    zod.object({
+      dataType: zod.string(),
+      retentionDays: zod.number(),
+      enabled: zod.boolean(),
+    }),
+  ),
+});
+
+export const UpdateRetentionPoliciesResponse = zod.object({
+  data: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        orgId: zod.number(),
+        dataType: zod.string(),
+        retentionDays: zod.number(),
+        enabled: zod.boolean(),
+        lastPurgedAt: zod.coerce.date().nullish(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Query audit logs with filters
+ */
+export const GetComplianceAuditLogsQueryParams = zod.object({
+  page: zod.coerce.number().optional(),
+  limit: zod.coerce.number().optional(),
+  operation: zod.coerce.string().optional(),
+  result: zod.coerce.string().optional(),
+  startDate: zod.date().optional(),
+  endDate: zod.date().optional(),
+  search: zod.coerce.string().optional(),
+});
+
+export const GetComplianceAuditLogsResponse = zod.object({
+  data: zod
+    .array(
+      zod.object({
+        id: zod.number().optional(),
+        orgId: zod.number().optional(),
+        aiEmployeeId: zod.number().nullish(),
+        toolId: zod.number().optional(),
+        operation: zod.string().optional(),
+        parameters: zod.object({}).passthrough().nullish(),
+        result: zod.string().optional(),
+        resultData: zod.object({}).passthrough().nullish(),
+        permissionDecision: zod.string().nullish(),
+        executionDurationMs: zod.number().nullish(),
+        errorMessage: zod.string().nullish(),
+        requestId: zod.string().nullish(),
+        createdAt: zod.coerce.date().optional(),
+      }),
+    )
+    .optional(),
+  total: zod.number().optional(),
+  limit: zod.number().optional(),
+  offset: zod.number().optional(),
+});
+
+/**
+ * @summary Export audit logs as CSV or JSON
+ */
+export const ExportAuditLogsQueryParams = zod.object({
+  format: zod.enum(["csv", "json"]).optional(),
+  startDate: zod.date().optional(),
+  endDate: zod.date().optional(),
+});
+
+export const ExportAuditLogsResponse = zod.object({
+  data: zod.string().optional(),
+  format: zod.string().optional(),
+  count: zod.number().optional(),
 });

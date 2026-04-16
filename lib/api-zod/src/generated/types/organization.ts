@@ -14,5 +14,6 @@ export interface Organization {
   logoUrl?: string | null;
   industry?: string | null;
   timezone: string;
+  dataRegion?: string | null;
   createdAt: string;
 }

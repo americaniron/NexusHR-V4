@@ -57,6 +57,7 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
     -   **Per-Employee Performance Tab:** Dedicated "Performance" tab on employee detail page with quality metrics, trend charts (task completion, approval rating over time), and SLA configuration.
     -   **Exportable Reports:** CSV/JSON performance report export for individual employees or the full team via `/api/analytics/export`.
     -   **API Endpoints:** `POST /api/analytics/ratings`, `GET/PUT /api/analytics/sla/:id`, `POST /api/analytics/csat`, `GET /api/analytics/quality-metrics`, `GET /api/analytics/trends`, `GET /api/analytics/employee/:id/performance`, `GET /api/analytics/export`.
+-   **Enterprise Compliance & Data Residency:** Data residency preference (US/EU/APAC) stored on organizations. GDPR data management with full data export and deletion request workflows (30-day grace period for deletions). Consent management for data processing, analytics, third-party sharing, and marketing. Configurable data retention policies for conversations, audit logs, and task history. Compliance posture dashboard showing SOC 2, GDPR, HIPAA, and PCI DSS framework status based on org configuration. Searchable audit log viewer with CSV/JSON export. Schema: `compliance_data_requests`, `compliance_consent_records`, `compliance_retention_policies` tables. Routes at `/api/compliance/*`. Frontend pages at `/compliance` (dashboard), `/audit-logs` (viewer), and Settings > Data & Privacy tab.
 
 ## External Dependencies
 

@@ -48,6 +48,8 @@ tags:
     description: HeyGen Video Agent with Seedance 2.0 integration
   - name: proactive-rules
     description: Proactive AI employee behavior rules
+  - name: compliance
+    description: Compliance, data residency, and GDPR controls
 
 paths:
   /healthz:
@@ -1812,6 +1814,228 @@ paths:
                   pagination:
                     $ref: "#/components/schemas/Pagination"
 
+  /compliance/posture:
+    get:
+      operationId: getCompliancePosture
+      tags: [compliance]
+      summary: Get compliance posture dashboard
+      responses:
+        "200":
+          description: Compliance posture
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompliancePosture"
+
+  /compliance/data-requests:
+    get:
+      operationId: listDataRequests
+      tags: [compliance]
+      summary: List GDPR data requests
+      responses:
+        "200":
+          description: Data requests
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ComplianceDataRequest"
+    post:
+      operationId: createDataRequest
+      tags: [compliance]
+      summary: Create a data export or deletion request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDataRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceDataRequest"
+
+  /compliance/data-requests/{id}/cancel:
+    post:
+      operationId: cancelDataRequest
+      tags: [compliance]
+      summary: Cancel a pending data request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceDataRequest"
+
+  /compliance/consent:
+    get:
+      operationId: listConsentRecords
+      tags: [compliance]
+      summary: List consent records
+      responses:
+        "200":
+          description: Consent records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ComplianceConsentRecord"
+    post:
+      operationId: updateConsent
+      tags: [compliance]
+      summary: Update consent preference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateConsent"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceConsentRecord"
+
+  /compliance/retention-policies:
+    get:
+      operationId: listRetentionPolicies
+      tags: [compliance]
+      summary: List data retention policies
+      responses:
+        "200":
+          description: Retention policies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ComplianceRetentionPolicy"
+    put:
+      operationId: updateRetentionPolicies
+      tags: [compliance]
+      summary: Update data retention policies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRetentionPolicies"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ComplianceRetentionPolicy"
+
+  /compliance/audit-logs:
+    get:
+      operationId: getComplianceAuditLogs
+      tags: [compliance]
+      summary: Query audit logs with filters
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: operation
+          in: query
+          schema:
+            type: string
+        - name: result
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated audit logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogList"
+
+  /compliance/audit-logs/export:
+    get:
+      operationId: exportAuditLogs
+      tags: [compliance]
+      summary: Export audit logs as CSV or JSON
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Exported audit logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: string
+                  format:
+                    type: string
+                  count:
+                    type: integer
+
 components:
   parameters:
     PageParam:
@@ -1868,6 +2092,9 @@ components:
           nullable: true
         timezone:
           type: string
+        dataRegion:
+          type: string
+          nullable: true
         createdAt:
           type: string
       required: [id, clerkOrgId, name, slug, timezone, createdAt]
@@ -1883,6 +2110,9 @@ components:
           type: string
         timezone:
           type: string
+        dataRegion:
+          type: string
+          enum: [us, eu, apac]
 
     User:
       type: object
@@ -3509,3 +3739,212 @@ components:
         executedAt:
           type: string
           format: date-time
+
+    CompliancePosture:
+      type: object
+      properties:
+        frameworks:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              status:
+                type: string
+                enum: [compliant, partial, not_applicable, action_required]
+              description:
+                type: string
+              relevance:
+                type: string
+              checks:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    status:
+                      type: string
+                      enum: [pass, fail, warning, not_applicable]
+                    detail:
+                      type: string
+        dataRegion:
+          type: string
+          nullable: true
+        industry:
+          type: string
+          nullable: true
+        lastUpdated:
+          type: string
+          format: date-time
+
+    ComplianceDataRequest:
+      type: object
+      required: [id, orgId, type, status, requestedBy, requestedAt]
+      properties:
+        id:
+          type: integer
+        orgId:
+          type: integer
+        type:
+          type: string
+          enum: [export, deletion]
+        status:
+          type: string
+          enum: [pending, processing, completed, cancelled, expired]
+        requestedBy:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        downloadUrl:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+
+    CreateDataRequest:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [export, deletion]
+        notes:
+          type: string
+
+    ComplianceConsentRecord:
+      type: object
+      required: [id, orgId, consentType, granted]
+      properties:
+        id:
+          type: integer
+        orgId:
+          type: integer
+        userId:
+          type: string
+        consentType:
+          type: string
+        granted:
+          type: boolean
+        version:
+          type: string
+        grantedAt:
+          type: string
+          format: date-time
+          nullable: true
+        revokedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    UpdateConsent:
+      type: object
+      required: [consentType, granted]
+      properties:
+        consentType:
+          type: string
+        granted:
+          type: boolean
+
+    ComplianceRetentionPolicy:
+      type: object
+      required: [id, orgId, dataType, retentionDays, enabled]
+      properties:
+        id:
+          type: integer
+        orgId:
+          type: integer
+        dataType:
+          type: string
+        retentionDays:
+          type: integer
+        enabled:
+          type: boolean
+        lastPurgedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    UpdateRetentionPolicies:
+      type: object
+      required: [policies]
+      properties:
+        policies:
+          type: array
+          items:
+            type: object
+            required: [dataType, retentionDays, enabled]
+            properties:
+              dataType:
+                type: string
+              retentionDays:
+                type: integer
+              enabled:
+                type: boolean
+
+    AuditLogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        orgId:
+          type: integer
+        aiEmployeeId:
+          type: integer
+          nullable: true
+        toolId:
+          type: integer
+        operation:
+          type: string
+        parameters:
+          type: object
+          nullable: true
+        result:
+          type: string
+        resultData:
+          type: object
+          nullable: true
+        permissionDecision:
+          type: string
+          nullable: true
+        executionDurationMs:
+          type: integer
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        requestId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    AuditLogList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogEntry"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer

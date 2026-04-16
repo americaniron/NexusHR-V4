@@ -28,6 +28,7 @@ import videoCallRouter from "./videoCall";
 import memoryRouter from "./memory";
 import proactiveRulesRouter from "./proactive-rules";
 import analyticsRouter from "./analytics";
+import complianceRouter from "./compliance";
 
 const router: IRouter = Router();
 
@@ -60,5 +61,6 @@ router.use(videoCallRouter);
 router.use(memoryRouter);
 router.use(proactiveRulesRouter);
 router.use(analyticsRouter);
+router.use(complianceRouter);
 
 export default router;

@@ -23,6 +23,7 @@ import type {
   AnalyticsTrends,
   ApiKeyCreated,
   ArticleList,
+  AuditLogList,
   AvatarGallery,
   AvatarGenerateRequest,
   AvatarResult,
@@ -33,6 +34,9 @@ import type {
   CheckoutResponse,
   CloneVoiceBody,
   ClonedVoiceResult,
+  ComplianceConsentRecord,
+  ComplianceDataRequest,
+  CompliancePosture,
   ConfirmConversationTask200,
   ConfirmConversationTaskBody,
   ConversationDetail,
@@ -41,6 +45,7 @@ import type {
   CreateApiKeyBody,
   CreateBillingPortal200,
   CreateConversation,
+  CreateDataRequest,
   CreateInterview,
   CreateProactiveRuleBody,
   CreateTask,
@@ -54,9 +59,12 @@ import type {
   EmployeePerformance,
   ExportAnalytics200Two,
   ExportAnalyticsParams,
+  ExportAuditLogs200,
+  ExportAuditLogsParams,
   GetAnalyticsOverviewParams,
   GetAvatarBrandingPresets200,
   GetAvatarGalleryParams,
+  GetComplianceAuditLogsParams,
   GetEmployeePerformanceParams,
   GetPaymentProviders200,
   GetQualityMetricsParams,
@@ -71,13 +79,16 @@ import type {
   InterviewSession,
   ListApiKeys200,
   ListArticlesParams,
+  ListConsentRecords200,
   ListConversationsParams,
+  ListDataRequests200,
   ListEmployeesParams,
   ListInvoices200,
   ListNotificationsParams,
   ListProactiveExecutions200,
   ListProactiveExecutionsParams,
   ListProactiveRules200,
+  ListRetentionPolicies200,
   ListRolesParams,
   ListTasksParams,
   ListTicketsParams,
@@ -111,9 +122,12 @@ import type {
   TicketList,
   TranscribeAudioBody,
   TranscriptionResult,
+  UpdateConsent,
   UpdateEmployee,
   UpdateOrganization,
   UpdateProactiveRuleBody,
+  UpdateRetentionPolicies,
+  UpdateRetentionPolicies200,
   UpdateSlaConfigBody,
   UpdateTask,
   UpdateWorkflow,
@@ -7447,6 +7461,849 @@ export function useListProactiveExecutions<
     params,
     options,
   );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get compliance posture dashboard
+ */
+export const getGetCompliancePostureUrl = () => {
+  return `/api/compliance/posture`;
+};
+
+export const getCompliancePosture = async (
+  options?: RequestInit,
+): Promise<CompliancePosture> => {
+  return customFetch<CompliancePosture>(getGetCompliancePostureUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCompliancePostureQueryKey = () => {
+  return [`/api/compliance/posture`] as const;
+};
+
+export const getGetCompliancePostureQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCompliancePosture>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCompliancePosture>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCompliancePostureQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCompliancePosture>>
+  > = ({ signal }) => getCompliancePosture({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCompliancePosture>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCompliancePostureQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCompliancePosture>>
+>;
+export type GetCompliancePostureQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get compliance posture dashboard
+ */
+
+export function useGetCompliancePosture<
+  TData = Awaited<ReturnType<typeof getCompliancePosture>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCompliancePosture>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCompliancePostureQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List GDPR data requests
+ */
+export const getListDataRequestsUrl = () => {
+  return `/api/compliance/data-requests`;
+};
+
+export const listDataRequests = async (
+  options?: RequestInit,
+): Promise<ListDataRequests200> => {
+  return customFetch<ListDataRequests200>(getListDataRequestsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDataRequestsQueryKey = () => {
+  return [`/api/compliance/data-requests`] as const;
+};
+
+export const getListDataRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDataRequests>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDataRequests>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDataRequestsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listDataRequests>>
+  > = ({ signal }) => listDataRequests({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDataRequests>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListDataRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDataRequests>>
+>;
+export type ListDataRequestsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List GDPR data requests
+ */
+
+export function useListDataRequests<
+  TData = Awaited<ReturnType<typeof listDataRequests>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDataRequests>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListDataRequestsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a data export or deletion request
+ */
+export const getCreateDataRequestUrl = () => {
+  return `/api/compliance/data-requests`;
+};
+
+export const createDataRequest = async (
+  createDataRequest: CreateDataRequest,
+  options?: RequestInit,
+): Promise<ComplianceDataRequest> => {
+  return customFetch<ComplianceDataRequest>(getCreateDataRequestUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createDataRequest),
+  });
+};
+
+export const getCreateDataRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDataRequest>>,
+    TError,
+    { data: BodyType<CreateDataRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDataRequest>>,
+  TError,
+  { data: BodyType<CreateDataRequest> },
+  TContext
+> => {
+  const mutationKey = ["createDataRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDataRequest>>,
+    { data: BodyType<CreateDataRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createDataRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateDataRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createDataRequest>>
+>;
+export type CreateDataRequestMutationBody = BodyType<CreateDataRequest>;
+export type CreateDataRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a data export or deletion request
+ */
+export const useCreateDataRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDataRequest>>,
+    TError,
+    { data: BodyType<CreateDataRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createDataRequest>>,
+  TError,
+  { data: BodyType<CreateDataRequest> },
+  TContext
+> => {
+  return useMutation(getCreateDataRequestMutationOptions(options));
+};
+
+/**
+ * @summary Cancel a pending data request
+ */
+export const getCancelDataRequestUrl = (id: number) => {
+  return `/api/compliance/data-requests/${id}/cancel`;
+};
+
+export const cancelDataRequest = async (
+  id: number,
+  options?: RequestInit,
+): Promise<ComplianceDataRequest> => {
+  return customFetch<ComplianceDataRequest>(getCancelDataRequestUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCancelDataRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelDataRequest>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelDataRequest>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["cancelDataRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelDataRequest>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return cancelDataRequest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelDataRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelDataRequest>>
+>;
+
+export type CancelDataRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Cancel a pending data request
+ */
+export const useCancelDataRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelDataRequest>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelDataRequest>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getCancelDataRequestMutationOptions(options));
+};
+
+/**
+ * @summary List consent records
+ */
+export const getListConsentRecordsUrl = () => {
+  return `/api/compliance/consent`;
+};
+
+export const listConsentRecords = async (
+  options?: RequestInit,
+): Promise<ListConsentRecords200> => {
+  return customFetch<ListConsentRecords200>(getListConsentRecordsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListConsentRecordsQueryKey = () => {
+  return [`/api/compliance/consent`] as const;
+};
+
+export const getListConsentRecordsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listConsentRecords>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listConsentRecords>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListConsentRecordsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listConsentRecords>>
+  > = ({ signal }) => listConsentRecords({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listConsentRecords>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListConsentRecordsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listConsentRecords>>
+>;
+export type ListConsentRecordsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List consent records
+ */
+
+export function useListConsentRecords<
+  TData = Awaited<ReturnType<typeof listConsentRecords>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listConsentRecords>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListConsentRecordsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update consent preference
+ */
+export const getUpdateConsentUrl = () => {
+  return `/api/compliance/consent`;
+};
+
+export const updateConsent = async (
+  updateConsent: UpdateConsent,
+  options?: RequestInit,
+): Promise<ComplianceConsentRecord> => {
+  return customFetch<ComplianceConsentRecord>(getUpdateConsentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateConsent),
+  });
+};
+
+export const getUpdateConsentMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateConsent>>,
+    TError,
+    { data: BodyType<UpdateConsent> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateConsent>>,
+  TError,
+  { data: BodyType<UpdateConsent> },
+  TContext
+> => {
+  const mutationKey = ["updateConsent"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateConsent>>,
+    { data: BodyType<UpdateConsent> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateConsent(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateConsentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateConsent>>
+>;
+export type UpdateConsentMutationBody = BodyType<UpdateConsent>;
+export type UpdateConsentMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update consent preference
+ */
+export const useUpdateConsent = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateConsent>>,
+    TError,
+    { data: BodyType<UpdateConsent> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateConsent>>,
+  TError,
+  { data: BodyType<UpdateConsent> },
+  TContext
+> => {
+  return useMutation(getUpdateConsentMutationOptions(options));
+};
+
+/**
+ * @summary List data retention policies
+ */
+export const getListRetentionPoliciesUrl = () => {
+  return `/api/compliance/retention-policies`;
+};
+
+export const listRetentionPolicies = async (
+  options?: RequestInit,
+): Promise<ListRetentionPolicies200> => {
+  return customFetch<ListRetentionPolicies200>(getListRetentionPoliciesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListRetentionPoliciesQueryKey = () => {
+  return [`/api/compliance/retention-policies`] as const;
+};
+
+export const getListRetentionPoliciesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listRetentionPolicies>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listRetentionPolicies>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListRetentionPoliciesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listRetentionPolicies>>
+  > = ({ signal }) => listRetentionPolicies({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listRetentionPolicies>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListRetentionPoliciesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listRetentionPolicies>>
+>;
+export type ListRetentionPoliciesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List data retention policies
+ */
+
+export function useListRetentionPolicies<
+  TData = Awaited<ReturnType<typeof listRetentionPolicies>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listRetentionPolicies>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListRetentionPoliciesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update data retention policies
+ */
+export const getUpdateRetentionPoliciesUrl = () => {
+  return `/api/compliance/retention-policies`;
+};
+
+export const updateRetentionPolicies = async (
+  updateRetentionPolicies: UpdateRetentionPolicies,
+  options?: RequestInit,
+): Promise<UpdateRetentionPolicies200> => {
+  return customFetch<UpdateRetentionPolicies200>(
+    getUpdateRetentionPoliciesUrl(),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(updateRetentionPolicies),
+    },
+  );
+};
+
+export const getUpdateRetentionPoliciesMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateRetentionPolicies>>,
+    TError,
+    { data: BodyType<UpdateRetentionPolicies> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateRetentionPolicies>>,
+  TError,
+  { data: BodyType<UpdateRetentionPolicies> },
+  TContext
+> => {
+  const mutationKey = ["updateRetentionPolicies"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateRetentionPolicies>>,
+    { data: BodyType<UpdateRetentionPolicies> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateRetentionPolicies(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateRetentionPoliciesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateRetentionPolicies>>
+>;
+export type UpdateRetentionPoliciesMutationBody =
+  BodyType<UpdateRetentionPolicies>;
+export type UpdateRetentionPoliciesMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update data retention policies
+ */
+export const useUpdateRetentionPolicies = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateRetentionPolicies>>,
+    TError,
+    { data: BodyType<UpdateRetentionPolicies> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateRetentionPolicies>>,
+  TError,
+  { data: BodyType<UpdateRetentionPolicies> },
+  TContext
+> => {
+  return useMutation(getUpdateRetentionPoliciesMutationOptions(options));
+};
+
+/**
+ * @summary Query audit logs with filters
+ */
+export const getGetComplianceAuditLogsUrl = (
+  params?: GetComplianceAuditLogsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/compliance/audit-logs?${stringifiedParams}`
+    : `/api/compliance/audit-logs`;
+};
+
+export const getComplianceAuditLogs = async (
+  params?: GetComplianceAuditLogsParams,
+  options?: RequestInit,
+): Promise<AuditLogList> => {
+  return customFetch<AuditLogList>(getGetComplianceAuditLogsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetComplianceAuditLogsQueryKey = (
+  params?: GetComplianceAuditLogsParams,
+) => {
+  return [`/api/compliance/audit-logs`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetComplianceAuditLogsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getComplianceAuditLogs>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetComplianceAuditLogsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getComplianceAuditLogs>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetComplianceAuditLogsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getComplianceAuditLogs>>
+  > = ({ signal }) =>
+    getComplianceAuditLogs(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getComplianceAuditLogs>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetComplianceAuditLogsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getComplianceAuditLogs>>
+>;
+export type GetComplianceAuditLogsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Query audit logs with filters
+ */
+
+export function useGetComplianceAuditLogs<
+  TData = Awaited<ReturnType<typeof getComplianceAuditLogs>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetComplianceAuditLogsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getComplianceAuditLogs>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetComplianceAuditLogsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Export audit logs as CSV or JSON
+ */
+export const getExportAuditLogsUrl = (params?: ExportAuditLogsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/compliance/audit-logs/export?${stringifiedParams}`
+    : `/api/compliance/audit-logs/export`;
+};
+
+export const exportAuditLogs = async (
+  params?: ExportAuditLogsParams,
+  options?: RequestInit,
+): Promise<ExportAuditLogs200> => {
+  return customFetch<ExportAuditLogs200>(getExportAuditLogsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getExportAuditLogsQueryKey = (params?: ExportAuditLogsParams) => {
+  return [
+    `/api/compliance/audit-logs/export`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getExportAuditLogsQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportAuditLogs>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ExportAuditLogsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportAuditLogs>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getExportAuditLogsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof exportAuditLogs>>> = ({
+    signal,
+  }) => exportAuditLogs(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportAuditLogs>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ExportAuditLogsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof exportAuditLogs>>
+>;
+export type ExportAuditLogsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Export audit logs as CSV or JSON
+ */
+
+export function useExportAuditLogs<
+  TData = Awaited<ReturnType<typeof exportAuditLogs>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ExportAuditLogsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportAuditLogs>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getExportAuditLogsQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

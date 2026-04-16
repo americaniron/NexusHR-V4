@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, UserCircle, CheckSquare, GitMerge, MessageSquare, BarChart, Plug, CreditCard, Settings, HelpCircle, LogOut, PanelLeftClose, PanelLeft, Clapperboard, Store } from "lucide-react";
+import { LayoutDashboard, Users, UserCircle, CheckSquare, GitMerge, MessageSquare, BarChart, Plug, CreditCard, Settings, HelpCircle, LogOut, PanelLeftClose, PanelLeft, Clapperboard, Store, Shield, FileText } from "lucide-react";
 import { useClerk, useUser } from "@clerk/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ const navigation = [
   { name: "Video Studio", href: "/video-studio", icon: Clapperboard, isNew: true },
   { name: "Analytics", href: "/analytics", icon: BarChart },
   { name: "Integrations", href: "/integrations", icon: Plug },
+  { name: "Compliance", href: "/compliance", icon: Shield },
+  { name: "Audit Log", href: "/audit-logs", icon: FileText },
   { name: "Billing", href: "/billing", icon: CreditCard },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Help & Support", href: "/help", icon: HelpCircle },

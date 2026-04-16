@@ -15,6 +15,7 @@ const updateOrgBody = z.object({
   logoUrl: z.string().url().nullable().optional(),
   industry: z.string().optional(),
   timezone: z.string().optional(),
+  dataRegion: z.enum(["us", "eu", "apac"]).optional(),
 });
 
 router.get("/organizations/current", requireAuth, async (req, res, next) => {
@@ -45,12 +46,13 @@ router.patch("/organizations/current", requireAuth, validate({ body: updateOrgBo
     const orgId = auth?.orgId;
     if (!orgId) throw AppError.notFound("No organization found");
 
-    const { name, logoUrl, industry, timezone } = req.body;
+    const { name, logoUrl, industry, timezone, dataRegion } = req.body;
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (name) updates.name = name;
     if (logoUrl !== undefined) updates.logoUrl = logoUrl;
     if (industry !== undefined) updates.industry = industry;
     if (timezone) updates.timezone = timezone;
+    if (dataRegion) updates.dataRegion = dataRegion;
 
     const [updated] = await db.update(organizations)
       .set(updates)

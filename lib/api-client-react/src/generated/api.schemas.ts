@@ -24,14 +24,25 @@ export interface Organization {
   logoUrl?: string | null;
   industry?: string | null;
   timezone: string;
+  dataRegion?: string | null;
   createdAt: string;
 }
+
+export type UpdateOrganizationDataRegion =
+  (typeof UpdateOrganizationDataRegion)[keyof typeof UpdateOrganizationDataRegion];
+
+export const UpdateOrganizationDataRegion = {
+  us: "us",
+  eu: "eu",
+  apac: "apac",
+} as const;
 
 export interface UpdateOrganization {
   name?: string;
   logoUrl?: string;
   industry?: string;
   timezone?: string;
+  dataRegion?: UpdateOrganizationDataRegion;
 }
 
 export interface User {
@@ -1065,6 +1076,155 @@ export interface ProactiveExecution {
   executedAt: string;
 }
 
+export type CompliancePostureFrameworksItemStatus =
+  (typeof CompliancePostureFrameworksItemStatus)[keyof typeof CompliancePostureFrameworksItemStatus];
+
+export const CompliancePostureFrameworksItemStatus = {
+  compliant: "compliant",
+  partial: "partial",
+  not_applicable: "not_applicable",
+  action_required: "action_required",
+} as const;
+
+export type CompliancePostureFrameworksItemChecksItemStatus =
+  (typeof CompliancePostureFrameworksItemChecksItemStatus)[keyof typeof CompliancePostureFrameworksItemChecksItemStatus];
+
+export const CompliancePostureFrameworksItemChecksItemStatus = {
+  pass: "pass",
+  fail: "fail",
+  warning: "warning",
+  not_applicable: "not_applicable",
+} as const;
+
+export type CompliancePostureFrameworksItemChecksItem = {
+  name?: string;
+  status?: CompliancePostureFrameworksItemChecksItemStatus;
+  detail?: string;
+};
+
+export type CompliancePostureFrameworksItem = {
+  name?: string;
+  status?: CompliancePostureFrameworksItemStatus;
+  description?: string;
+  relevance?: string;
+  checks?: CompliancePostureFrameworksItemChecksItem[];
+};
+
+export interface CompliancePosture {
+  frameworks?: CompliancePostureFrameworksItem[];
+  dataRegion?: string | null;
+  industry?: string | null;
+  lastUpdated?: string;
+}
+
+export type ComplianceDataRequestType =
+  (typeof ComplianceDataRequestType)[keyof typeof ComplianceDataRequestType];
+
+export const ComplianceDataRequestType = {
+  export: "export",
+  deletion: "deletion",
+} as const;
+
+export type ComplianceDataRequestStatus =
+  (typeof ComplianceDataRequestStatus)[keyof typeof ComplianceDataRequestStatus];
+
+export const ComplianceDataRequestStatus = {
+  pending: "pending",
+  processing: "processing",
+  completed: "completed",
+  cancelled: "cancelled",
+  expired: "expired",
+} as const;
+
+export interface ComplianceDataRequest {
+  id: number;
+  orgId: number;
+  type: ComplianceDataRequestType;
+  status: ComplianceDataRequestStatus;
+  requestedBy: string;
+  requestedAt: string;
+  scheduledAt?: string | null;
+  completedAt?: string | null;
+  expiresAt?: string | null;
+  downloadUrl?: string | null;
+  notes?: string | null;
+}
+
+export type CreateDataRequestType =
+  (typeof CreateDataRequestType)[keyof typeof CreateDataRequestType];
+
+export const CreateDataRequestType = {
+  export: "export",
+  deletion: "deletion",
+} as const;
+
+export interface CreateDataRequest {
+  type: CreateDataRequestType;
+  notes?: string;
+}
+
+export interface ComplianceConsentRecord {
+  id: number;
+  orgId: number;
+  userId?: string;
+  consentType: string;
+  granted: boolean;
+  version?: string;
+  grantedAt?: string | null;
+  revokedAt?: string | null;
+}
+
+export interface UpdateConsent {
+  consentType: string;
+  granted: boolean;
+}
+
+export interface ComplianceRetentionPolicy {
+  id: number;
+  orgId: number;
+  dataType: string;
+  retentionDays: number;
+  enabled: boolean;
+  lastPurgedAt?: string | null;
+}
+
+export type UpdateRetentionPoliciesPoliciesItem = {
+  dataType: string;
+  retentionDays: number;
+  enabled: boolean;
+};
+
+export interface UpdateRetentionPolicies {
+  policies: UpdateRetentionPoliciesPoliciesItem[];
+}
+
+export type AuditLogEntryParameters = { [key: string]: unknown } | null;
+
+export type AuditLogEntryResultData = { [key: string]: unknown } | null;
+
+export interface AuditLogEntry {
+  id?: number;
+  orgId?: number;
+  aiEmployeeId?: number | null;
+  toolId?: number;
+  operation?: string;
+  parameters?: AuditLogEntryParameters;
+  result?: string;
+  resultData?: AuditLogEntryResultData;
+  permissionDecision?: string | null;
+  executionDurationMs?: number | null;
+  errorMessage?: string | null;
+  requestId?: string | null;
+  createdAt?: string;
+}
+
+export interface AuditLogList {
+  data?: AuditLogEntry[];
+  total?: number;
+  limit?: number;
+  offset?: number;
+}
+
 export type PageParamParameter = number;
 
 export type LimitParamParameter = number;
@@ -1399,4 +1559,50 @@ export type ListProactiveExecutionsParams = {
 export type ListProactiveExecutions200 = {
   data?: ProactiveExecution[];
   pagination?: Pagination;
+};
+
+export type ListDataRequests200 = {
+  data?: ComplianceDataRequest[];
+};
+
+export type ListConsentRecords200 = {
+  data?: ComplianceConsentRecord[];
+};
+
+export type ListRetentionPolicies200 = {
+  data?: ComplianceRetentionPolicy[];
+};
+
+export type UpdateRetentionPolicies200 = {
+  data?: ComplianceRetentionPolicy[];
+};
+
+export type GetComplianceAuditLogsParams = {
+  page?: number;
+  limit?: number;
+  operation?: string;
+  result?: string;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+};
+
+export type ExportAuditLogsParams = {
+  format?: ExportAuditLogsFormat;
+  startDate?: string;
+  endDate?: string;
+};
+
+export type ExportAuditLogsFormat =
+  (typeof ExportAuditLogsFormat)[keyof typeof ExportAuditLogsFormat];
+
+export const ExportAuditLogsFormat = {
+  csv: "csv",
+  json: "json",
+} as const;
+
+export type ExportAuditLogs200 = {
+  data?: string;
+  format?: string;
+  count?: number;
 };

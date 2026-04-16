@@ -1,4 +1,4 @@
-import { useGetCurrentOrganization, useGetCurrentUser, useUpdateOrganization, useListApiKeys, useCreateApiKey, useRevokeApiKey } from "@workspace/api-client-react";
+import { useGetCurrentOrganization, useGetCurrentUser, useUpdateOrganization, useListApiKeys, useCreateApiKey, useRevokeApiKey, useListDataRequests, useCreateDataRequest, useCancelDataRequest, useListConsentRecords, useUpdateConsent, useListRetentionPolicies, useUpdateRetentionPolicies } from "@workspace/api-client-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, User, Bell, Key, Shield, Copy, Users, Plus, Trash2, Lock, Smartphone, Monitor, Mail, Loader2, AlertTriangle } from "lucide-react";
+import { Building2, User, Bell, Key, Shield, Copy, Users, Plus, Trash2, Lock, Smartphone, Monitor, Mail, Loader2, AlertTriangle, Globe, Download, FileText, Clock, Database } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function SettingsPage() {
@@ -22,20 +22,30 @@ export default function SettingsPage() {
   const revokeKeyMutation = useRevokeApiKey();
   const { toast } = useToast();
 
+  const { data: dataRequests, refetch: refetchDataRequests } = useListDataRequests();
+  const createDataRequestMutation = useCreateDataRequest();
+  const cancelDataRequestMutation = useCancelDataRequest();
+  const { data: consentRecords, refetch: refetchConsent } = useListConsentRecords();
+  const updateConsentMutation = useUpdateConsent();
+  const { data: retentionData, refetch: refetchRetention } = useListRetentionPolicies();
+  const updateRetentionMutation = useUpdateRetentionPolicies();
+
   const [orgName, setOrgName] = useState("");
   const [industry, setIndustry] = useState("");
+  const [dataRegion, setDataRegion] = useState("");
   const [newKeyRevealed, setNewKeyRevealed] = useState<string | null>(null);
 
   useEffect(() => {
     if (org) {
       setOrgName(org.name);
       setIndustry(org.industry || "");
+      setDataRegion(org.dataRegion || "");
     }
   }, [org]);
 
   const handleSaveOrg = async () => {
     try {
-      await updateOrg.mutateAsync({ data: { name: orgName, industry } });
+      await updateOrg.mutateAsync({ data: { name: orgName, industry, ...(dataRegion ? { dataRegion: dataRegion as any } : {}) } });
       toast({ title: "Organization updated" });
     } catch {
       toast({ title: "Failed to update", variant: "destructive" });
@@ -104,6 +114,9 @@ export default function SettingsPage() {
           <TabsTrigger value="security" className="gap-2">
             <Shield className="h-4 w-4" /> Security
           </TabsTrigger>
+          <TabsTrigger value="privacy" className="gap-2">
+            <Database className="h-4 w-4" /> Data & Privacy
+          </TabsTrigger>
           <TabsTrigger value="api" className="gap-2">
             <Key className="h-4 w-4" /> API Keys
           </TabsTrigger>
@@ -123,6 +136,21 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label htmlFor="industry">Industry</Label>
                 <Input id="industry" value={industry} onChange={(e) => setIndustry(e.target.value)} className="max-w-md bg-background" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dataRegion">Data Region</Label>
+                <Select value={dataRegion} onValueChange={setDataRegion}>
+                  <SelectTrigger className="max-w-md bg-background">
+                    <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Select data region" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="us">United States (US)</SelectItem>
+                    <SelectItem value="eu">European Union (EU)</SelectItem>
+                    <SelectItem value="apac">Asia-Pacific (APAC)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Preferred region for data storage and processing.</p>
               </div>
               <div className="space-y-2 pt-2">
                 <Label>Workspace Slug</Label>
@@ -369,6 +397,254 @@ export default function SettingsPage() {
                   Update Password
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="privacy" className="mt-6 space-y-6">
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Download className="h-5 w-5 text-primary" />
+                Data Export (GDPR Portability)
+              </CardTitle>
+              <CardDescription>
+                Export all organization data in a downloadable format for GDPR data portability compliance.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-background">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Full Data Export</p>
+                  <p className="text-xs text-muted-foreground">Export all organization data including employees, tasks, conversations, and settings as JSON.</p>
+                </div>
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  onClick={async () => {
+                    try {
+                      await createDataRequestMutation.mutateAsync({ data: { type: "export" as const } });
+                      refetchDataRequests();
+                      toast({ title: "Data export initiated", description: "Your export is being prepared." });
+                    } catch { toast({ title: "Failed to create export request", variant: "destructive" }); }
+                  }}
+                  disabled={createDataRequestMutation.isPending}
+                >
+                  {createDataRequestMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  Request Export
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-destructive/20">
+            <CardHeader>
+              <CardTitle className="text-destructive flex items-center gap-2">
+                <Trash2 className="h-5 w-5" />
+                Data Deletion (Right to Erasure)
+              </CardTitle>
+              <CardDescription>
+                Request deletion of all organization data. A 30-day grace period applies before permanent deletion.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 rounded-lg border border-destructive/20 bg-destructive/5">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Request Data Deletion</p>
+                  <p className="text-xs text-muted-foreground">All data will be scheduled for permanent deletion after a 30-day grace period.</p>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-2"
+                  onClick={async () => {
+                    try {
+                      await createDataRequestMutation.mutateAsync({ data: { type: "deletion" as const } });
+                      refetchDataRequests();
+                      toast({ title: "Deletion request created", description: "Data will be deleted after the 30-day grace period." });
+                    } catch { toast({ title: "Failed to create deletion request", variant: "destructive" }); }
+                  }}
+                  disabled={createDataRequestMutation.isPending}
+                >
+                  Request Deletion
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {(dataRequests?.data || []).length > 0 && (
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Data Requests
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {(dataRequests?.data || []).map((request: any) => (
+                  <div key={request.id} className="flex items-center justify-between p-4 rounded-lg border border-border bg-background">
+                    <div className="flex items-center gap-3">
+                      {request.type === "export" ? <Download className="h-4 w-4 text-primary" /> : <Trash2 className="h-4 w-4 text-destructive" />}
+                      <div>
+                        <p className="text-sm font-medium text-foreground capitalize">{request.type} Request</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {new Date(request.requestedAt).toLocaleDateString()}
+                          {request.scheduledAt && ` · Scheduled: ${new Date(request.scheduledAt).toLocaleDateString()}`}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={
+                        request.status === "completed" ? "text-green-500 border-green-500/30" :
+                        request.status === "pending" ? "text-amber-500 border-amber-500/30" :
+                        request.status === "cancelled" ? "text-muted-foreground" :
+                        "text-blue-500 border-blue-500/30"
+                      }>
+                        {request.status}
+                      </Badge>
+                      {request.status === "pending" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-destructive"
+                          onClick={async () => {
+                            try {
+                              await cancelDataRequestMutation.mutateAsync({ id: request.id });
+                              refetchDataRequests();
+                              toast({ title: "Request cancelled" });
+                            } catch { toast({ title: "Failed to cancel", variant: "destructive" }); }
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Consent Management
+              </CardTitle>
+              <CardDescription>
+                Manage data processing consent preferences for your organization.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[
+                { type: "data_processing", label: "Data Processing", description: "Consent for processing organization data to deliver AI services" },
+                { type: "analytics", label: "Analytics & Insights", description: "Consent for using aggregated data to generate analytics and insights" },
+                { type: "third_party_sharing", label: "Third-Party Data Sharing", description: "Consent for sharing data with integrated third-party services" },
+                { type: "marketing", label: "Marketing Communications", description: "Consent for receiving product updates and marketing communications" },
+              ].map((consent) => {
+                const record = (consentRecords?.data || []).find((r: any) => r.consentType === consent.type);
+                return (
+                  <div key={consent.type} className="flex items-center justify-between p-4 rounded-lg border border-border bg-background">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm">{consent.label}</Label>
+                      <p className="text-xs text-muted-foreground">{consent.description}</p>
+                      {record && (
+                        <p className="text-xs text-muted-foreground">
+                          {record.granted ? `Granted ${record.grantedAt ? new Date(record.grantedAt).toLocaleDateString() : ""}` : `Revoked ${record.revokedAt ? new Date(record.revokedAt).toLocaleDateString() : ""}`}
+                        </p>
+                      )}
+                    </div>
+                    <Switch
+                      checked={record?.granted || false}
+                      onCheckedChange={async (checked) => {
+                        try {
+                          await updateConsentMutation.mutateAsync({ data: { consentType: consent.type, granted: checked } });
+                          refetchConsent();
+                          toast({ title: `${consent.label} consent ${checked ? "granted" : "revoked"}` });
+                        } catch { toast({ title: "Failed to update consent", variant: "destructive" }); }
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" />
+                Data Retention Policies
+              </CardTitle>
+              <CardDescription>
+                Configure how long different types of data are retained before automatic purging.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(retentionData?.data || []).map((policy: any) => {
+                const labels: Record<string, string> = {
+                  conversations: "Conversation Logs",
+                  audit_logs: "Audit Trail",
+                  task_history: "Task History",
+                };
+                return (
+                  <div key={policy.dataType} className="flex items-center justify-between p-4 rounded-lg border border-border bg-background">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm">{labels[policy.dataType] || policy.dataType}</Label>
+                        <Badge variant="outline" className={policy.enabled ? "text-green-500 border-green-500/30" : "text-muted-foreground"}>
+                          {policy.enabled ? "Active" : "Disabled"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Retain for {policy.retentionDays} days
+                        {policy.lastPurgedAt && ` · Last purged: ${new Date(policy.lastPurgedAt).toLocaleDateString()}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Select
+                        value={String(policy.retentionDays)}
+                        onValueChange={async (value) => {
+                          try {
+                            await updateRetentionMutation.mutateAsync({
+                              data: {
+                                policies: [{ dataType: policy.dataType, retentionDays: parseInt(value), enabled: policy.enabled }],
+                              },
+                            });
+                            refetchRetention();
+                            toast({ title: "Retention policy updated" });
+                          } catch { toast({ title: "Failed to update", variant: "destructive" }); }
+                        }}
+                      >
+                        <SelectTrigger className="w-[140px] bg-background"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="30">30 days</SelectItem>
+                          <SelectItem value="90">90 days</SelectItem>
+                          <SelectItem value="180">180 days</SelectItem>
+                          <SelectItem value="365">1 year</SelectItem>
+                          <SelectItem value="730">2 years</SelectItem>
+                          <SelectItem value="1825">5 years</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Switch
+                        checked={policy.enabled}
+                        onCheckedChange={async (checked) => {
+                          try {
+                            await updateRetentionMutation.mutateAsync({
+                              data: {
+                                policies: [{ dataType: policy.dataType, retentionDays: policy.retentionDays, enabled: checked }],
+                              },
+                            });
+                            refetchRetention();
+                            toast({ title: `Retention ${checked ? "enabled" : "disabled"} for ${labels[policy.dataType] || policy.dataType}` });
+                          } catch { toast({ title: "Failed to update", variant: "destructive" }); }
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
         </TabsContent>
