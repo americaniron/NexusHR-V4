@@ -19,6 +19,11 @@ import { queryAuditLogs, getAuditSummary } from "../services/tools/auditLogger";
 
 const router = Router();
 
+function redactConnection(record: typeof integrations.$inferSelect) {
+  const { connectionConfig: _cc, ...safe } = record;
+  return safe;
+}
+
 async function verifyEmployeeOwnership(orgId: number, aiEmployeeId: number): Promise<void> {
   const [employee] = await db
     .select({ id: aiEmployees.id, orgId: aiEmployees.orgId })
@@ -83,7 +88,7 @@ router.post("/tools/connections", requireAuth, validate({ body: connectBody }), 
         healthStatus: "healthy",
         updatedAt: new Date(),
       }).where(eq(integrations.id, existing.id)).returning();
-      res.json(updated);
+      res.json(redactConnection(updated));
     } else {
       const [connection] = await db.insert(integrations).values({
         orgId,
@@ -94,7 +99,7 @@ router.post("/tools/connections", requireAuth, validate({ body: connectBody }), 
         connectedAt: new Date(),
         healthStatus: "healthy",
       }).returning();
-      res.status(201).json(connection);
+      res.status(201).json(redactConnection(connection));
     }
   } catch (error) {
     next(error);
@@ -122,7 +127,7 @@ router.delete("/tools/connections/:id", requireAuth, validate({ params: idParam 
       updatedAt: new Date(),
     }).where(eq(integrations.id, connectionId)).returning();
 
-    res.json(updated);
+    res.json(redactConnection(updated));
   } catch (error) {
     next(error);
   }
@@ -138,7 +143,7 @@ router.get("/tools/connections", requireAuth, async (req, res, next) => {
       .from(integrations)
       .where(eq(integrations.orgId, orgId));
 
-    res.json(connections);
+    res.json(connections.map(redactConnection));
   } catch (error) {
     next(error);
   }

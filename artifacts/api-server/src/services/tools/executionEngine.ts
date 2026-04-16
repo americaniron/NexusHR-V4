@@ -152,7 +152,11 @@ export async function executeToolAccess(request: ToolExecutionRequest): Promise<
               Object.assign(creds, refreshed);
             }
           }
-          const adapterResult = await adapter.execute(operation, parameters || {}, creds);
+          const adapterParams = { ...parameters };
+          if (resourceType && !adapterParams.resourceType) {
+            adapterParams.resourceType = resourceType;
+          }
+          const adapterResult = await adapter.execute(operation, adapterParams, creds);
           if (!adapterResult.success) throw new Error(adapterResult.error || "Adapter execution failed");
           return adapterResult.data;
         }
