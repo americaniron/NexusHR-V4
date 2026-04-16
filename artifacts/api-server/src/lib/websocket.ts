@@ -6,6 +6,7 @@ import { db } from "@workspace/db";
 import { organizations } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { getVideoSessionData } from "../routes/videoCall";
+import { handleProactiveEvent, type ProactiveEventType } from "../services/proactive/eventListener";
 
 export type DomainEvent =
   | "task:created" | "task:updated" | "task:deleted" | "task:assigned"
@@ -197,18 +198,48 @@ export function initWebSocket(httpServer: HttpServer): Server {
   return io;
 }
 
-export function publishEvent(orgId: number, room: Room, event: DomainEvent, data: unknown): void {
-  if (!io) {
-    logger.warn("WebSocket server not initialized, event not published");
-    return;
+const DOMAIN_TO_PROACTIVE_EVENT: Partial<Record<DomainEvent, ProactiveEventType>> = {
+  "task:created": "task:created",
+  "task:updated": "task:updated",
+  "workflow:completed": "workflow:completed",
+  "workflow:failed": "workflow:failed",
+  "billing:alert_email": "billing:alert",
+  "employee:hired": "employee:hired",
+  "integration:connected": "integration:connected",
+};
+
+function resolveProactiveEventType(event: DomainEvent, data: unknown): ProactiveEventType | null {
+  if (event === "task:updated" && data && typeof data === "object") {
+    const record = data as Record<string, unknown>;
+    if (record.status === "completed") return "task:completed";
+    if (record.status === "failed") return "task:failed";
   }
-  const roomKey = `org:${orgId}:${room}`;
-  io.to(roomKey).emit(event, {
-    event,
-    data,
-    timestamp: Date.now(),
-    orgId,
-  });
+  return DOMAIN_TO_PROACTIVE_EVENT[event] ?? null;
+}
+
+export function publishEvent(orgId: number, room: Room, event: DomainEvent, data: unknown): void {
+  if (io) {
+    const roomKey = `org:${orgId}:${room}`;
+    io.to(roomKey).emit(event, {
+      event,
+      data,
+      timestamp: Date.now(),
+      orgId,
+    });
+  } else {
+    logger.warn("WebSocket server not initialized, WebSocket event not emitted");
+  }
+
+  const proactiveType = resolveProactiveEventType(event, data);
+  if (proactiveType) {
+    handleProactiveEvent({
+      type: proactiveType,
+      orgId,
+      data: (data && typeof data === "object" ? data : { value: data }) as Record<string, unknown>,
+    }).catch((err) => {
+      logger.warn({ err, event: proactiveType }, "Proactive event handler failed (non-blocking)");
+    });
+  }
 }
 
 export function publishToOrg(orgId: number, event: DomainEvent, data: unknown): void {

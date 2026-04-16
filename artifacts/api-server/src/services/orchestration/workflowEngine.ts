@@ -4,6 +4,7 @@ import { eq, and, asc } from "drizzle-orm";
 import { routeTask } from "./taskRouter";
 import { createAssignment, transitionAssignment } from "./assignmentEngine";
 import { AppError } from "../../middlewares/errorHandler";
+import { publishEvent } from "../../lib/websocket";
 
 interface StepResult {
   stepId: number;
@@ -194,6 +195,12 @@ export async function executeNextStep(
           completedAt: new Date(),
         }).where(eq(workflowInstances.id, instanceId));
 
+        publishEvent(orgId, "workflows", "workflow:failed", {
+          instanceId,
+          workflowId: instance.workflowId,
+          error: currentResult.error,
+        });
+
         return {
           instanceId,
           workflowId: instance.workflowId,
@@ -302,6 +309,12 @@ export async function failStep(
     completedAt: new Date(),
   }).where(eq(workflowInstances.id, instanceId));
 
+  publishEvent(orgId, "workflows", "workflow:failed", {
+    instanceId,
+    workflowId: instance.workflowId,
+    error,
+  });
+
   return {
     instanceId,
     workflowId: instance.workflowId,
@@ -363,6 +376,11 @@ async function advanceToNextStep(
       stepResults,
       completedAt: new Date(),
     }).where(eq(workflowInstances.id, instance.id));
+
+    publishEvent(orgId, "workflows", "workflow:completed", {
+      instanceId: instance.id,
+      workflowId: instance.workflowId,
+    });
 
     return {
       instanceId: instance.id,
