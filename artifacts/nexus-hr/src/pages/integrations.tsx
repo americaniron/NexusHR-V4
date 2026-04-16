@@ -11,6 +11,22 @@ import { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plug, Search, CheckCircle2, XCircle, ExternalLink, Zap } from "lucide-react";
 
+interface OAuthRedirectResponse {
+  requiresOAuth: boolean;
+  provider: string;
+  authorizeUrl: string;
+}
+
+function isOAuthRedirect(result: unknown): result is OAuthRedirectResponse {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "requiresOAuth" in result &&
+    (result as OAuthRedirectResponse).requiresOAuth === true &&
+    "authorizeUrl" in result
+  );
+}
+
 export default function IntegrationsPage() {
   const { data: integrations, isLoading, refetch } = useListIntegrations();
   const connectTool = useConnectIntegration();
@@ -28,9 +44,9 @@ export default function IntegrationsPage() {
         refetch();
       } else {
         const result = await connectTool.mutateAsync({ toolId });
-        if (result && (result as any).requiresOAuth) {
-          const authorizeUrl = (result as any).authorizeUrl;
-          const response = await fetch(`${import.meta.env.BASE_URL}api${authorizeUrl}`.replace(/\/+/g, '/'), {
+        if (result && isOAuthRedirect(result)) {
+          const baseUrl = import.meta.env.BASE_URL.replace(/\/+$/, "");
+          const response = await fetch(`${baseUrl}${result.authorizeUrl}`, {
             credentials: "include",
           });
           const data = await response.json();

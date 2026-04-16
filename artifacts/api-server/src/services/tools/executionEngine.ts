@@ -4,7 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { AppError } from "../../middlewares/errorHandler";
 import { evaluatePermission, checkRateLimit } from "./permissionEngine";
 import { logToolAccess } from "./auditLogger";
-import { getAdapter } from "./adapters/registry";
+import { resolveAdapter } from "./adapters/registry";
 import type { OAuthCredentials } from "./adapters/types";
 
 const EXECUTION_TIMEOUT_MS = 5 * 60 * 1000;
@@ -139,7 +139,7 @@ export async function executeToolAccess(request: ToolExecutionRequest): Promise<
   let resultStatus: "success" | "error" | "timeout" = "success";
 
   try {
-    const adapter = getAdapter(tool.name);
+    const adapter = resolveAdapter(tool);
     const executeFn = adapter
       ? async () => {
           const creds = extractCredentials(connection);

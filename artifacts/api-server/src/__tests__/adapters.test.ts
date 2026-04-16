@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from "vite
 import type { OAuthCredentials } from "../services/tools/adapters/types";
 import { slackAdapter } from "../services/tools/adapters/slack";
 import { googleAdapter } from "../services/tools/adapters/google";
-import { getAdapter, hasAdapter, listAdapters } from "../services/tools/adapters/registry";
+import { getAdapter, hasAdapter, listAdapters, resolveAdapter, getAdapterByProvider } from "../services/tools/adapters/registry";
 
 const mockCredentials: OAuthCredentials = {
   accessToken: "xoxb-test-token-123",
@@ -33,6 +33,33 @@ describe("Adapter Registry", () => {
     expect(adapters).toContain("slack");
     expect(adapters).toContain("google-workspace");
     expect(adapters.length).toBe(2);
+  });
+
+  it("resolves adapter by provider field", () => {
+    expect(getAdapterByProvider("slack")).toBe(slackAdapter);
+    expect(getAdapterByProvider("google")).toBe(googleAdapter);
+    expect(getAdapterByProvider("Slack")).toBe(slackAdapter);
+    expect(getAdapterByProvider("unknown")).toBeUndefined();
+  });
+
+  it("resolveAdapter prefers provider over name", () => {
+    const tool = { name: "some-custom-name", provider: "slack" };
+    expect(resolveAdapter(tool)).toBe(slackAdapter);
+  });
+
+  it("resolveAdapter falls back to name when provider is null", () => {
+    const tool = { name: "slack", provider: null };
+    expect(resolveAdapter(tool)).toBe(slackAdapter);
+  });
+
+  it("resolveAdapter falls back to name when provider has no adapter", () => {
+    const tool = { name: "google-workspace", provider: "nonexistent" };
+    expect(resolveAdapter(tool)).toBe(googleAdapter);
+  });
+
+  it("resolveAdapter returns undefined when neither matches", () => {
+    const tool = { name: "unknown", provider: "nonexistent" };
+    expect(resolveAdapter(tool)).toBeUndefined();
   });
 });
 
