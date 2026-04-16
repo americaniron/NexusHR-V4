@@ -10,14 +10,9 @@ import { AppError } from "../middlewares/errorHandler";
 import { publishEvent } from "../lib/websocket";
 import { requirePlanLimit } from "../middlewares/planLimits";
 import { recordUsage } from "../lib/billing/metering";
+import { listTasksQuery } from "../schemas/query";
 
 const router = Router();
-
-const listTasksQuery = paginationQuery.extend({
-  status: z.enum(["pending", "in_progress", "completed", "failed", "cancelled"]).optional(),
-  assigneeId: z.coerce.number().int().optional(),
-  priority: z.enum(["low", "medium", "high", "critical"]).optional(),
-});
 
 const createTaskBody = z.object({
   title: z.string().min(1).max(500),

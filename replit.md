@@ -23,7 +23,8 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
 **Backend:**
 -   **API Framework:** Express 5 with Clerk middleware.
 -   **Database:** PostgreSQL with Drizzle ORM (comprehensive schema covering organizations, users, AI roles, employees, interviews, tasks, workflows, conversations, integrations, billing, support, notifications, relational memory, and prompt templates/audit logs).
--   **Validation:** Zod schemas for all API inputs.
+-   **Validation:** Zod schemas for all API inputs. Query schemas use `.passthrough()` in the validate middleware to allow unknown proxy parameters.
+-   **Testing:** Vitest + Supertest for integration tests. Query schemas shared via `src/schemas/query.ts`.
 -   **API Codegen:** Orval generates React Query hooks and Zod schemas from OpenAPI.
 -   **Error Handling:** Structured JSON errors with a global handler.
 -   **Real-time Communication:** Socket.io for WebSocket connections with authentication and room-based subscriptions.

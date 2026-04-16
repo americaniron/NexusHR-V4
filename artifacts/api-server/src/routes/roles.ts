@@ -3,18 +3,11 @@ import { db } from "@workspace/db";
 import { aiEmployeeRoles } from "@workspace/db";
 import { eq, sql, ilike, and, asc, desc } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
-import { z } from "zod/v4";
-import { validate, paginationQuery, idParam } from "../middlewares/validate";
+import { validate, idParam } from "../middlewares/validate";
 import { AppError } from "../middlewares/errorHandler";
+import { listRolesQuery } from "../schemas/query";
 
 const router = Router();
-
-const listRolesQuery = paginationQuery.extend({
-  category: z.string().optional(),
-  industry: z.string().optional(),
-  search: z.string().optional(),
-  sortBy: z.enum(["relevance", "price_asc", "price_desc", "newest"]).optional(),
-});
 
 router.get("/roles", validate({ query: listRolesQuery }), async (req, res, next) => {
   try {
