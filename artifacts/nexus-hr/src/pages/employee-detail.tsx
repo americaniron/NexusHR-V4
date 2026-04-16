@@ -10,6 +10,7 @@ import { AIAvatar } from "@/components/ai-avatar";
 import { PersonalityConfig } from "@/components/personality-config";
 import { ProactiveBehaviors } from "@/components/proactive-behaviors";
 import { EmployeePerformanceTab } from "@/components/employee-performance-tab";
+import { MemoryManagement } from "@/components/memory-management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,6 +35,7 @@ import {
   Video,
   Sparkles,
   BarChart3,
+  Database,
 } from "lucide-react";
 
 interface PersonalityAxes {
@@ -251,6 +253,9 @@ export default function EmployeeDetailPage() {
           <TabsTrigger value="performance" className="gap-2">
             <BarChart3 className="h-4 w-4" /> Performance
           </TabsTrigger>
+          <TabsTrigger value="memory" className="gap-2">
+            <Database className="h-4 w-4" /> Memory
+          </TabsTrigger>
           <TabsTrigger value="personality" className="gap-2">
             <Brain className="h-4 w-4" /> Personality
           </TabsTrigger>
@@ -308,6 +313,14 @@ export default function EmployeeDetailPage() {
 
         <TabsContent value="proactive" className="mt-6">
           <ProactiveBehaviors
+            employeeId={employeeId}
+            employeeName={employee.name}
+            apiBase={apiBase}
+          />
+        </TabsContent>
+
+        <TabsContent value="memory" className="mt-6">
+          <MemoryManagement
             employeeId={employeeId}
             employeeName={employee.name}
             apiBase={apiBase}
