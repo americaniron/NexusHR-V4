@@ -1,4 +1,5 @@
 import { getAnthropicClient } from "@workspace/integrations-anthropic-ai/client";
+import { AI_CONFIG } from "./aiConfig";
 
 type MessageRole = "user" | "assistant";
 
@@ -11,8 +12,6 @@ interface ChatOptions {
   temperature?: number;
   maxTokens?: number;
 }
-
-const MODEL = "claude-opus-4-6";
 
 export async function chatCompletion(
   messages: ChatMessage[],
@@ -27,8 +26,8 @@ export async function chatCompletion(
   }));
 
   const response = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: options.maxTokens ?? 8192,
+    model: AI_CONFIG.model,
+    max_tokens: options.maxTokens ?? AI_CONFIG.defaultMaxTokens,
     ...(systemMsg ? { system: systemMsg.content } : {}),
     messages: chatMsgs,
   });
@@ -53,8 +52,8 @@ export async function streamChatCompletion(
   let fullResponse = "";
 
   const stream = anthropic.messages.stream({
-    model: MODEL,
-    max_tokens: options.maxTokens ?? 8192,
+    model: AI_CONFIG.model,
+    max_tokens: options.maxTokens ?? AI_CONFIG.defaultMaxTokens,
     ...(systemMsg ? { system: systemMsg.content } : {}),
     messages: chatMsgs,
   });

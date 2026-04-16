@@ -1,4 +1,5 @@
 import { getAnthropicClient } from "@workspace/integrations-anthropic-ai/client";
+import { AI_CONFIG } from "./aiConfig";
 import { randomUUID } from "crypto";
 import { objectStorageClient } from "./objectStorage";
 import {
@@ -162,8 +163,8 @@ async function generateImageWithClaude(prompt: string): Promise<Buffer> {
   const anthropic = getAnthropicClient();
 
   const refinementResponse = await anthropic.messages.create({
-    model: "claude-opus-4-6",
-    max_tokens: 1024,
+    model: AI_CONFIG.model,
+    max_tokens: AI_CONFIG.refinementMaxTokens,
     messages: [{
       role: "user",
       content: `You are a professional portrait photographer. Refine this image prompt to be more detailed and photorealistic. Return ONLY the refined prompt text, nothing else.\n\nOriginal prompt: ${prompt}`,
@@ -359,7 +360,7 @@ export async function runStyleGAN3Pipeline(
     pipelineMetadata: {
       stages,
       totalDurationMs: Date.now() - pipelineStart,
-      model: "claude-opus-4-6",
+      model: AI_CONFIG.model,
     },
   };
 
@@ -382,7 +383,7 @@ export async function runStyleGAN3Pipeline(
       pipelineMetadata: {
         stages,
         totalDurationMs: Date.now() - pipelineStart,
-        model: "claude-opus-4-6",
+        model: AI_CONFIG.model,
       },
       isPreGenerated: false,
     }).returning({ id: avatarAssets.id });

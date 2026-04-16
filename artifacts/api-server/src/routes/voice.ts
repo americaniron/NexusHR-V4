@@ -118,14 +118,15 @@ router.post("/voice/transcribe", requireAuth, transcribeLimit, transcribeJsonPar
     }
 
     const { getAnthropicClient } = await import("@workspace/integrations-anthropic-ai/client");
+    const { AI_CONFIG } = await import("../lib/aiConfig");
     const anthropic = getAnthropicClient();
 
     const base64Audio = audioBuffer.toString("base64");
     const mediaType = mimeType as "audio/webm" | "audio/wav" | "audio/mp3" | "audio/mpeg" | "audio/ogg" | "audio/flac";
 
     const response = await anthropic.messages.create({
-      model: "claude-opus-4-6",
-      max_tokens: 8192,
+      model: AI_CONFIG.model,
+      max_tokens: AI_CONFIG.defaultMaxTokens,
       messages: [{
         role: "user",
         content: [
