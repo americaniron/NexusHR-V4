@@ -2,28 +2,38 @@ import { ReplitConnectors } from "@replit/connectors-sdk";
 
 const connectors = new ReplitConnectors();
 
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || "";
 const ELEVENLABS_BASE_URL = "https://api.elevenlabs.io";
 
-function useProxy(): boolean {
-  return !ELEVENLABS_API_KEY;
+function getApiKey(): string {
+  const key = process.env.ELEVENLABS_API_KEY;
+  if (!key) {
+    throw new Error("ElevenLabs API key not configured. Set ELEVENLABS_API_KEY environment variable.");
+  }
+  return key;
 }
 
 async function elevenLabsFetch(path: string, init?: RequestInit): Promise<Response> {
-  if (useProxy()) {
-    return connectors.proxy("elevenlabs", path, {
-      method: init?.method || "GET",
-      headers: init?.headers as Record<string, string> | undefined,
-      body: init?.body as string | undefined,
+  const method = init?.method || "GET";
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+
+  if (apiKey) {
+    return fetch(`${ELEVENLABS_BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        "xi-api-key": apiKey,
+        ...(init?.headers as Record<string, string> || {}),
+      },
     });
   }
-  return fetch(`${ELEVENLABS_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "xi-api-key": ELEVENLABS_API_KEY,
-      ...(init?.headers as Record<string, string> || {}),
-    },
-  });
+
+  if (method === "GET") {
+    return connectors.proxy("elevenlabs", path, {
+      method: "GET",
+      headers: init?.headers as Record<string, string> | undefined,
+    });
+  }
+
+  throw new Error("ElevenLabs API key required for POST requests. Set ELEVENLABS_API_KEY environment variable.");
 }
 
 export async function textToSpeech(

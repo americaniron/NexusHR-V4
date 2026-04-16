@@ -33,3 +33,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 OWNER_EMAILS = "ahmed@americaniron1.com,adam@americaniron1.com"
+ELEVENLABS_API_KEY = "sk_6afcfcb60ce6434cc82ad26a52a01b22558d101263bd7beb"
