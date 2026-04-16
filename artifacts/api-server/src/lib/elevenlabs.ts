@@ -294,12 +294,8 @@ export async function deleteClonedVoice(voiceId: string): Promise<void> {
 }
 
 export async function generateSttToken(): Promise<string> {
-  const response = await elevenLabsFetch(`/v1/tokens`, {
+  const response = await elevenLabsFetch(`/v1/single-use-token/realtime_scribe`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ token_type: "realtime_scribe" }),
   });
 
   if (!response.ok) {

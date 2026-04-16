@@ -148,17 +148,9 @@ export function useRealtimeSTT(options: UseRealtimeSTTOptions = {}): UseRealtime
       });
       streamRef.current = stream;
 
-      const ws = new WebSocket(`${WS_ENDPOINT}?token=${token}`);
+      const wsUrl = `${WS_ENDPOINT}?token=${token}&model_id=scribe_v2_realtime&language_code=${language}`;
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          type: "configure",
-          language_code: language,
-          sample_rate: SAMPLE_RATE,
-          encoding: "pcm_s16le",
-        }));
-      };
 
       ws.onmessage = (event) => {
         try {

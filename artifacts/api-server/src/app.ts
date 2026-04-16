@@ -123,7 +123,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(clerkMiddleware());
 
-const PUBLIC_PATH_PREFIXES = ["/healthz", "/billing/webhook", "/roles", "/static", "/storage/public-objects"];
+const PUBLIC_PATH_PREFIXES = ["/healthz", "/billing/webhook", "/roles", "/static", "/storage/public-objects", "/voice/stt-token-test"];
 
 app.use("/api", (req: Request, res: Response, next: NextFunction) => {
   const path = req.path;

@@ -201,6 +201,15 @@ router.post("/voice/synthesize-aligned", requireAuth, synthesizeLimit, validate(
   }
 });
 
+router.get("/voice/stt-token-test", async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const token = await generateSttToken();
+    res.json({ success: true, tokenLength: token.length, tokenPreview: token.substring(0, 20) + "..." });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error instanceof Error ? error.message : "Unknown error" });
+  }
+});
+
 const sttTokenLimit = rateLimit({ windowMs: 60_000, max: 10, keyPrefix: "voice-stt-token" });
 
 router.get("/voice/stt-token", requireAuth, sttTokenLimit, async (_req: Request, res: Response, next: NextFunction) => {
