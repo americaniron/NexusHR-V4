@@ -31,13 +31,13 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
 **Core Features & Implementations:**
 -   **AI-Guided Setup Wizard:** Multi-step onboarding wizard (Welcome → Org Profile → Browse Talent → Customize → Integrations → Deploy) with real-time AI assistant panel providing contextual guidance. Includes skeleton loading states, error handling with retry, role recommendation by industry, avatar generation, voice selection, and integration connection. Located at `/onboarding`, accessible after signup.
 -   **AI People Management:** Catalog of 105+ AI roles, onboarding and management of AI people, AI-powered interview sessions, real-time chat with ElevenLabs audio playback, HeyGen Seedance 2.0 integration for cinematic AI person videos.
--   **AI Avatar System:** Photorealistic headshots (OpenAI `gpt-image-1` or DiceBear fallback), `AIAvatar` component supporting `idle`, `speaking`, `thinking`, `listening` states.
+-   **AI Avatar System:** Photorealistic headshots (Claude Opus 4.6 prompt refinement + Replit image proxy, DiceBear fallback), `AIAvatar` component supporting `idle`, `speaking`, `thinking`, `listening` states.
     -   **Emotion Engine:** Detects 7 emotion states from AI response text, mapping to ElevenLabs voice parameters and avatar visual cues (ring glows, indicator dots, waveform bars).
     -   **Avatar Animator:** `AvatarAnimator` component for viseme-driven mouth animation, idle cycles, and emotion-driven facial expressions.
     -   **Rich Chat Messages:** 8 types including text, voice transcription, data cards, file attachments, action confirmations, status updates, quick replies, and escalation notices.
     -   **ElevenLabs Alignment API:** Used for character-level timing data to drive lip sync.
     -   **Collaboration Visibility Panel:** Real-time inter-professional workflow progress with dependency graphs and assignments.
--   **Voice & Visual States:** ElevenLabs TTS with personality-mapped voice settings and emotion-aware modulation. OpenAI Whisper STT for transcription. `useVoiceMode` hook for managing the full voice pipeline.
+-   **Voice & Visual States:** ElevenLabs TTS with personality-mapped voice settings and emotion-aware modulation. Claude Opus 4.6 for audio transcription. `useVoiceMode` hook for managing the full voice pipeline.
 -   **AI Personality Engine:** 7-Axis personality system with customizable sliders, dynamic tone control, culture alignment, and a relational memory engine.
 -   **Prompt Architecture & Assembly Pipeline:** 9-layer prompt assembly, 7-stage assembly pipeline for context injection and token management, PII redaction, audit logging, and template versioning.
 -   **AI Orchestration Layer:** Task router for AI employee assignment, assignment engine, progress tracker, dependency manager, and workflow execution engine.
@@ -47,11 +47,9 @@ NexsusHR is built as a pnpm workspace monorepo using TypeScript.
 ## External Dependencies
 
 -   **Authentication:** Clerk
--   **AI (Primary):** Anthropic Claude (Opus 4.6, Sonnet 4.6) via Replit AI Integrations
--   **AI (Fallback):** OpenAI GPT-4o via Replit AI Integrations
+-   **AI (Exclusive):** Anthropic Claude Opus 4.6 via Replit AI Integrations (all reasoning, chat, prompt refinement, transcription)
 -   **Voice Synthesis:** ElevenLabs (via Replit integration connector)
--   **Image Generation:** OpenAI `gpt-image-1`
--   **Speech-to-Text:** OpenAI Whisper
+-   **Image Generation:** Replit AI proxy (Claude Opus 4.6 prompt refinement)
 -   **Database:** PostgreSQL
 -   **ORM:** Drizzle ORM
 -   **Validation:** Zod

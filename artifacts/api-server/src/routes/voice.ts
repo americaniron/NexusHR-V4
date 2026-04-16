@@ -117,22 +117,38 @@ router.post("/voice/transcribe", requireAuth, transcribeLimit, transcribeJsonPar
       throw AppError.badRequest("Audio file too large (max 10MB)");
     }
 
-    const OpenAI = (await import("openai")).default;
-    const openai = new OpenAI({
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://ai-proxy.replit.app/v1",
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "placeholder",
+    const { getAnthropicClient } = await import("@workspace/integrations-anthropic-ai/client");
+    const anthropic = getAnthropicClient();
+
+    const base64Audio = audioBuffer.toString("base64");
+    const mediaType = mimeType as "audio/webm" | "audio/wav" | "audio/mp3" | "audio/mpeg" | "audio/ogg" | "audio/flac";
+
+    const response = await anthropic.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: 8192,
+      messages: [{
+        role: "user",
+        content: [
+          {
+            type: "input_audio" as any,
+            source: {
+              type: "base64",
+              media_type: mediaType,
+              data: base64Audio,
+            },
+          } as any,
+          {
+            type: "text",
+            text: "Please transcribe the audio exactly as spoken. Return ONLY the transcribed text, nothing else. If the audio is unclear, transcribe what you can hear.",
+          },
+        ],
+      }],
     });
 
-    const audioFile = new File([new Uint8Array(audioBuffer)], `audio.${extension}`, { type: mimeType });
-
-    const transcription = await openai.audio.transcriptions.create({
-      model: "whisper-1",
-      file: audioFile,
-      language: "en",
-    });
+    const transcribedText = response.content[0].type === "text" ? response.content[0].text : "";
 
     res.json({
-      text: transcription.text,
+      text: transcribedText,
       language: "en",
     });
   } catch (error) {
