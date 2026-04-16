@@ -55,7 +55,7 @@ export function validate(schemas: ValidationSchemas) {
 export const paginationQuery = z.object({
   page: z.coerce.number().int().min(1).default(1).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(12).optional(),
-});
+}).passthrough();
 
 export const idParam = z.object({
   id: z.coerce.number().int().min(1),

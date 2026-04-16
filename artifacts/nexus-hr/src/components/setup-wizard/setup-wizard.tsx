@@ -47,34 +47,22 @@ const WIZARD_STEPS = [
 
 const AI_GUIDE: Record<string, string[]> = {
   welcome: [
-    "Hi there! I'm Aria Lawson, your Admin and Onboarding Director here at NexsusHR. I'll personally walk you through bringing your first AI professional onboard.",
-    "This will only take about 3 minutes. We'll set up your organization, find the perfect role, customize their personality and appearance, connect your tools, and have them ready to work alongside your team.",
-    "Let's get started! Click 'Begin Setup' whenever you're ready.",
+    "Hi! I'm Aria Lawson, your Onboarding Director. I'll walk you through setting up your first AI professional — it only takes about three minutes.",
   ],
   profile: [
-    "First, tell me a bit about your organization so I can recommend the best AI professionals for your needs.",
-    "Your industry and team size help me understand what roles will deliver the biggest impact. For example, healthcare companies typically benefit most from Medical Records Analysts and Patient Coordinators, while tech startups often start with DevOps Engineers or Data Analysts.",
-    "Don't worry about getting everything perfect — you can always update this later in Settings.",
+    "Tell me about your organization. Your industry helps me recommend the right talent for your team.",
   ],
   browse: [
-    "Based on your profile, I've highlighted roles that are especially well-suited for your organization.",
-    "Each role comes with deep, real-world expertise. Click on any card to see their full capabilities — core responsibilities, daily tasks, the tools they integrate with, and even their default personality profile.",
-    "Take your time browsing, or use the search bar to find something specific. Once you find the right fit, select them and we'll move to customization.",
+    "I've highlighted roles recommended for your organization. Select one to continue.",
   ],
   customize: [
-    "Now let's make this AI professional yours. Give them a name that fits your team culture.",
-    "You can also generate a unique avatar and select a voice profile. The personality sliders let you fine-tune how they communicate — more formal for client-facing roles, more casual for internal teams.",
-    "Every detail you set here shapes how they'll interact with your organization. This is what makes NexsusHR different — these aren't generic tools, they're colleagues built to fit your culture.",
+    "Let's personalize your new AI professional. Set their name, avatar, voice, and personality.",
   ],
   integrations: [
-    "Great choice! Now let's connect the tools your team already uses so your new AI professional can work in your existing workflow.",
-    "The most common first connections are Slack for real-time communication, Google Workspace for document collaboration, and your project management tool like Jira or Asana.",
-    "You can skip this step and connect tools later from the Integrations page. Your AI professional will still work perfectly through the NexsusHR chat and voice interface.",
+    "Connect the tools your team already uses — Slack, Google Workspace, Jira, and more.",
   ],
   deploy: [
-    "Everything is set! Your AI professional is ready to join your organization's workforce.",
-    "Once you confirm, they'll be available immediately — you can start chatting, assigning tasks, or using voice mode right away. They'll remember context across all conversations and execute tasks autonomously.",
-    "Welcome to the future of work. Let's bring your new team member online!",
+    "Everything looks great. Your AI professional is ready to join your team.",
   ],
 };
 

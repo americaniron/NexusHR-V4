@@ -132,10 +132,6 @@ export function AIAssistant({ messages, stepTitle, context }: AIAssistantProps) 
     return () => clearTimeout(timer);
   }, [stepTitle]);
 
-  const handleVideoStarted = () => {
-    setIsSpeaking(true);
-  };
-
   const handleVideoEnded = () => {
     setIsSpeaking(false);
     setIsVideoStep(false);
@@ -191,7 +187,7 @@ export function AIAssistant({ messages, stepTitle, context }: AIAssistantProps) 
 
   return (
     <div className="rounded-xl border border-primary/20 bg-gradient-to-b from-primary/5 to-transparent overflow-hidden">
-      <div className="relative bg-black aspect-video overflow-hidden">
+      <div className="relative bg-black aspect-[4/3] overflow-hidden">
         {isVideoStep ? (
           <video
             ref={videoRef}
@@ -199,7 +195,7 @@ export function AIAssistant({ messages, stepTitle, context }: AIAssistantProps) 
             className="w-full h-full object-cover"
             muted
             playsInline
-            onPlaying={handleVideoStarted}
+            onPlaying={() => setIsSpeaking(true)}
             onEnded={handleVideoEnded}
           />
         ) : (
@@ -213,7 +209,7 @@ export function AIAssistant({ messages, stepTitle, context }: AIAssistantProps) 
                 <img
                   src={ADMIN_AVATAR}
                   alt={ADMIN_NAME}
-                  className={`w-32 h-32 rounded-full object-cover border-4 transition-all duration-300 ${
+                  className={`w-28 h-28 rounded-full object-cover border-4 transition-all duration-300 ${
                     isSpeaking
                       ? "border-primary shadow-[0_0_30px_rgba(var(--primary-rgb,200,120,50),0.4)]"
                       : "border-white/20 shadow-lg"
@@ -248,14 +244,28 @@ export function AIAssistant({ messages, stepTitle, context }: AIAssistantProps) 
           </div>
         )}
 
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-white text-sm font-semibold">{ADMIN_NAME}</span>
-            <span className="text-white/50 text-xs">{ADMIN_TITLE}</span>
+        {caption && !isVideoStep && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent px-4 pb-4 pt-10">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-white text-xs font-semibold">{ADMIN_NAME}</span>
+              <span className="text-white/40 text-[10px]">{ADMIN_TITLE}</span>
+            </div>
+            <p className="text-white/90 text-sm leading-snug">
+              {caption}
+            </p>
           </div>
-        </div>
+        )}
 
-        <div className="absolute top-3 right-3 flex items-center gap-2">
+        {!caption && !isVideoStep && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
+            <div className="flex items-center gap-2">
+              <span className="text-white text-xs font-semibold">{ADMIN_NAME}</span>
+              <span className="text-white/40 text-[10px]">{ADMIN_TITLE}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="absolute top-3 right-3">
           <button
             onClick={toggleAudio}
             className="h-8 w-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
@@ -270,34 +280,26 @@ export function AIAssistant({ messages, stepTitle, context }: AIAssistantProps) 
         </div>
       </div>
 
-      {caption && (
-        <div className="px-4 py-3 border-b border-primary/10 bg-card/50">
-          <p className="text-sm text-foreground/90 leading-relaxed italic">
-            &ldquo;{caption}&rdquo;
-          </p>
-        </div>
-      )}
-
-      <div className="px-4 py-3">
+      <div className="px-3 py-2.5">
         {!showChat ? (
           <button
             onClick={() => setShowChat(true)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors text-sm text-primary font-medium"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors text-xs text-primary font-medium"
           >
-            <MessageCircle className="h-4 w-4" />
+            <MessageCircle className="h-3.5 w-3.5" />
             Ask Aria a Question
           </button>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground font-medium">
+              <span className="text-[11px] text-muted-foreground font-medium">
                 Ask Aria anything about this step
               </span>
               <button
                 onClick={() => setShowChat(false)}
-                className="h-6 w-6 rounded-full hover:bg-muted flex items-center justify-center"
+                className="h-5 w-5 rounded-full hover:bg-muted flex items-center justify-center"
               >
-                <X className="h-3.5 w-3.5 text-muted-foreground" />
+                <X className="h-3 w-3 text-muted-foreground" />
               </button>
             </div>
             <div className="flex gap-2">
@@ -307,19 +309,19 @@ export function AIAssistant({ messages, stepTitle, context }: AIAssistantProps) 
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAskAria()}
                 placeholder="Type your question..."
-                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 disabled={chatLoading}
                 autoFocus
               />
               <button
                 onClick={handleAskAria}
                 disabled={chatLoading || !chatInput.trim()}
-                className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
+                className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 {chatLoading ? (
-                  <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 text-primary-foreground animate-spin" />
                 ) : (
-                  <Send className="h-4 w-4 text-primary-foreground" />
+                  <Send className="h-3.5 w-3.5 text-primary-foreground" />
                 )}
               </button>
             </div>
