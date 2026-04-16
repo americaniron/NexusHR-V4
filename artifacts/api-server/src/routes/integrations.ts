@@ -85,6 +85,41 @@ const OAUTH_CONFIGS: Record<string, {
       "https://www.googleapis.com/auth/drive",
     ],
   },
+  hubspot: {
+    authUrl: "https://app.hubspot.com/oauth/authorize",
+    tokenUrl: "https://api.hubapi.com/oauth/v1/token",
+    clientIdEnv: "HUBSPOT_CLIENT_ID",
+    clientSecretEnv: "HUBSPOT_CLIENT_SECRET",
+    scopes: [
+      "crm.objects.contacts.read",
+      "crm.objects.contacts.write",
+      "crm.objects.deals.read",
+      "crm.objects.deals.write",
+      "crm.objects.companies.read",
+    ],
+  },
+  jira: {
+    authUrl: "https://auth.atlassian.com/authorize",
+    tokenUrl: "https://auth.atlassian.com/oauth/token",
+    clientIdEnv: "JIRA_CLIENT_ID",
+    clientSecretEnv: "JIRA_CLIENT_SECRET",
+    scopes: [
+      "read:jira-work",
+      "write:jira-work",
+      "read:jira-user",
+    ],
+  },
+  github: {
+    authUrl: "https://github.com/login/oauth/authorize",
+    tokenUrl: "https://github.com/login/oauth/access_token",
+    clientIdEnv: "GITHUB_CLIENT_ID",
+    clientSecretEnv: "GITHUB_CLIENT_SECRET",
+    scopes: [
+      "repo",
+      "read:user",
+      "read:org",
+    ],
+  },
 };
 
 const OAUTH_REQUIRED_TOOLS = new Set(Object.keys(OAUTH_CONFIGS));
@@ -175,13 +210,16 @@ router.get("/integrations/oauth/:provider/authorize", requireAuth, async (req, r
 
     const redirectUri = `${process.env.API_BASE_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`}/api/integrations/oauth/${provider}/callback`;
 
+    const scopeSeparator = provider === "slack" ? "," : " ";
+
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
-      scope: config.scopes.join(provider === "slack" ? "," : " "),
+      scope: config.scopes.join(scopeSeparator),
       state,
       response_type: "code",
       ...(provider === "google-workspace" ? { access_type: "offline", prompt: "consent" } : {}),
+      ...(provider === "jira" ? { audience: "api.atlassian.com", prompt: "consent" } : {}),
     });
 
     res.json({ url: `${config.authUrl}?${params.toString()}` });
@@ -210,16 +248,29 @@ router.get("/integrations/oauth/:provider/callback", async (req, res, next) => {
     const clientSecret = process.env[config.clientSecretEnv]!;
     const redirectUri = `${process.env.API_BASE_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`}/api/integrations/oauth/${provider}/callback`;
 
+    const tokenHeaders: Record<string, string> = {
+      "Content-Type": "application/x-www-form-urlencoded",
+    };
+    if (provider === "github") {
+      tokenHeaders["Accept"] = "application/json";
+    }
+
+    const tokenBody: Record<string, string> = {
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    };
+
+    if (provider === "jira") {
+      tokenHeaders["Content-Type"] = "application/json";
+    }
+
     const tokenResponse = await fetch(config.tokenUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code,
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        grant_type: "authorization_code",
-      }),
+      headers: tokenHeaders,
+      body: provider === "jira" ? JSON.stringify(tokenBody) : new URLSearchParams(tokenBody),
     });
 
     const tokenData = await tokenResponse.json();
@@ -227,7 +278,10 @@ router.get("/integrations/oauth/:provider/callback", async (req, res, next) => {
     if (provider === "slack" && tokenData.ok === false) {
       throw AppError.internal(`Slack token exchange failed: ${tokenData.error || "unknown error"}`);
     }
-    if (provider !== "slack" && !tokenResponse.ok) {
+    if (provider === "github" && tokenData.error) {
+      throw AppError.internal(`GitHub token exchange failed: ${tokenData.error_description || tokenData.error}`);
+    }
+    if (provider !== "slack" && provider !== "github" && !tokenResponse.ok) {
       throw AppError.internal(`OAuth token exchange failed: ${tokenData.error?.message || tokenData.error || "unknown error"}`);
     }
 
