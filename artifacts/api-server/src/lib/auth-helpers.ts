@@ -37,6 +37,9 @@ export async function getAuthContext(req: Request): Promise<AuthContext> {
     if (user?.email) {
       isOwner = getOwnerEmails().includes(user.email.toLowerCase());
     }
+    if (!orgId && user?.orgId) {
+      orgId = user.orgId;
+    }
   }
 
   return { orgId, userId, clerkUserId, clerkOrgId, isOwner };
