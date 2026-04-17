@@ -158,8 +158,8 @@ describe("POST /employees – voiceLanguage persistence", () => {
     expect(res.status).toBe(201);
     expect(res.body.voiceLanguage).toBe("es");
 
-    const insertedValues = mockValues.mock.calls[0][0];
-    expect(insertedValues.voiceLanguage).toBe("es");
+    const insertedValues = (mockValues.mock.calls as unknown[][])[0]?.[0] as Record<string, unknown> | undefined;
+    expect(insertedValues!.voiceLanguage).toBe("es");
   });
 
   it("defaults voiceLanguage to 'en' when not provided during hire", async () => {
@@ -177,8 +177,8 @@ describe("POST /employees – voiceLanguage persistence", () => {
     expect(res.status).toBe(201);
     expect(res.body.voiceLanguage).toBe("en");
 
-    const insertedValues = mockValues.mock.calls[0][0];
-    expect(insertedValues.voiceLanguage).toBe("en");
+    const insertedValues = (mockValues.mock.calls as unknown[][])[0]?.[0] as Record<string, unknown> | undefined;
+    expect(insertedValues!.voiceLanguage).toBe("en");
   });
 
   it("persists Japanese voiceLanguage during hire", async () => {
@@ -197,8 +197,8 @@ describe("POST /employees – voiceLanguage persistence", () => {
     expect(res.status).toBe(201);
     expect(res.body.voiceLanguage).toBe("ja");
 
-    const insertedValues = mockValues.mock.calls[0][0];
-    expect(insertedValues.voiceLanguage).toBe("ja");
+    const insertedValues = (mockValues.mock.calls as unknown[][])[0]?.[0] as Record<string, unknown> | undefined;
+    expect(insertedValues!.voiceLanguage).toBe("ja");
   });
 
   it("persists voiceId alongside voiceLanguage during hire", async () => {
@@ -219,9 +219,9 @@ describe("POST /employees – voiceLanguage persistence", () => {
     expect(res.body.voiceId).toBe("custom-voice-1");
     expect(res.body.voiceLanguage).toBe("fr");
 
-    const insertedValues = mockValues.mock.calls[0][0];
-    expect(insertedValues.voiceId).toBe("custom-voice-1");
-    expect(insertedValues.voiceLanguage).toBe("fr");
+    const insertedValues = (mockValues.mock.calls as unknown[][])[0]?.[0] as Record<string, unknown> | undefined;
+    expect(insertedValues!.voiceId).toBe("custom-voice-1");
+    expect(insertedValues!.voiceLanguage).toBe("fr");
   });
 
   it("rejects voiceLanguage exceeding max length", async () => {

@@ -194,7 +194,7 @@ router.get("/integrations/oauth/:provider/authorize", requireAuth, async (req, r
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.badRequest("No organization");
 
-    const provider = req.params.provider;
+    const provider = String(req.params.provider);
     const config = OAUTH_CONFIGS[provider];
     if (!config) throw AppError.badRequest(`Unsupported OAuth provider: ${provider}`);
 
@@ -230,7 +230,7 @@ router.get("/integrations/oauth/:provider/authorize", requireAuth, async (req, r
 
 router.get("/integrations/oauth/:provider/callback", async (req, res, next) => {
   try {
-    const provider = req.params.provider;
+    const provider = String(req.params.provider);
     const config = OAUTH_CONFIGS[provider];
     if (!config) throw AppError.badRequest(`Unsupported OAuth provider: ${provider}`);
 
@@ -273,7 +273,7 @@ router.get("/integrations/oauth/:provider/callback", async (req, res, next) => {
       body: provider === "jira" ? JSON.stringify(tokenBody) : new URLSearchParams(tokenBody),
     });
 
-    const tokenData = await tokenResponse.json();
+    const tokenData: any = await tokenResponse.json();
 
     if (provider === "slack" && tokenData.ok === false) {
       throw AppError.internal(`Slack token exchange failed: ${tokenData.error || "unknown error"}`);

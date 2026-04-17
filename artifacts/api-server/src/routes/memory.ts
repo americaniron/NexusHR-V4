@@ -17,7 +17,7 @@ router.get("/memory/list/:aiEmployeeId", requireAuth, async (req, res, next) => 
     const { userId } = await getAuthContext(req);
     if (!userId) throw AppError.forbidden();
 
-    const aiEmployeeId = parseInt(req.params.aiEmployeeId, 10);
+    const aiEmployeeId = parseInt(String(req.params.aiEmployeeId), 10);
     if (!aiEmployeeId || isNaN(aiEmployeeId)) throw AppError.badRequest("Invalid aiEmployeeId");
 
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
@@ -74,7 +74,7 @@ router.delete("/memory/:id", requireAuth, async (req, res, next) => {
     const { userId } = await getAuthContext(req);
     if (!userId) throw AppError.forbidden();
 
-    const memoryId = parseInt(req.params.id, 10);
+    const memoryId = parseInt(String(req.params.id), 10);
     if (!memoryId || isNaN(memoryId)) throw AppError.badRequest("Invalid memory id");
 
     const [existing] = await db

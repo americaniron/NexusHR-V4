@@ -64,4 +64,4 @@ export function formatVectorForPg(vec: number[]): string {
   return `[${vec.join(",")}]`;
 }
 
-export { EMBEDDING_DIM };
+export { EMBEDDING_DIM, EMBEDDING_DIM as EMBEDDING_DIMENSIONS };

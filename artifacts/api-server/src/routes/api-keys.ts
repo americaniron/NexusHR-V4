@@ -74,7 +74,7 @@ router.delete("/api-keys/:id", requireAuth, async (req, res, next) => {
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.notFound("No organization");
 
-    const keyId = parseInt(req.params.id);
+    const keyId = parseInt(String(req.params.id));
     if (isNaN(keyId)) throw AppError.badRequest("Invalid key ID");
 
     const [key] = await db.select().from(apiKeys)

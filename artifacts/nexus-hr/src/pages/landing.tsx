@@ -38,7 +38,7 @@ import {
   Mic,
   Sparkles,
 } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -323,6 +323,21 @@ function HeroBackground() {
   );
 }
 
+function ImageWithFallback({ src, alt, className, loading }: { src: string; alt: string; className?: string; loading?: "eager" | "lazy" }) {
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      loading={loading}
+      onError={(e) => {
+        const target = e.currentTarget;
+        target.style.display = "none";
+      }}
+    />
+  );
+}
+
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("annual");
@@ -331,6 +346,16 @@ export default function LandingPage() {
   const [demoSubmitted, setDemoSubmitted] = useState(false);
   const [emailSignup, setEmailSignup] = useState("");
   const [emailSignupSubmitted, setEmailSignupSubmitted] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const scrollToSection = useCallback((e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    setMobileMenuOpen(false);
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
   const [roiRoles, setRoiRoles] = useState<{ role: string; count: number }[]>([
     { role: "Data Analyst", count: 2 },
     { role: "Customer Support", count: 2 },
@@ -378,29 +403,54 @@ export default function LandingPage() {
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background selection:bg-primary/30">
-      <header className="sticky top-0 z-50 flex h-20 items-center justify-between border-b border-border/40 px-6 backdrop-blur-md bg-background/80">
-        <div className="flex items-center gap-2.5">
-          <img src={`${BASE}nexushr-logo.png`} alt="NexsusHR" className="h-10 w-10 object-contain" />
-          <span className="text-xl font-bold tracking-tight text-foreground">NexsusHR</span>
+      <header className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-md bg-background/80">
+        <div className="flex h-20 items-center justify-between px-6">
+          <div className="flex items-center gap-2.5">
+            <ImageWithFallback src={`${BASE}nexushr-logo.png`} alt="NexsusHR" className="h-10 w-10 object-contain" />
+            <span className="text-xl font-bold tracking-tight text-foreground">NexsusHR</span>
+          </div>
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
+            <a href="#team" onClick={(e) => scrollToSection(e, "team")} className="hover:text-foreground transition-colors">Meet the Team</a>
+            <a href="#features" onClick={(e) => scrollToSection(e, "features")} className="hover:text-foreground transition-colors">Features</a>
+            <a href="#industries" onClick={(e) => scrollToSection(e, "industries")} className="hover:text-foreground transition-colors">Industries</a>
+            <a href="#pricing" onClick={(e) => scrollToSection(e, "pricing")} className="hover:text-foreground transition-colors">Pricing</a>
+            <a href="#faq" onClick={(e) => scrollToSection(e, "faq")} className="hover:text-foreground transition-colors">FAQ</a>
+          </nav>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link href="/sign-in" className="hidden sm:inline text-sm font-medium text-muted-foreground hover:text-foreground">
+              Log in
+            </Link>
+            <Link href="/sign-up">
+              <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs sm:text-sm">
+                <span className="hidden sm:inline">Start Free Trial</span>
+                <span className="sm:hidden">Try Free</span>
+              </Button>
+            </Link>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <XCircle className="h-5 w-5" />
+              ) : (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-          <a href="#team" className="hover:text-foreground transition-colors">Meet the Team</a>
-          <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-          <a href="#industries" className="hover:text-foreground transition-colors">Industries</a>
-          <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
-          <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
-        </nav>
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Link href="/sign-in" className="hidden sm:inline text-sm font-medium text-muted-foreground hover:text-foreground">
-            Log in
-          </Link>
-          <Link href="/sign-up">
-            <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs sm:text-sm">
-              <span className="hidden sm:inline">Start Free Trial</span>
-              <span className="sm:hidden">Try Free</span>
-            </Button>
-          </Link>
-        </div>
+        {mobileMenuOpen && (
+          <nav className="md:hidden border-t border-border/40 bg-background/95 backdrop-blur-md px-6 py-4 space-y-3">
+            <a href="#team" onClick={(e) => scrollToSection(e, "team")} className="block text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Meet the Team</a>
+            <a href="#features" onClick={(e) => scrollToSection(e, "features")} className="block text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</a>
+            <a href="#industries" onClick={(e) => scrollToSection(e, "industries")} className="block text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Industries</a>
+            <a href="#pricing" onClick={(e) => scrollToSection(e, "pricing")} className="block text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
+            <a href="#faq" onClick={(e) => scrollToSection(e, "faq")} className="block text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">FAQ</a>
+            <Link href="/sign-in" className="block text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Log in</Link>
+          </nav>
+        )}
       </header>
 
       <main className="flex-1">
@@ -523,7 +573,7 @@ export default function LandingPage() {
                         <img
                           src={member.avatar}
                           alt={member.name}
-                          className="w-24 h-24 rounded-full object-cover border-3 border-primary/20 group-hover:border-primary/40 transition-colors shadow-lg"
+                          className="w-24 h-24 rounded-full object-cover border-[3px] border-primary/20 group-hover:border-primary/40 transition-colors shadow-lg"
                         />
                         <div className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-card" />
                       </div>
@@ -690,7 +740,7 @@ export default function LandingPage() {
                       <img
                         src={activeVertical.featuredEmployee.avatar}
                         alt={activeVertical.featuredEmployee.name}
-                        className="w-28 h-28 rounded-full object-cover border-3 border-primary/30 shadow-lg mb-4"
+                        className="w-28 h-28 rounded-full object-cover border-[3px] border-primary/30 shadow-lg mb-4"
                       />
                       <p className="text-base font-bold text-foreground">{activeVertical.featuredEmployee.name}</p>
                       <p className="text-sm text-primary">{activeVertical.featuredEmployee.role}</p>
@@ -904,25 +954,35 @@ export default function LandingPage() {
               <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Frequently Asked Questions</h2>
             </div>
             <div className="max-w-3xl mx-auto space-y-3">
-              {FAQ.map((faq, i) => (
-                <div
-                  key={i}
-                  className="rounded-xl border border-border bg-card overflow-hidden"
-                >
-                  <button
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    className="w-full flex items-center justify-between p-5 text-left"
+              {FAQ.map((faq, i) => {
+                const isOpen = openFaq === i;
+                return (
+                  <div
+                    key={i}
+                    className="rounded-xl border border-border bg-card overflow-hidden"
                   >
-                    <span className="text-sm font-semibold text-foreground pr-4">{faq.q}</span>
-                    <ChevronDown className={`h-4 w-4 text-muted-foreground flex-shrink-0 transition-transform ${openFaq === i ? "rotate-180" : ""}`} />
-                  </button>
-                  {openFaq === i && (
-                    <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-border pt-4">
-                      {faq.a}
+                    <button
+                      onClick={() => setOpenFaq(isOpen ? null : i)}
+                      className="w-full flex items-center justify-between p-5 text-left"
+                      aria-expanded={isOpen}
+                    >
+                      <span className="text-sm font-semibold text-foreground pr-4">{faq.q}</span>
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    <div
+                      className="overflow-hidden transition-all duration-300 ease-in-out"
+                      style={{
+                        maxHeight: isOpen ? "500px" : "0",
+                        opacity: isOpen ? 1 : 0,
+                      }}
+                    >
+                      <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-border pt-4">
+                        {faq.a}
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -1021,19 +1081,19 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold text-foreground mb-4 text-sm">Product</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <a href="#team" className="block hover:text-foreground transition-colors">Meet the Team</a>
-                <a href="#features" className="block hover:text-foreground transition-colors">Features</a>
-                <a href="#pricing" className="block hover:text-foreground transition-colors">Pricing</a>
-                <a href="#industries" className="block hover:text-foreground transition-colors">Industries</a>
+                <a href="#team" onClick={(e) => scrollToSection(e, "team")} className="block hover:text-foreground transition-colors">Meet the Team</a>
+                <a href="#features" onClick={(e) => scrollToSection(e, "features")} className="block hover:text-foreground transition-colors">Features</a>
+                <a href="#pricing" onClick={(e) => scrollToSection(e, "pricing")} className="block hover:text-foreground transition-colors">Pricing</a>
+                <a href="#industries" onClick={(e) => scrollToSection(e, "industries")} className="block hover:text-foreground transition-colors">Industries</a>
               </div>
             </div>
             <div>
               <h4 className="font-semibold text-foreground mb-4 text-sm">Resources</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <a href="#roi" className="block hover:text-foreground transition-colors">ROI Calculator</a>
-                <a href="#faq" className="block hover:text-foreground transition-colors">FAQ</a>
-                <a href="#contact" className="block hover:text-foreground transition-colors">Request Demo</a>
-                <a href="#how-it-works" className="block hover:text-foreground transition-colors">How It Works</a>
+                <a href="#roi" onClick={(e) => scrollToSection(e, "roi")} className="block hover:text-foreground transition-colors">ROI Calculator</a>
+                <a href="#faq" onClick={(e) => scrollToSection(e, "faq")} className="block hover:text-foreground transition-colors">FAQ</a>
+                <a href="#contact" onClick={(e) => scrollToSection(e, "contact")} className="block hover:text-foreground transition-colors">Request Demo</a>
+                <a href="#how-it-works" onClick={(e) => scrollToSection(e, "how-it-works")} className="block hover:text-foreground transition-colors">How It Works</a>
               </div>
             </div>
             <div>

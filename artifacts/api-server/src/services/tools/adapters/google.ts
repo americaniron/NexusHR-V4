@@ -19,7 +19,7 @@ async function googleRequest(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: { message: response.statusText } }));
+    const error = (await response.json().catch(() => ({ error: { message: response.statusText } }))) as any;
     return { success: false, error: error.error?.message || `Google API error: ${response.status}` };
   }
 
@@ -71,7 +71,7 @@ export const googleAdapter: ToolAdapter = {
     });
 
     if (!response.ok) return null;
-    const data = await response.json();
+    const data = (await response.json()) as any;
     return {
       accessToken: data.access_token,
       refreshToken: credentials.refreshToken,

@@ -192,8 +192,8 @@ describe("relationalMemory", () => {
   describe("retrieveMemories", () => {
     it("returns memories ordered by relevance when no queryText is provided", async () => {
       const expectedMemories = [
-        buildMemory({ id: 1, content: "first", relevanceScore: 0.9 }),
-        buildMemory({ id: 2, content: "second", relevanceScore: 0.5 }),
+        buildMemory({ id: 1, content: "first", memoryType: "preference", relevanceScore: 0.9 }),
+        buildMemory({ id: 2, content: "second", memoryType: "preference", relevanceScore: 0.5 }),
       ];
       selectChain.mockResolvedValueOnce(expectedMemories);
       updateSetChain.mockResolvedValueOnce(undefined);
@@ -205,7 +205,7 @@ describe("relationalMemory", () => {
     });
 
     it("respects the limit option", async () => {
-      const singleMemory = [buildMemory({ id: 1, content: "only one" })];
+      const singleMemory = [buildMemory({ id: 1, content: "only one", memoryType: "preference" })];
       selectChain.mockResolvedValueOnce(singleMemory);
       updateSetChain.mockResolvedValueOnce(undefined);
 
@@ -221,7 +221,7 @@ describe("relationalMemory", () => {
 
     it("delegates to hybrid search when queryText is provided", async () => {
       const hybridResults = [
-        buildMemory({ id: 10, content: "vacation policy details", relevanceScore: 0.8 }),
+        buildMemory({ id: 10, content: "vacation policy details", memoryType: "preference", relevanceScore: 0.8 }),
       ];
       executeChain.mockResolvedValueOnce({ rows: hybridResults });
       updateSetChain.mockResolvedValueOnce(undefined);
@@ -290,7 +290,7 @@ describe("relationalMemory", () => {
 
     it("updates lastAccessedAt for returned memories", async () => {
       const memories = [
-        buildMemory({ id: 5, content: "test memory" }),
+        buildMemory({ id: 5, content: "test memory", memoryType: "preference" }),
       ];
       selectChain.mockResolvedValueOnce(memories);
       updateSetChain.mockResolvedValueOnce(undefined);

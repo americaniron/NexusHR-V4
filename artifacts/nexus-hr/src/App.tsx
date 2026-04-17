@@ -1,4 +1,5 @@
-import { useEffect, useRef, useCallback, lazy, Suspense } from "react";
+import { useEffect, useRef, useCallback, lazy, Suspense, Component } from "react";
+import type { ErrorInfo, ReactNode } from "react";
 import { ClerkProvider, Show, useClerk, useSession } from '@clerk/react';
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from 'wouter';
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
@@ -57,6 +58,59 @@ function PageFallback() {
   );
 }
 
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("[ErrorBoundary] Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-4 p-8 text-center">
+          <div className="rounded-full bg-destructive/10 p-4">
+            <svg className="h-8 w-8 text-destructive" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold">Something went wrong</h2>
+          <p className="text-sm text-muted-foreground max-w-md">
+            {this.state.error?.message || "An unexpected error occurred while loading this page."}
+          </p>
+          <button
+            className="mt-2 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload();
+            }}
+          >
+            Reload page
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function HomeRedirect() {
   return (
     <>
@@ -83,9 +137,11 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     <>
       <Show when="signed-in">
         <AppLayout>
-          <Suspense fallback={<PageFallback />}>
-            <Component />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<PageFallback />}>
+              <Component />
+            </Suspense>
+          </ErrorBoundary>
         </AppLayout>
       </Show>
       <Show when="signed-out">
@@ -168,9 +224,11 @@ function ClerkProviderWithRoutes() {
             <Route path="/onboarding">
               {() => (
                 <Show when="signed-in">
-                  <Suspense fallback={<PageFallback />}>
-                    <OnboardingPage />
-                  </Suspense>
+                  <ErrorBoundary>
+                    <Suspense fallback={<PageFallback />}>
+                      <OnboardingPage />
+                    </Suspense>
+                  </ErrorBoundary>
                 </Show>
               )}
             </Route>

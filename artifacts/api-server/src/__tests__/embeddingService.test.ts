@@ -8,66 +8,66 @@ import {
 
 describe("embeddingService", () => {
   describe("generateEmbedding", () => {
-    it("produces a vector of the correct dimension", () => {
-      const vec = generateEmbedding("hello world");
+    it("produces a vector of the correct dimension", async () => {
+      const vec = await generateEmbedding("hello world");
       expect(vec).toHaveLength(EMBEDDING_DIMENSIONS);
       expect(vec).toHaveLength(384);
     });
 
-    it("returns a zero vector for empty text", () => {
-      const vec = generateEmbedding("");
+    it("returns a zero vector for empty text", async () => {
+      const vec = await generateEmbedding("");
       expect(vec).toHaveLength(EMBEDDING_DIMENSIONS);
-      expect(vec.every(v => v === 0)).toBe(true);
+      expect(vec.every((v: number) => v === 0)).toBe(true);
     });
 
-    it("returns a zero vector for text with only stopwords", () => {
-      const vec = generateEmbedding("the a an is are");
+    it("returns a zero vector for text with only stopwords", async () => {
+      const vec = await generateEmbedding("the a an is are");
       expect(vec).toHaveLength(EMBEDDING_DIMENSIONS);
-      expect(vec.every(v => v === 0)).toBe(true);
+      expect(vec.every((v: number) => v === 0)).toBe(true);
     });
 
-    it("produces a normalized vector (unit length)", () => {
-      const vec = generateEmbedding("employee performance review");
-      const magnitude = Math.sqrt(vec.reduce((sum, v) => sum + v * v, 0));
+    it("produces a normalized vector (unit length)", async () => {
+      const vec = await generateEmbedding("employee performance review");
+      const magnitude = Math.sqrt(vec.reduce((sum: number, v: number) => sum + v * v, 0));
       expect(magnitude).toBeCloseTo(1.0, 5);
     });
 
-    it("is deterministic — same input produces the same output", () => {
-      const a = generateEmbedding("quarterly sales report");
-      const b = generateEmbedding("quarterly sales report");
+    it("is deterministic — same input produces the same output", async () => {
+      const a = await generateEmbedding("quarterly sales report");
+      const b = await generateEmbedding("quarterly sales report");
       expect(a).toEqual(b);
     });
 
-    it("produces different vectors for different inputs", () => {
-      const a = generateEmbedding("machine learning algorithms");
-      const b = generateEmbedding("cooking recipe for pasta");
+    it("produces different vectors for different inputs", async () => {
+      const a = await generateEmbedding("machine learning algorithms");
+      const b = await generateEmbedding("cooking recipe for pasta");
       expect(a).not.toEqual(b);
     });
 
-    it("handles single-character tokens by filtering them out", () => {
-      const vec = generateEmbedding("a b c d e f");
+    it("handles single-character tokens by filtering them out", async () => {
+      const vec = await generateEmbedding("a b c d e f");
       expect(vec).toHaveLength(EMBEDDING_DIMENSIONS);
-      expect(vec.every(v => v === 0)).toBe(true);
+      expect(vec.every((v: number) => v === 0)).toBe(true);
     });
 
-    it("handles very long text without error", () => {
+    it("handles very long text without error", async () => {
       const longText = "performance ".repeat(1000);
-      const vec = generateEmbedding(longText);
+      const vec = await generateEmbedding(longText);
       expect(vec).toHaveLength(EMBEDDING_DIMENSIONS);
-      const magnitude = Math.sqrt(vec.reduce((sum, v) => sum + v * v, 0));
+      const magnitude = Math.sqrt(vec.reduce((sum: number, v: number) => sum + v * v, 0));
       expect(magnitude).toBeCloseTo(1.0, 5);
     });
 
-    it("strips punctuation before embedding", () => {
-      const a = generateEmbedding("hello, world!");
-      const b = generateEmbedding("hello world");
+    it("strips punctuation before embedding", async () => {
+      const a = await generateEmbedding("hello, world!");
+      const b = await generateEmbedding("hello world");
       expect(a).toEqual(b);
     });
   });
 
   describe("cosineSimilarity", () => {
-    it("returns 1 for identical normalized vectors", () => {
-      const vec = generateEmbedding("team meeting notes");
+    it("returns 1 for identical normalized vectors", async () => {
+      const vec = await generateEmbedding("team meeting notes");
       expect(cosineSimilarity(vec, vec)).toBeCloseTo(1.0, 5);
     });
 
@@ -79,9 +79,9 @@ describe("embeddingService", () => {
       expect(cosineSimilarity(a, b)).toBeCloseTo(0, 5);
     });
 
-    it("returns 0 when either vector is all zeros", () => {
+    it("returns 0 when either vector is all zeros", async () => {
       const zero = new Array(EMBEDDING_DIMENSIONS).fill(0);
-      const nonZero = generateEmbedding("test");
+      const nonZero = await generateEmbedding("test");
       expect(cosineSimilarity(zero, nonZero)).toBe(0);
       expect(cosineSimilarity(nonZero, zero)).toBe(0);
     });
@@ -100,10 +100,10 @@ describe("embeddingService", () => {
       expect(cosineSimilarity(a, b)).toBeCloseTo(-1.0, 5);
     });
 
-    it("ranks semantically similar texts higher than unrelated ones", () => {
-      const query = generateEmbedding("employee salary review");
-      const related = generateEmbedding("worker compensation evaluation");
-      const unrelated = generateEmbedding("tropical fish aquarium setup");
+    it("ranks semantically similar texts higher than unrelated ones", async () => {
+      const query = await generateEmbedding("employee salary review");
+      const related = await generateEmbedding("worker compensation evaluation");
+      const unrelated = await generateEmbedding("tropical fish aquarium setup");
 
       const simRelated = cosineSimilarity(query, related);
       const simUnrelated = cosineSimilarity(query, unrelated);
@@ -111,9 +111,9 @@ describe("embeddingService", () => {
       expect(simRelated).toBeGreaterThan(simUnrelated);
     });
 
-    it("is symmetric", () => {
-      const a = generateEmbedding("project deadline");
-      const b = generateEmbedding("task timeline");
+    it("is symmetric", async () => {
+      const a = await generateEmbedding("project deadline");
+      const b = await generateEmbedding("task timeline");
       expect(cosineSimilarity(a, b)).toBeCloseTo(cosineSimilarity(b, a), 10);
     });
   });
@@ -128,8 +128,8 @@ describe("embeddingService", () => {
       expect(formatVectorForPg([])).toBe("[]");
     });
 
-    it("formats a full-dimension embedding", () => {
-      const vec = generateEmbedding("test");
+    it("formats a full-dimension embedding", async () => {
+      const vec = await generateEmbedding("test");
       const formatted = formatVectorForPg(vec);
       expect(formatted.startsWith("[")).toBe(true);
       expect(formatted.endsWith("]")).toBe(true);
@@ -139,8 +139,8 @@ describe("embeddingService", () => {
   });
 
   describe("similarity ordering", () => {
-    it("orders a set of texts by relevance to a query", () => {
-      const query = generateEmbedding("hiring new engineer");
+    it("orders a set of texts by relevance to a query", async () => {
+      const query = await generateEmbedding("hiring new engineer");
 
       const candidates = [
         { text: "hiring new engineer for the team", label: "close" },
@@ -148,10 +148,10 @@ describe("embeddingService", () => {
         { text: "office kitchen coffee machine repair", label: "unrelated" },
       ];
 
-      const scored = candidates.map(c => ({
+      const scored = await Promise.all(candidates.map(async c => ({
         ...c,
-        score: cosineSimilarity(query, generateEmbedding(c.text)),
-      }));
+        score: cosineSimilarity(query, await generateEmbedding(c.text)),
+      })));
 
       scored.sort((a, b) => b.score - a.score);
 
@@ -159,11 +159,11 @@ describe("embeddingService", () => {
       expect(scored[scored.length - 1].label).toBe("unrelated");
     });
 
-    it("identical text scores higher than merely similar text", () => {
+    it("identical text scores higher than merely similar text", async () => {
       const text = "employee performance review";
-      const query = generateEmbedding(text);
-      const identical = generateEmbedding(text);
-      const similar = generateEmbedding("worker evaluation assessment");
+      const query = await generateEmbedding(text);
+      const identical = await generateEmbedding(text);
+      const similar = await generateEmbedding("worker evaluation assessment");
 
       expect(cosineSimilarity(query, identical)).toBeGreaterThan(
         cosineSimilarity(query, similar),

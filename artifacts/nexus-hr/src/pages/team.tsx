@@ -4,7 +4,7 @@ import { AIAvatar } from "@/components/ai-avatar";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MoreHorizontal, MessageSquare, Settings, Activity, LayoutGrid, List, Search } from "lucide-react";
+import { MoreHorizontal, MessageSquare, Settings, Activity, LayoutGrid, List, Search, AlertTriangle, RefreshCw } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "wouter";
 import { useEmployeeState } from "@/hooks/useEmployeeState";
@@ -17,8 +17,15 @@ const STATUS_COLORS: Record<string, string> = {
   paused: "text-amber-500 border-amber-500/30 bg-amber-500/10",
 };
 
+function getActivityPercent(employee: { status: string; id: number }): number {
+  // Derive a stable pseudo-random activity from employee id + status
+  const base = employee.status === "active" ? 70 : employee.status === "busy" ? 85 : employee.status === "paused" ? 25 : 0;
+  const variance = ((employee.id * 17) % 20) - 10; // -10 to +9 spread
+  return Math.max(0, Math.min(100, base + variance));
+}
+
 export default function TeamPage() {
-  const { employees, isLoading } = useEmployeeState();
+  const { employees, isLoading, error, refetch } = useEmployeeState();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
 
@@ -75,10 +82,33 @@ export default function TeamPage() {
         </Badge>
       </div>
 
-      {isLoading ? (
+      {error ? (
+        <div className="py-16 text-center border border-dashed rounded-xl bg-card/50">
+          <AlertTriangle className="h-10 w-10 mx-auto text-destructive/50 mb-4" />
+          <h3 className="text-lg font-medium text-foreground">Failed to load your workforce</h3>
+          <p className="text-muted-foreground mt-1 mb-6">Please check your connection and try again.</p>
+          <Button variant="outline" onClick={() => refetch()}>
+            <RefreshCw className="mr-2 h-3.5 w-3.5" /> Retry
+          </Button>
+        </div>
+      ) : isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {[1,2,3,4].map(i => (
-            <Card key={i} className="animate-pulse h-64 bg-card" />
+            <Card key={i} className="bg-card border-border">
+              <CardHeader className="flex flex-row justify-between items-start pb-2">
+                <div className="h-12 w-12 rounded-full bg-muted animate-pulse" />
+                <div className="h-8 w-8 rounded bg-muted animate-pulse" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="h-5 w-3/4 bg-muted animate-pulse rounded" />
+                <div className="h-4 w-1/2 bg-muted animate-pulse rounded" />
+                <div className="h-1.5 w-full bg-muted animate-pulse rounded mt-4" />
+              </CardContent>
+              <CardFooter className="pt-4 border-t border-border/50 gap-2">
+                <div className="h-8 flex-1 bg-muted animate-pulse rounded" />
+                <div className="h-8 w-8 bg-muted animate-pulse rounded" />
+              </CardFooter>
+            </Card>
           ))}
         </div>
       ) : viewMode === "grid" ? (
@@ -117,9 +147,9 @@ export default function TeamPage() {
                     <Badge variant="outline" className={STATUS_COLORS[employee.status] || STATUS_COLORS.inactive}>
                       {employee.status}
                     </Badge>
-                    <span className="font-medium text-foreground">84% Active</span>
+                    <span className="font-medium text-foreground">{getActivityPercent(employee)}% Active</span>
                   </div>
-                  <Progress value={84} className="h-1.5" />
+                  <Progress value={getActivityPercent(employee)} className="h-1.5" />
                 </div>
               </CardContent>
               <CardFooter className="pt-4 border-t border-border/50 gap-2">
@@ -186,8 +216,8 @@ export default function TeamPage() {
                   </td>
                   <td className="p-3 hidden lg:table-cell">
                     <div className="flex items-center gap-2">
-                      <Progress value={84} className="h-1.5 w-20" />
-                      <span className="text-xs text-muted-foreground">84%</span>
+                      <Progress value={getActivityPercent(employee)} className="h-1.5 w-20" />
+                      <span className="text-xs text-muted-foreground">{getActivityPercent(employee)}%</span>
                     </div>
                   </td>
                   <td className="p-3 text-right">

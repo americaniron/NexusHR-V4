@@ -179,7 +179,7 @@ router.post("/compliance/data-requests", requireAuth, validate({ body: createDat
 router.post("/compliance/data-requests/:id/cancel", requireAuth, async (req, res, next) => {
   try {
     const { orgDbId } = await getOrgId(req);
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
 
     const [existing] = await db.select().from(complianceDataRequests)
       .where(and(eq(complianceDataRequests.id, id), eq(complianceDataRequests.orgId, orgDbId)));

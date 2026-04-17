@@ -29,7 +29,7 @@ afterAll(async () => {
 });
 
 async function insertTestRow(label: string, content: string, relevanceScore = 0.5, lastAccessedAt?: Date) {
-  const embedding = generateEmbedding(content);
+  const embedding = await generateEmbedding(content);
   const vecStr = formatVectorForPg(embedding);
   const accessed = lastAccessedAt ?? new Date();
   const result = await pool.query(
@@ -61,14 +61,14 @@ describe("pgvector integration", () => {
         .map(Number);
       expect(storedVec).toHaveLength(EMBEDDING_DIMENSIONS);
 
-      const expectedVec = generateEmbedding("employee payroll processing system");
+      const expectedVec = await generateEmbedding("employee payroll processing system");
       for (let i = 0; i < storedVec.length; i++) {
         expect(storedVec[i]).toBeCloseTo(expectedVec[i], 4);
       }
     });
 
     it("orders results by cosine distance (closest first)", async () => {
-      const queryVec = formatVectorForPg(generateEmbedding("payroll salary compensation"));
+      const queryVec = formatVectorForPg(await generateEmbedding("payroll salary compensation"));
 
       const result = await pool.query(
         `SELECT label, embedding <=> $1::vector AS distance
@@ -83,7 +83,7 @@ describe("pgvector integration", () => {
     });
 
     it("cosine distance from pgvector matches local cosineSimilarity", async () => {
-      const queryEmb = generateEmbedding("payroll salary compensation");
+      const queryEmb = await generateEmbedding("payroll salary compensation");
       const queryVec = formatVectorForPg(queryEmb);
 
       const result = await pool.query(
@@ -94,7 +94,7 @@ describe("pgvector integration", () => {
       );
 
       for (const row of result.rows) {
-        const storedEmb = generateEmbedding(row.content);
+        const storedEmb = await generateEmbedding(row.content);
         const localSim = cosineSimilarity(queryEmb, storedEmb);
         const localDist = 1 - localSim;
         expect(row.distance).toBeCloseTo(localDist, 3);
@@ -102,7 +102,7 @@ describe("pgvector integration", () => {
     });
 
     it("self-distance is zero", async () => {
-      const payrollEmb = generateEmbedding("employee payroll processing system");
+      const payrollEmb = await generateEmbedding("employee payroll processing system");
       const vecStr = formatVectorForPg(payrollEmb);
 
       const result = await pool.query(
@@ -130,7 +130,7 @@ describe("pgvector integration", () => {
     });
 
     it("hybrid score combines vector similarity and time decay", async () => {
-      const queryVec = formatVectorForPg(generateEmbedding("new employee onboarding"));
+      const queryVec = formatVectorForPg(await generateEmbedding("new employee onboarding"));
       const vectorWeight = 0.5;
       const timeDecayWeight = 0.5;
 
@@ -155,7 +155,7 @@ describe("pgvector integration", () => {
     });
 
     it("higher vectorWeight makes vector similarity dominate ordering", async () => {
-      const queryVec = formatVectorForPg(generateEmbedding("new employee onboarding"));
+      const queryVec = formatVectorForPg(await generateEmbedding("new employee onboarding"));
       const vectorWeight = 0.9;
       const timeDecayWeight = 0.1;
 
@@ -176,7 +176,7 @@ describe("pgvector integration", () => {
     });
 
     it("LIMIT restricts the number of returned rows", async () => {
-      const queryVec = formatVectorForPg(generateEmbedding("onboarding"));
+      const queryVec = formatVectorForPg(await generateEmbedding("onboarding"));
 
       const result = await pool.query(
         `SELECT label, embedding <=> $1::vector AS distance
@@ -195,7 +195,7 @@ describe("pgvector integration", () => {
          VALUES ('no-vector', 'record without embedding', NULL, 0.7)`,
       );
 
-      const queryVec = formatVectorForPg(generateEmbedding("test"));
+      const queryVec = formatVectorForPg(await generateEmbedding("test"));
 
       const result = await pool.query(
         `SELECT label,

@@ -16,7 +16,7 @@ async function slackRequest(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  const data = await response.json();
+  const data = (await response.json()) as any;
   if (!data.ok) {
     return { success: false, error: data.error || "Slack API error" };
   }
@@ -46,7 +46,7 @@ export const slackAdapter: ToolAdapter = {
       }),
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as any;
     if (!data.ok) return null;
 
     return {

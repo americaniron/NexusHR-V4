@@ -60,7 +60,7 @@ router.get("/personality/employee/:employeeId", requireAuth, async (req: Request
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.forbidden("Organization required");
 
-    const employeeId = parseInt(req.params.employeeId, 10);
+    const employeeId = parseInt(String(req.params.employeeId), 10);
     if (isNaN(employeeId)) throw AppError.badRequest("Invalid employee ID");
 
     const employee = await verifyEmployeeBelongsToOrg(employeeId, orgId);
@@ -90,7 +90,7 @@ router.put("/personality/employee/:employeeId", requireAuth, validate({ body: up
     const { orgId } = await getAuthContext(req);
     if (!orgId) throw AppError.forbidden("Organization required");
 
-    const employeeId = parseInt(req.params.employeeId, 10);
+    const employeeId = parseInt(String(req.params.employeeId), 10);
     if (isNaN(employeeId)) throw AppError.badRequest("Invalid employee ID");
 
     await verifyEmployeeBelongsToOrg(employeeId, orgId);
@@ -263,7 +263,7 @@ router.get("/personality/memories/:aiEmployeeId", requireAuth, async (req: Reque
     const { orgId, userId } = await getAuthContext(req);
     if (!orgId || !userId) throw AppError.forbidden("Authentication required");
 
-    const aiEmployeeId = parseInt(req.params.aiEmployeeId, 10);
+    const aiEmployeeId = parseInt(String(req.params.aiEmployeeId), 10);
     if (isNaN(aiEmployeeId)) throw AppError.badRequest("Invalid employee ID");
 
     await verifyEmployeeBelongsToOrg(aiEmployeeId, orgId);
@@ -289,7 +289,7 @@ router.delete("/personality/memories/:memoryId", requireAuth, async (req: Reques
     const { orgId, userId } = await getAuthContext(req);
     if (!orgId || !userId) throw AppError.forbidden("Authentication required");
 
-    const memoryId = parseInt(req.params.memoryId, 10);
+    const memoryId = parseInt(String(req.params.memoryId), 10);
     if (isNaN(memoryId)) throw AppError.badRequest("Invalid memory ID");
 
     const [memory] = await db

@@ -293,8 +293,7 @@ function RuleCard({
           </Badge>
           <Switch
             checked={rule.enabled}
-            onCheckedChange={(e) => {
-              e.preventDefault?.();
+            onCheckedChange={() => {
               onToggleEnabled();
             }}
             onClick={(e) => e.stopPropagation()}

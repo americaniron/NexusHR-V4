@@ -19,7 +19,7 @@ async function githubRequest(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: response.statusText }));
+    const error = (await response.json().catch(() => ({ message: response.statusText }))) as any;
     return { success: false, error: error.message || `GitHub API error: ${response.status}` };
   }
 
@@ -78,7 +78,7 @@ export const githubAdapter: ToolAdapter = {
     });
 
     if (!response.ok) return null;
-    const data = await response.json();
+    const data = (await response.json()) as any;
     if (data.error) return null;
     return {
       accessToken: data.access_token,

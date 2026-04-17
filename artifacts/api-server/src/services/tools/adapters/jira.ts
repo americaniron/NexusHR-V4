@@ -16,7 +16,7 @@ async function jiraRequest(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: response.statusText }));
+    const error = (await response.json().catch(() => ({ message: response.statusText }))) as any;
     const messages = error.errorMessages?.join(", ") || error.message || `Jira API error: ${response.status}`;
     return { success: false, error: messages };
   }
@@ -95,7 +95,7 @@ export const jiraAdapter: ToolAdapter = {
     });
 
     if (!response.ok) return null;
-    const data = await response.json();
+    const data = (await response.json()) as any;
     return {
       accessToken: data.access_token,
       refreshToken: data.refresh_token || credentials.refreshToken,

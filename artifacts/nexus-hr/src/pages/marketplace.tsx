@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Star, Briefcase, Zap, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Filter, Star, Briefcase, Zap, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, AlertTriangle, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -73,7 +73,7 @@ export default function MarketplacePage() {
     debouncedSearch(e.target.value);
   };
 
-  const { data: rolesData, isLoading: isLoadingRoles } = useListRoles({
+  const { data: rolesData, isLoading: isLoadingRoles, error: rolesError, refetch: refetchRoles } = useListRoles({
     search: debouncedSearchValue || undefined,
     category: category || undefined,
     sortBy,
@@ -100,7 +100,7 @@ export default function MarketplacePage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden">
-        <div className={`w-full lg:w-64 flex flex-col gap-6 shrink-0 overflow-y-auto pr-2 ${filtersOpen ? "" : "lg:flex"}`}>
+        <div className="w-full lg:w-64 flex flex-col gap-6 shrink-0 lg:overflow-y-auto pr-2">
           <div className="space-y-4">
             <button
               onClick={() => setFiltersOpen(!filtersOpen)}
@@ -109,64 +109,77 @@ export default function MarketplacePage() {
               <span className="flex items-center gap-2"><Filter className="h-4 w-4" /> Filters</span>
               <span className="lg:hidden">{filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</span>
             </button>
-            
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search roles..."
-                className="pl-9 bg-card border-border"
-                value={searchInput}
-                onChange={handleSearchChange}
-              />
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Sort By</label>
-              <Select value={sortBy} onValueChange={(val) => setSortBy(val as ListRolesSortBy)}>
-                <SelectTrigger className="bg-card">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="relevance">Relevance</SelectItem>
-                  <SelectItem value="rating">Top Rated</SelectItem>
-                  <SelectItem value="price_asc">Price: Low to High</SelectItem>
-                  <SelectItem value="price_desc">Price: High to Low</SelectItem>
-                  <SelectItem value="newest">Newest Additions</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <div className={`space-y-4 ${filtersOpen ? "block" : "hidden lg:block"}`}>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search roles..."
+                  className="pl-9 bg-card border-border"
+                  value={searchInput}
+                  onChange={handleSearchChange}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Categories</label>
-              <div className="flex flex-col gap-1">
-                <Button
-                  variant={category === "" ? "secondary" : "ghost"}
-                  className="justify-start h-8 text-sm"
-                  onClick={() => setCategory("")}
-                >
-                  All Categories
-                </Button>
-                {categoriesData?.data?.map((cat) => (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Sort By</label>
+                <Select value={sortBy} onValueChange={(val) => setSortBy(val as ListRolesSortBy)}>
+                  <SelectTrigger className="bg-card">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="relevance">Relevance</SelectItem>
+                    <SelectItem value="rating">Top Rated</SelectItem>
+                    <SelectItem value="price_asc">Price: Low to High</SelectItem>
+                    <SelectItem value="price_desc">Price: High to Low</SelectItem>
+                    <SelectItem value="newest">Newest Additions</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Categories</label>
+                <div className="flex flex-col gap-1">
                   <Button
-                    key={cat.category}
-                    variant={category === cat.category ? "secondary" : "ghost"}
-                    className="justify-between h-8 text-sm group"
-                    onClick={() => setCategory(cat.category)}
+                    variant={category === "" ? "secondary" : "ghost"}
+                    className="justify-start h-8 text-sm"
+                    onClick={() => setCategory("")}
                   >
-                    <span className="truncate">{cat.category}</span>
-                    <Badge variant="secondary" className="ml-2 h-5 bg-background group-hover:bg-card">
-                      {cat.count}
-                    </Badge>
+                    All Categories
                   </Button>
-                ))}
+                  {categoriesData?.data?.map((cat) => (
+                    <Button
+                      key={cat.category}
+                      variant={category === cat.category ? "secondary" : "ghost"}
+                      className="justify-between h-8 text-sm group"
+                      onClick={() => setCategory(cat.category)}
+                    >
+                      <span className="truncate">{cat.category}</span>
+                      <Badge variant="secondary" className="ml-2 h-5 bg-background group-hover:bg-card">
+                        {cat.count}
+                      </Badge>
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-hidden">
-          {isLoadingRoles ? (
+          {rolesError ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center border border-dashed rounded-lg bg-card/50 p-12">
+                <AlertTriangle className="h-8 w-8 mx-auto mb-3 text-destructive/60" />
+                <p className="text-foreground font-medium mb-1">Failed to load AI professionals</p>
+                <p className="text-sm text-muted-foreground mb-4">Please check your connection and try again.</p>
+                <Button variant="outline" size="sm" onClick={() => refetchRoles()}>
+                  <RefreshCw className="mr-2 h-3.5 w-3.5" /> Retry
+                </Button>
+              </div>
+            </div>
+          ) : isLoadingRoles ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 overflow-y-auto h-full pb-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Card key={i} className="bg-card border-border">
