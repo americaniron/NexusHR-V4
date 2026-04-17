@@ -73,6 +73,9 @@ const allowedOrigins = [
   process.env.CUSTOM_DOMAIN ? `https://${process.env.CUSTOM_DOMAIN}` : null,
   "https://aipeoplehr.com",
   "https://www.aipeoplehr.com",
+  // Cloudflare Pages deployments
+  "https://nexushr-v4.pages.dev",
+  "https://*.nexushr-v4.pages.dev",
 ].filter(Boolean) as string[];
 
 if (process.env.NODE_ENV === "production" && !process.env.REPLIT_DEV_DOMAIN && !process.env.REPLIT_DEPLOYMENT_URL) {
@@ -93,6 +96,11 @@ app.use(cors({
     try {
       const originHost = new URL(origin).host;
       if (allowedHosts.has(originHost)) {
+        callback(null, true);
+        return;
+      }
+      // Allow all Cloudflare Pages preview deployments
+      if (originHost.endsWith(".nexushr-v4.pages.dev") || originHost === "nexushr-v4.pages.dev") {
         callback(null, true);
         return;
       }

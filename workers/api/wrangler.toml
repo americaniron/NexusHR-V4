@@ -1,0 +1,38 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "nexushr-v4-api"
+main = "dist/index.mjs"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Build command
+[build]
+command = "node build.mjs"
+
+# Non-secret environment variables
+[vars]
+NODE_ENV = "production"
+OWNER_EMAILS = "ahmed@americaniron1.com,adam@americaniron1.com"
+FRONTEND_URL = "https://nexushr-v4.pages.dev"
+
+# Hyperdrive binding for PostgreSQL (via Neon)
+# Uncomment after creating Hyperdrive config:
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "<hyperdrive-config-id>"
+
+# Worker limits
+[limits]
+cpu_ms = 30000
+
+# Secrets to set via `wrangler secret put <KEY>`:
+# - DATABASE_URL (if not using Hyperdrive)
+# - CLERK_SECRET_KEY
+# - CLERK_PUBLISHABLE_KEY
+# - VITE_CLERK_PUBLISHABLE_KEY
+# - STRIPE_SECRET_KEY
+# - STRIPE_WEBHOOK_SECRET
+# - ELEVENLABS_API_KEY
+# - HEYGEN_API_KEY
+# - INTEGRATION_ENCRYPTION_KEY
+# - PAYPAL_CLIENT_ID
+# - PAYPAL_CLIENT_SECRET
