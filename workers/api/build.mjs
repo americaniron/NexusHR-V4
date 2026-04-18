@@ -81,6 +81,7 @@ async function buildWorker() {
     },
     // Resolve workspace packages and provide stubs for incompatible deps
     alias: {
+      "@workspace/db/schema": path.resolve(rootDir, "lib/db/src/schema"),
       "@workspace/db": path.resolve(rootDir, "lib/db/src/index.ts"),
       "@workspace/api-zod": path.resolve(rootDir, "lib/api-zod/src/index.ts"),
       "socket.io": path.resolve(workerDir, "src/stubs/socket.io.ts"),
