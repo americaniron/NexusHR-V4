@@ -7,6 +7,7 @@ on:
       - 'artifacts/api-server/**'
       - 'lib/**'
       - 'workers/api/**'
+      - '.github/workflows/deploy-worker.yml'
   workflow_dispatch:
 
 jobs:
@@ -28,8 +29,12 @@ jobs:
         with:
           version: 9
 
-      - name: Install dependencies
+      - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install Worker build dependencies
+        working-directory: workers/api
+        run: npm install
 
       - name: Build Worker
         working-directory: workers/api
@@ -41,18 +46,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: workers/api
-          command: deploy
-          secrets: |
-            DATABASE_URL
-            CLERK_SECRET_KEY
-            CLERK_PUBLISHABLE_KEY
-            STRIPE_SECRET_KEY
-            STRIPE_WEBHOOK_SECRET
-            ELEVENLABS_API_KEY
-            HEYGEN_API_KEY
-            INTEGRATION_ENCRYPTION_KEY
-            PAYPAL_CLIENT_ID
-            PAYPAL_CLIENT_SECRET
+          command: deploy --no-build
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
