@@ -31,7 +31,6 @@ async function buildWorker() {
 
   const noopStub = path.resolve(workerDir, "src/stubs/noop-module.ts");
 
-  // Plugin to redirect unsupported Node builtins to our stub
   const nodeStubPlugin = {
     name: "node-stub",
     setup(build) {
@@ -49,9 +48,9 @@ async function buildWorker() {
     platform: "node",
     target: "esnext",
     bundle: true,
-    // CJS format: require() stays as native require() — Workers CJS loader handles it
     format: "cjs",
     outdir: distDir,
+    outExtension: { ".js": ".cjs" },
     logLevel: "info",
     conditions: ["workerd", "worker", "browser"],
     plugins: [nodeStubPlugin],
@@ -122,7 +121,6 @@ async function buildWorker() {
       "@opentelemetry/sdk-node": noopStub,
       "@tensorflow/tfjs-node": noopStub,
     },
-    // No banner needed — CJS require() works natively in Workers CJS module loader
   });
 
   console.log("Worker build complete → workers/api/dist/");
