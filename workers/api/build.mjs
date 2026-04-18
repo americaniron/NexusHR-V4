@@ -96,14 +96,26 @@ async function buildWorker() {
       "@opentelemetry/sdk-node": noopStub,
       "@tensorflow/tfjs-node": noopStub,
     },
-    // CJS compat banner for Express and other CJS packages
+    // CJS compat banner — defensive for Cloudflare Workers where import.meta.url may be undefined
     banner: {
       js: `import { createRequire as __bannerCrReq } from 'node:module';
 import __bannerPath from 'node:path';
 import __bannerUrl from 'node:url';
-globalThis.require = __bannerCrReq(import.meta.url);
-globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
-globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
+if (typeof import.meta.url === 'string' && import.meta.url !== '') {
+  try {
+    globalThis.require = __bannerCrReq(import.meta.url);
+    globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
+    globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
+  } catch (_) {
+    globalThis.require = globalThis.require || ((id) => { throw new Error('require not available: ' + id); });
+    globalThis.__filename = globalThis.__filename || '';
+    globalThis.__dirname = globalThis.__dirname || '';
+  }
+} else {
+  globalThis.require = globalThis.require || ((id) => { throw new Error('require not available: ' + id); });
+  globalThis.__filename = globalThis.__filename || '';
+  globalThis.__dirname = globalThis.__dirname || '';
+}
 `,
     },
   });
