@@ -13,6 +13,8 @@ async function buildWorker() {
   const distDir = path.resolve(workerDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
+  const noopStub = path.resolve(workerDir, "src/stubs/noop-module.ts");
+
   await esbuild({
     entryPoints: [path.resolve(workerDir, "src/index.ts")],
     platform: "node",
@@ -23,7 +25,7 @@ async function buildWorker() {
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
     conditions: ["workerd", "worker", "browser"],
-    // Externalize packages that won't work in Workers
+    // Externalize native addons only (these can't be bundled at all)
     external: [
       "*.node",
       "sharp",
@@ -45,34 +47,16 @@ async function buildWorker() {
       "pg-native",
       "oracledb",
       "mongodb-client-encryption",
-      "nodemailer",
-      "handlebars",
-      "knex",
-      "typeorm",
       "protobufjs",
       "onnxruntime-node",
-      "@xenova/transformers",
-      "@tensorflow/*",
-      "@prisma/client",
-      "@mikro-orm/*",
-      "@grpc/*",
       "@swc/*",
-      "@aws-sdk/*",
-      "@azure/*",
-      "@opentelemetry/*",
-      "@google-cloud/*",
-      "@google/*",
-      "googleapis",
-      "firebase-admin",
       "@parcel/watcher",
       "@sentry/profiling-node",
-      "aws-sdk",
       "classic-level",
       "dd-trace",
       "newrelic",
       "piscina",
       "tinypool",
-      // socket.io and @xenova/transformers are handled via alias stubs
     ],
     sourcemap: "linked",
     define: {
@@ -87,6 +71,30 @@ async function buildWorker() {
       "socket.io": path.resolve(workerDir, "src/stubs/socket.io.ts"),
       "socket.io-client": path.resolve(workerDir, "src/stubs/socket.io.ts"),
       "@xenova/transformers": path.resolve(workerDir, "src/stubs/xenova-transformers.ts"),
+      // Cloud SDKs — stub out (not compatible with Workers runtime)
+      "@google-cloud/storage": noopStub,
+      "@google-cloud/pubsub": noopStub,
+      "@google-cloud/logging": noopStub,
+      "googleapis": noopStub,
+      "firebase-admin": noopStub,
+      "@aws-sdk/client-s3": noopStub,
+      "@aws-sdk/client-ses": noopStub,
+      "@aws-sdk/client-sqs": noopStub,
+      "aws-sdk": noopStub,
+      "@azure/storage-blob": noopStub,
+      "@azure/identity": noopStub,
+      // ORM / heavy server libs — stub out
+      "nodemailer": noopStub,
+      "handlebars": noopStub,
+      "knex": noopStub,
+      "typeorm": noopStub,
+      "@prisma/client": noopStub,
+      "@mikro-orm/core": noopStub,
+      "@grpc/grpc-js": noopStub,
+      "@grpc/proto-loader": noopStub,
+      "@opentelemetry/api": noopStub,
+      "@opentelemetry/sdk-node": noopStub,
+      "@tensorflow/tfjs-node": noopStub,
     },
     // CJS compat banner for Express and other CJS packages
     banner: {
