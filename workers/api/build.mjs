@@ -20,13 +20,11 @@ async function buildWorker() {
     platform: "node",
     target: "esnext",
     bundle: true,
-    // Use CJS output — wrangler will convert to ESM-compatible Workers format
-    // This avoids the __require() wrapper that breaks in Workers runtime
-    format: "cjs",
+    format: "esm",
     outdir: distDir,
+    outExtension: { ".js": ".mjs" },
     logLevel: "info",
     conditions: ["workerd", "worker", "browser"],
-    // Externalize native addons only
     external: [
       "*.node",
       "sharp",
@@ -93,6 +91,15 @@ async function buildWorker() {
       "@opentelemetry/api": noopStub,
       "@opentelemetry/sdk-node": noopStub,
       "@tensorflow/tfjs-node": noopStub,
+    },
+    // Banner: provide a working require() for Workers runtime
+    // esbuild's __require shim checks if require exists; this ensures it does
+    // createRequire('file:///worker.mjs') creates a require function that can
+    // resolve Node.js built-in modules in Workers with nodejs_compat
+    banner: {
+      js: `import { createRequire as __banner_createRequire } from 'node:module';
+try { globalThis.require = __banner_createRequire('file:///worker.mjs'); } catch(e) {}
+`,
     },
   });
 
