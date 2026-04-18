@@ -20,12 +20,13 @@ async function buildWorker() {
     platform: "node",
     target: "esnext",
     bundle: true,
-    format: "esm",
+    // Use CJS output — wrangler will convert to ESM-compatible Workers format
+    // This avoids the __require() wrapper that breaks in Workers runtime
+    format: "cjs",
     outdir: distDir,
-    outExtension: { ".js": ".mjs" },
     logLevel: "info",
     conditions: ["workerd", "worker", "browser"],
-    // Externalize native addons only (these can't be bundled at all)
+    // Externalize native addons only
     external: [
       "*.node",
       "sharp",
@@ -63,7 +64,6 @@ async function buildWorker() {
       "process.env.DISABLE_WEBSOCKET": '"true"',
       "process.env.DISABLE_SCHEDULERS": '"true"',
     },
-    // Resolve workspace packages and provide stubs for incompatible deps
     alias: {
       "@workspace/db/schema": path.resolve(rootDir, "lib/db/src/schema"),
       "@workspace/db": path.resolve(rootDir, "lib/db/src/index.ts"),
@@ -71,7 +71,6 @@ async function buildWorker() {
       "socket.io": path.resolve(workerDir, "src/stubs/socket.io.ts"),
       "socket.io-client": path.resolve(workerDir, "src/stubs/socket.io.ts"),
       "@xenova/transformers": path.resolve(workerDir, "src/stubs/xenova-transformers.ts"),
-      // Cloud SDKs — stub out (not compatible with Workers runtime)
       "@google-cloud/storage": noopStub,
       "@google-cloud/pubsub": noopStub,
       "@google-cloud/logging": noopStub,
@@ -83,7 +82,6 @@ async function buildWorker() {
       "aws-sdk": noopStub,
       "@azure/storage-blob": noopStub,
       "@azure/identity": noopStub,
-      // ORM / heavy server libs — stub out
       "nodemailer": noopStub,
       "handlebars": noopStub,
       "knex": noopStub,
@@ -96,7 +94,6 @@ async function buildWorker() {
       "@opentelemetry/sdk-node": noopStub,
       "@tensorflow/tfjs-node": noopStub,
     },
-    // No CJS compat banner — wrangler handles module resolution during re-bundling
   });
 
   console.log("Worker build complete → workers/api/dist/");
