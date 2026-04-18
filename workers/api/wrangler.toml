@@ -15,10 +15,9 @@ OWNER_EMAILS = "ahmed@americaniron1.com,adam@americaniron1.com"
 FRONTEND_URL = "https://nexushr-v4.pages.dev"
 
 # Hyperdrive binding for PostgreSQL (via Neon)
-# Uncomment after creating Hyperdrive config:
-# [[hyperdrive]]
-# binding = "HYPERDRIVE"
-# id = "<hyperdrive-config-id>"
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "646d982636854f879ce8a034b893e16f"
 
 # Worker limits
 [limits]
