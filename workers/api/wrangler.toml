@@ -1,11 +1,8 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "nexushr-v4-api"
-main = "dist/index.cjs"
+main = "dist/index.mjs"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
-
-# Skip wrangler's internal bundling — we pre-build with esbuild
-no_bundle = true
 
 # Build command (runs our custom esbuild)
 [build]
