@@ -1,7 +1,11 @@
 /**
  * Worker ESM entry point.
- * Pre-imports Node.js built-ins and provides a require() function
- * so that CJS code (Express, etc.) can use require() at runtime.
+ * Pre-imports Node.js built-ins and provides a CJS-compatible require()
+ * function so that CommonJS code (Express, etc.) can work at runtime.
+ *
+ * Key: ESM namespace objects have shape { default, namedExport1, ... }
+ * but CJS require() should return the default export directly for
+ * modules that have one (e.g., require('events') === EventEmitter).
  */
 import * as _events from "node:events";
 import * as _fs from "node:fs";
@@ -24,36 +28,56 @@ import * as _string_decoder from "node:string_decoder";
 import * as _async_hooks from "node:async_hooks";
 import * as _diagnostics_channel from "node:diagnostics_channel";
 import * as _module from "node:module";
+import * as _perf_hooks from "node:perf_hooks";
 
-const builtinModules: Record<string, any> = {
-  "events": _events, "node:events": _events,
-  "fs": _fs, "node:fs": _fs,
-  "fs/promises": _fsp, "node:fs/promises": _fsp,
-  "path": _path, "node:path": _path,
-  "url": _url, "node:url": _url,
-  "http": _http, "node:http": _http,
-  "https": _https, "node:https": _https,
-  "crypto": _crypto, "node:crypto": _crypto,
-  "stream": _stream, "node:stream": _stream,
-  "buffer": _buffer, "node:buffer": _buffer,
-  "util": _util, "node:util": _util,
-  "os": _os, "node:os": _os,
-  "zlib": _zlib, "node:zlib": _zlib,
-  "querystring": _querystring, "node:querystring": _querystring,
-  "net": _net, "node:net": _net,
-  "tls": _tls, "node:tls": _tls,
-  "assert": _assert, "node:assert": _assert,
-  "string_decoder": _string_decoder, "node:string_decoder": _string_decoder,
-  "async_hooks": _async_hooks, "node:async_hooks": _async_hooks,
-  "diagnostics_channel": _diagnostics_channel, "node:diagnostics_channel": _diagnostics_channel,
-  "module": _module, "node:module": _module,
+// Convert ESM namespace to CJS-style export:
+// If the namespace has a "default" that's an object/function, use it as the base
+// and merge named exports onto it (mimicking how Node.js CJS interop works)
+function toCjs(ns: any): any {
+  if (ns && ns.default != null && typeof ns.default === "object" || typeof ns.default === "function") {
+    // Merge named exports onto default, but don't override existing properties
+    const merged = ns.default;
+    for (const key of Object.keys(ns)) {
+      if (key !== "default" && !(key in merged)) {
+        try { merged[key] = ns[key]; } catch (e) {}
+      }
+    }
+    return merged;
+  }
+  return ns;
+}
+
+const builtinModules: Record<string, any> = {};
+
+// Register all builtins with both bare and node: prefixed names
+const raw: Record<string, any> = {
+  "events": _events, "fs": _fs, "fs/promises": _fsp,
+  "path": _path, "url": _url, "http": _http, "https": _https,
+  "crypto": _crypto, "stream": _stream, "buffer": _buffer,
+  "util": _util, "os": _os, "zlib": _zlib,
+  "querystring": _querystring, "net": _net, "tls": _tls,
+  "assert": _assert, "string_decoder": _string_decoder,
+  "async_hooks": _async_hooks, "diagnostics_channel": _diagnostics_channel,
+  "module": _module, "perf_hooks": _perf_hooks,
 };
 
-// Provide require() for CJS code (Express, etc.) running in ESM context
+for (const [name, ns] of Object.entries(raw)) {
+  const cjs = toCjs(ns);
+  builtinModules[name] = cjs;
+  builtinModules[`node:${name}`] = cjs;
+}
+
+// Provide CJS-compatible require() for runtime use
 globalThis.require = ((id: string) => {
   if (builtinModules[id]) return builtinModules[id];
-  throw new Error(`require() cannot resolve "${id}" in Workers runtime`);
+  // Return empty object for unknown modules (better than crashing)
+  console.warn(`require("${id}") — module not available in Workers, returning empty object`);
+  return {};
 }) as NodeRequire;
+
+// Also provide require.resolve as a no-op
+(globalThis.require as any).resolve = (id: string) => id;
+(globalThis.require as any).cache = {};
 
 // Re-export the Worker handler from the app bundle
 export { default } from "./app-bundle.mjs";
