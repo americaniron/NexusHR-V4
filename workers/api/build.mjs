@@ -36,7 +36,6 @@ async function buildWorker() {
     name: "node-stub",
     setup(build) {
       for (const mod of UNSUPPORTED_NODE_BUILTINS) {
-        // Match both "tty" and "node:tty" forms
         const filter = new RegExp(`^(node:)?${mod}$`);
         build.onResolve({ filter }, () => ({
           path: noopStub,
@@ -50,9 +49,9 @@ async function buildWorker() {
     platform: "node",
     target: "esnext",
     bundle: true,
-    format: "esm",
+    // CJS format: require() stays as native require() — Workers CJS loader handles it
+    format: "cjs",
     outdir: distDir,
-    outExtension: { ".js": ".mjs" },
     logLevel: "info",
     conditions: ["workerd", "worker", "browser"],
     plugins: [nodeStubPlugin],
@@ -123,11 +122,7 @@ async function buildWorker() {
       "@opentelemetry/sdk-node": noopStub,
       "@tensorflow/tfjs-node": noopStub,
     },
-    banner: {
-      js: `import { createRequire as __banner_createRequire } from 'node:module';
-try { globalThis.require = __banner_createRequire('file:///worker.mjs'); } catch(e) {}
-`,
-    },
+    // No banner needed — CJS require() works natively in Workers CJS module loader
   });
 
   console.log("Worker build complete → workers/api/dist/");
