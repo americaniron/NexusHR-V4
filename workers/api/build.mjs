@@ -2,7 +2,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
-import { rm } from "node:fs/promises";
+import { rm, writeFile } from "node:fs/promises";
 
 globalThis.require = createRequire(import.meta.url);
 
@@ -21,7 +21,6 @@ const UNSUPPORTED_NODE_BUILTINS = [
   "v8",
   "inspector",
   "trace_events",
-  "perf_hooks",
   "worker_threads",
 ];
 
@@ -43,14 +42,15 @@ async function buildWorker() {
     },
   };
 
+  // Build the main app bundle (ESM format)
   await esbuild({
     entryPoints: [path.resolve(workerDir, "src/index.ts")],
     platform: "node",
     target: "esnext",
     bundle: true,
-    format: "cjs",
+    format: "esm",
     outdir: distDir,
-    outExtension: { ".js": ".cjs" },
+    outExtension: { ".js": ".mjs" },
     logLevel: "info",
     conditions: ["workerd", "worker", "browser"],
     plugins: [nodeStubPlugin],
@@ -121,7 +121,40 @@ async function buildWorker() {
       "@opentelemetry/sdk-node": noopStub,
       "@tensorflow/tfjs-node": noopStub,
     },
+    // No banner — the wrapper entry handles require()
   });
+
+  // Rename dist/index.mjs to dist/app-bundle.mjs
+  const { rename } = await import("node:fs/promises");
+  await rename(
+    path.resolve(distDir, "index.mjs"),
+    path.resolve(distDir, "app-bundle.mjs"),
+  );
+  // Also rename source map if present
+  try {
+    await rename(
+      path.resolve(distDir, "index.mjs.map"),
+      path.resolve(distDir, "app-bundle.mjs.map"),
+    );
+  } catch (e) {}
+
+  // Build the ESM wrapper entry that provides require()
+  await esbuild({
+    entryPoints: [path.resolve(workerDir, "src/worker-entry.ts")],
+    platform: "node",
+    target: "esnext",
+    bundle: false, // Don't bundle — just compile TS to JS
+    format: "esm",
+    outdir: distDir,
+    outExtension: { ".js": ".mjs" },
+    logLevel: "info",
+  });
+
+  // Rename worker-entry.mjs to index.mjs
+  await rename(
+    path.resolve(distDir, "worker-entry.mjs"),
+    path.resolve(distDir, "index.mjs"),
+  );
 
   console.log("Worker build complete → workers/api/dist/");
 }
