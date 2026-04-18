@@ -9,11 +9,41 @@ globalThis.require = createRequire(import.meta.url);
 const workerDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(workerDir, "../..");
 
+// Node.js built-in modules NOT available in Cloudflare Workers
+const UNSUPPORTED_NODE_BUILTINS = [
+  "tty",
+  "child_process",
+  "cluster",
+  "dgram",
+  "readline",
+  "repl",
+  "vm",
+  "v8",
+  "inspector",
+  "trace_events",
+  "perf_hooks",
+  "worker_threads",
+];
+
 async function buildWorker() {
   const distDir = path.resolve(workerDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
   const noopStub = path.resolve(workerDir, "src/stubs/noop-module.ts");
+
+  // Plugin to redirect unsupported Node builtins to our stub
+  const nodeStubPlugin = {
+    name: "node-stub",
+    setup(build) {
+      for (const mod of UNSUPPORTED_NODE_BUILTINS) {
+        // Match both "tty" and "node:tty" forms
+        const filter = new RegExp(`^(node:)?${mod}$`);
+        build.onResolve({ filter }, () => ({
+          path: noopStub,
+        }));
+      }
+    },
+  };
 
   await esbuild({
     entryPoints: [path.resolve(workerDir, "src/index.ts")],
@@ -25,6 +55,7 @@ async function buildWorker() {
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
     conditions: ["workerd", "worker", "browser"],
+    plugins: [nodeStubPlugin],
     external: [
       "*.node",
       "sharp",
@@ -92,10 +123,6 @@ async function buildWorker() {
       "@opentelemetry/sdk-node": noopStub,
       "@tensorflow/tfjs-node": noopStub,
     },
-    // Banner: provide a working require() for Workers runtime
-    // esbuild's __require shim checks if require exists; this ensures it does
-    // createRequire('file:///worker.mjs') creates a require function that can
-    // resolve Node.js built-in modules in Workers with nodejs_compat
     banner: {
       js: `import { createRequire as __banner_createRequire } from 'node:module';
 try { globalThis.require = __banner_createRequire('file:///worker.mjs'); } catch(e) {}
