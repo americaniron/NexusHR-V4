@@ -19,10 +19,6 @@ FRONTEND_URL = "https://nexushr-v4.pages.dev"
 binding = "HYPERDRIVE"
 id = "646d982636854f879ce8a034b893e16f"
 
-# Worker limits
-[limits]
-cpu_ms = 30000
-
 # Secrets to set via `wrangler secret put <KEY>`:
 # - DATABASE_URL (if not using Hyperdrive)
 # - CLERK_SECRET_KEY
