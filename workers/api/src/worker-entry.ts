@@ -2,10 +2,6 @@
  * Worker ESM entry point.
  * Pre-imports Node.js built-ins and provides a CJS-compatible require()
  * function so that CommonJS code (Express, etc.) can work at runtime.
- *
- * Key: ESM namespace objects have shape { default, namedExport1, ... }
- * but CJS require() should return the default export directly for
- * modules that have one (e.g., require('events') === EventEmitter).
  */
 import * as _events from "node:events";
 import * as _fs from "node:fs";
@@ -30,12 +26,39 @@ import * as _diagnostics_channel from "node:diagnostics_channel";
 import * as _module from "node:module";
 import * as _perf_hooks from "node:perf_hooks";
 
-// Convert ESM namespace to CJS-style export:
-// If the namespace has a "default" that's an object/function, use it as the base
-// and merge named exports onto it (mimicking how Node.js CJS interop works)
+// --- Timer polyfills: add .ref()/.unref() to timer IDs ---
+const noop = () => {};
+
+const origSetInterval = globalThis.setInterval;
+const origSetTimeout = globalThis.setTimeout;
+
+globalThis.setInterval = ((...args: any[]) => {
+  const id = origSetInterval(...args as [any, any, ...any[]]);
+  if (typeof id === "number" || typeof id === "object") {
+    const timer = typeof id === "object" ? id : { [Symbol.toPrimitive]() { return id; } };
+    if (!("unref" in timer)) (timer as any).unref = noop;
+    if (!("ref" in timer)) (timer as any).ref = noop;
+    if (!("hasRef" in timer)) (timer as any).hasRef = () => true;
+    return timer as any;
+  }
+  return id;
+}) as typeof setInterval;
+
+globalThis.setTimeout = ((...args: any[]) => {
+  const id = origSetTimeout(...args as [any, any, ...any[]]);
+  if (typeof id === "number" || typeof id === "object") {
+    const timer = typeof id === "object" ? id : { [Symbol.toPrimitive]() { return id; } };
+    if (!("unref" in timer)) (timer as any).unref = noop;
+    if (!("ref" in timer)) (timer as any).ref = noop;
+    if (!("hasRef" in timer)) (timer as any).hasRef = () => true;
+    return timer as any;
+  }
+  return id;
+}) as typeof setTimeout;
+
+// --- ESM → CJS conversion for require() ---
 function toCjs(ns: any): any {
-  if (ns && ns.default != null && typeof ns.default === "object" || typeof ns.default === "function") {
-    // Merge named exports onto default, but don't override existing properties
+  if (ns && (typeof ns.default === "object" || typeof ns.default === "function") && ns.default != null) {
     const merged = ns.default;
     for (const key of Object.keys(ns)) {
       if (key !== "default" && !(key in merged)) {
@@ -49,7 +72,6 @@ function toCjs(ns: any): any {
 
 const builtinModules: Record<string, any> = {};
 
-// Register all builtins with both bare and node: prefixed names
 const raw: Record<string, any> = {
   "events": _events, "fs": _fs, "fs/promises": _fsp,
   "path": _path, "url": _url, "http": _http, "https": _https,
@@ -70,12 +92,10 @@ for (const [name, ns] of Object.entries(raw)) {
 // Provide CJS-compatible require() for runtime use
 globalThis.require = ((id: string) => {
   if (builtinModules[id]) return builtinModules[id];
-  // Return empty object for unknown modules (better than crashing)
   console.warn(`require("${id}") — module not available in Workers, returning empty object`);
   return {};
 }) as NodeRequire;
 
-// Also provide require.resolve as a no-op
 (globalThis.require as any).resolve = (id: string) => id;
 (globalThis.require as any).cache = {};
 
